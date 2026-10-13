@@ -320,7 +320,7 @@ window.SOZO = (() => {
             <div class="acct-menu" id="acctMenu" hidden>
               <p class="acct-name">${esc(sess().name || 'Mon compte')}</p>
               <p class="acct-mail">${esc(sess().email || '')}</p>
-              <p class="mono ash">${sess().role === 'auteur' ? 'Lecteur et auteur' : 'Lecteur'} · compte de démonstration</p>
+              <p class="mono ash">${sess().role === 'auteur' ? 'Lecteur et auteur' : 'Lecteur'}${sess().email_verifie ? '' : ' · e-mail à confirmer'}</p>
               <a href="suivis.html">${icon('heart')} Mes suivis</a>
               <a href="studio.html">${icon('pen')} Mon studio</a>
               <button type="button" id="logout">${icon('left')} Se déconnecter</button>

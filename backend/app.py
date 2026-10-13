@@ -41,9 +41,8 @@ def ouverte(f):
 
 
 def connectee(f):
-    """Route réservée à une personne connectée (sessions : étape 2).
-    Tant que l'authentification n'existe pas, elle refuse TOUT : un refus
-    est plus sûr qu'une ouverture provisoire oubliée."""
+    """Route réservée à une personne connectée : la session (cookie) est lue
+    avant chaque requête ; sans elle, 401 et une ligne au journal d'audit."""
     _DECLAREES[f.__name__] = "connectee"
 
     @wraps(f)
@@ -159,9 +158,35 @@ def creer_app():
         return send_from_directory(config.RACINE_SITE, chemin)
 
     # ── Garde-fous transverses ─────────────────────────────────────────────
+    import comptes
+    comptes.enregistrer(app)
+
+    @app.before_request
+    def session_et_csrf():
+        """Qui parle ? La réponse vient du cookie de session, et de lui seul."""
+        import security
+        g.user = None
+        jeton = request.cookies.get(security.COOKIE_SESSION)
+        if jeton and request.path.startswith("/api/"):
+            cx = db.connecter()
+            try:
+                g.user = security.lire_session(cx, jeton)
+            finally:
+                cx.fermer()
+        if request.path.startswith("/api/") and request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            # Corps JSON obligatoire : un formulaire HTML d'un autre site ne peut
+            # pas fabriquer cette requête (défense CSRF en plus du jeton).
+            if request.method != "DELETE" and not request.is_json:
+                return jsonify(erreur="Le corps doit être du JSON."), 415
+            if g.user:   # une session valide agit : elle doit prouver qu'elle vient de nos pages
+                fourni = request.headers.get(security.EN_TETE_CSRF, "")
+                if not fourni or not secrets.compare_digest(fourni, security.jeton_csrf(jeton)):
+                    auditer("csrf.refus", ressource=f"{request.method} {request.path}", resultat="refus")
+                    return jsonify(erreur="Requête refusée (jeton de sécurité absent ou faux)."), 403
+        return None
+
     @app.before_request
     def ferme_par_defaut():
-        g.user = None   # sessions : étape 2
         if request.endpoint is None:
             return None   # 404 géré plus bas
         vue = app.view_functions.get(request.endpoint)

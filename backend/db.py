@@ -15,7 +15,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 1
+VERSION_SCHEMA = 2
 _verrou = threading.Lock()
 
 

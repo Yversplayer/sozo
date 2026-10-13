@@ -6,7 +6,15 @@
     // on ne revient que vers une page du logiciel (jamais une adresse extérieure)
     return /^[a-z-]+\.html(\?[^#]*)?(#.*)?$/i.test(v) && !v.startsWith('connexion') ? v : 'decouvrir.html';
   })();
-  if (window.SozoAuth && SozoAuth.session) { location.replace(suite); return; }
+  /* Déjà connecté ? C'est le serveur qui le dit (cookie HttpOnly). */
+  fetch('/api/moi', { credentials: 'same-origin', cache: 'no-store' }).then((r) => r.ok ? r.json() : null)
+    .then((d) => { if (d && !S.q('reinitialiser') && !S.q('verifier')) { SozoAuth.garder(d.moi); location.replace(suite); } }).catch(() => {});
+  const api = (methode, url, corps) => fetch(url, {
+    method: methode, credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': SozoAuth.csrf() },
+    body: corps ? JSON.stringify(corps) : undefined
+  }).then((r) => r.json().catch(() => ({})).then((d) => ({ ok: r.ok, status: r.status, d })))
+    .catch(() => ({ ok: false, status: 0, d: { erreur: 'Le serveur ne répond pas. Vérifiez la connexion et réessayez.' } }));
   document.body.classList.add('cx-body');
   const mode0 = S.q('mode') === 'inscription' ? 'up' : 'in';
 
@@ -53,7 +61,8 @@
           <button class="btn btn--accent cx-submit" type="submit">Créer mon compte ${S.icon('right')}</button>
         </form>
 
-        <p class="warn cx-demo">${S.icon('lock')}<span><strong>Démonstration, sans serveur.</strong> Aucun compte n’est créé en ligne : votre nom, votre e-mail et votre rôle restent sur cet appareil. Le mot de passe n’est ni envoyé, ni enregistré.</span></p>
+        <p class="warn cx-demo">${S.icon('lock')}<span><strong>Serveur de développement.</strong> Les comptes sont réels sur ce serveur (mot de passe chiffré, session sécurisée). Les e-mails de vérification et de réinitialisation sont rédigés mais <strong>pas encore envoyés</strong> : aucun fournisseur n’est branché.</span></p>
+        <div class="cx-notice" id="notice" role="status" hidden></div>
       </div>
     </main>
   </div>`;
@@ -78,33 +87,67 @@
     if (v.length >= 8) sc++; if (v.length >= 12) sc++; if (/[A-Z]/.test(v) && /[a-z]/.test(v)) sc++; if (/\d/.test(v)) sc++; if (/[^\w\s]/.test(v)) sc++;
     const m = $('.cx-meter i'); m.style.width = (sc / 5 * 100) + '%'; m.dataset.level = sc < 2 ? 'faible' : sc < 4 ? 'moyen' : 'fort';
   });
-  $('#forgot').addEventListener('click', (e) => { e.preventDefault(); S.modal({ title: 'Mot de passe oublié', body: '<p>Dans le vrai logiciel, un lien de réinitialisation vous sera envoyé par e-mail.</p><p class="warn">Aucun e-mail ne part dans cette démonstration : il n’y a ni serveur, ni compte en ligne.</p>', actions: [{ label: 'Compris' }] }); });
+  $('#forgot').addEventListener('click', (e) => {
+    e.preventDefault();
+    const m = S.modal({ title: 'Mot de passe oublié', body: `<p>Indiquez l’adresse de votre compte : un lien pour choisir un nouveau mot de passe sera préparé.</p>
+      <label class="cx-field"><span>Adresse e-mail</span><input type="email" id="fgMail" autocomplete="email" value="${S.esc($('#fIn').email.value)}"></label><p class="cx-err" id="fgErr" role="alert"></p>`,
+      actions: [{ label: 'Annuler' }, { label: 'Préparer le lien', primary: true, onClick: async (close) => {
+        const email = document.getElementById('fgMail').value.trim();
+        if (!EMAIL.test(email)) { document.getElementById('fgErr').textContent = 'Cette adresse e-mail ne semble pas valide.'; return; }
+        const r = await api('POST', '/api/comptes/reinitialisation', { email });
+        if (!r.ok) { document.getElementById('fgErr').textContent = r.d.erreur || 'La demande a échoué.'; return; }
+        close();
+        notice('Si un compte existe pour cette adresse, le lien de réinitialisation est prêt. <strong>L’envoi d’e-mails n’est pas encore branché</strong> : il n’arrivera donc pas dans votre boîte.');
+      } }] });
+    return m;
+  });
+  function notice(html) { const n = $('#notice'); n.innerHTML = html; n.hidden = false; }
 
   const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   function fail(form, msg, field) { form.querySelector('.cx-err').textContent = msg; if (field) { field.setAttribute('aria-invalid', 'true'); field.focus(); } }
-  function enter(data) {
-    if (!SozoAuth.open({ ...data, since: new Date().toISOString().slice(0, 10) })) {
-      S.modal({ title: 'Connexion impossible', body: '<p>Ce navigateur bloque l’enregistrement local (navigation privée ?). Ouvrez Sōzō dans une fenêtre normale.</p>', actions: [{ label: 'Compris' }] });
-      return;
+  async function envoyer(f, url, corps) {
+    const b = f.querySelector('.cx-submit'), txt = b.innerHTML;
+    b.disabled = true; b.innerHTML = '<span class="spin" aria-hidden="true"></span> Un instant…';
+    const r = await api('POST', url, corps);
+    b.disabled = false; b.innerHTML = txt;
+    if (!r.ok) {
+      const champ = r.d.champ && f.querySelector(`[name="${{ mot_de_passe: 'pw', nom: 'name' }[r.d.champ] || r.d.champ}"]`);
+      return fail(f, r.d.erreur || 'La demande a échoué.', champ);
     }
+    SozoAuth.garder(r.d.moi);
     location.replace(suite);
   }
   $('#fIn').addEventListener('submit', (e) => {
     e.preventDefault(); const f = e.target; f.querySelectorAll('[aria-invalid]').forEach((x) => x.removeAttribute('aria-invalid'));
     const email = f.email.value.trim(), p = f.pw.value;
     if (!EMAIL.test(email)) return fail(f, 'Cette adresse e-mail ne semble pas valide.', f.email);
-    if (p.length < 8) return fail(f, 'Le mot de passe compte au moins 8 caractères.', f.pw);
-    const name = email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\p{L}/gu, (c) => c.toUpperCase());
-    enter({ name, email, role: 'lecteur' });
+    if (!p) return fail(f, 'Indiquez votre mot de passe.', f.pw);
+    envoyer(f, '/api/sessions', { email, mot_de_passe: p });
   });
   $('#fUp').addEventListener('submit', (e) => {
     e.preventDefault(); const f = e.target; f.querySelectorAll('[aria-invalid]').forEach((x) => x.removeAttribute('aria-invalid'));
-    const name = f.name.value.trim(), email = f.email.value.trim(), p = f.pw.value;
-    if (name.length < 2) return fail(f, 'Indiquez votre nom ou un pseudonyme (2 caractères au moins).', f.name);
+    const nom = f.name.value.trim(), email = f.email.value.trim(), p = f.pw.value;
+    if (nom.length < 2) return fail(f, 'Indiquez votre nom ou un pseudonyme (2 caractères au moins).', f.name);
     if (!EMAIL.test(email)) return fail(f, 'Cette adresse e-mail ne semble pas valide.', f.email);
     if (p.length < 8) return fail(f, 'Choisissez un mot de passe d’au moins 8 caractères.', f.pw);
     if (!f.cgu.checked) return fail(f, 'Merci d’accepter les conditions pour créer votre compte.', f.cgu);
-    enter({ name, email, role: f.role.value });
+    envoyer(f, '/api/comptes', { nom, email, mot_de_passe: p, role: f.role.value, cgu: true });
   });
+
+  /* liens reçus par e-mail : vérification et réinitialisation */
+  const jetonV = S.q('verifier'), jetonR = S.q('reinitialiser');
+  if (jetonV) {
+    api('POST', '/api/comptes/verification', { jeton: jetonV }).then((r) => notice(r.ok ? 'Adresse e-mail confirmée. Merci !' : S.esc(r.d.erreur || 'Lien invalide.')));
+  }
+  if (jetonR) {
+    S.modal({ title: 'Nouveau mot de passe', body: `<label class="cx-field"><span>Nouveau mot de passe <small>8 caractères au moins</small></span><input type="password" id="rzPw" autocomplete="new-password" minlength="8"></label><p class="cx-err" id="rzErr" role="alert"></p>`,
+      actions: [{ label: 'Annuler' }, { label: 'Enregistrer', primary: true, onClick: async (close) => {
+        const nouveau = document.getElementById('rzPw').value;
+        if (nouveau.length < 8) { document.getElementById('rzErr').textContent = 'Au moins 8 caractères.'; return; }
+        const r = await api('POST', '/api/comptes/reinitialisation/confirmer', { jeton: jetonR, nouveau });
+        if (!r.ok) { document.getElementById('rzErr').textContent = r.d.erreur || 'Échec.'; return; }
+        close(); notice('Mot de passe changé. Toutes vos anciennes sessions sont fermées : connectez-vous avec le nouveau.');
+      } }] });
+  }
   show(mode0);
 })();

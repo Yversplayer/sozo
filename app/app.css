@@ -845,3 +845,6 @@ html[data-theme="dark"] .cx-err { color: #FF8A7A; }
 @media (max-width: 420px) { .cx-role { grid-template-columns: 1fr; } }
 
 .acct-menu[hidden], .cx-form[hidden] { display: none; }
+.cx-notice { padding: 12px 14px; border-radius: var(--r); background: color-mix(in srgb, var(--gold) 16%, transparent); border: 1px solid var(--gold-line); font-size: 14px; }
+.cx-notice[hidden] { display: none; }
+.cx-submit .spin { border-color: rgba(58, 8, 16, .25); border-top-color: #3A0810; }
