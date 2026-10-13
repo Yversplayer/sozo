@@ -1,0 +1,3 @@
+-r requirements.txt
+# PostgreSQL 16 réel, local et jetable, pour la seconde suite de tests
+pgserver==0.1.4

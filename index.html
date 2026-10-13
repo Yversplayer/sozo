@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr" data-root="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sōzō — publiez votre livre page après page</title>
+  <meta name="description" content="Sōzō : la plateforme où l'auteur publie à son rythme, gratuit, payant ou mixte, et où le lecteur sait toujours ce qu'il achète.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <script src="assets/theme.js"></script>
+  <link rel="stylesheet" href="assets/fonts/fonts.css?v=1">
+  <link rel="stylesheet" href="styles.css?v=10">
+  <link rel="stylesheet" href="sozo.css?v=10">
+</head>
+<body>
+
+  <!-- ══════════ PRELOADER ══════════ -->
+  <div class="loader" id="loader" aria-hidden="true">
+    <div class="loader-inner">
+      <p class="loader-wordmark sz-wordmark"><svg class="sozo-logo" viewBox="-52 -1029 1882 1730" role="img" aria-label="Sōzō"><g class="sozo-logo__feather" transform="translate(782.5,13.0) rotate(-60.0) scale(1.0060)"><path class="sozo-logo__vane" d="M220,-8 C300,-60 400,-110 520,-150 L548,-128 C600,-170 690,-196 790,-200 L806,-176 C870,-196 960,-190 1050,-150 C990,-110 920,-70 850,-45 L838,-28 C760,-5 640,22 520,30 C420,36 320,28 220,-8 Z"/><path class="sozo-logo__hi" d="M220,-8 C320,28 420,36 520,30 C640,22 760,-5 838,-28 L850,-45 C920,-70 990,-110 1050,-150 C900,-110 700,-70 520,-40 C380,-20 280,-10 220,-8 Z"/><path class="sozo-logo__cut" d="M600,-82 L668,-160 M440,-48 L494,-106 M720,-108 L770,-40"/><path class="sozo-logo__rachis" d="M0,12 C250,-4 600,-62 1046,-148"/></g><path class="sozo-logo__ink" d="M92.2 117.5Q92.2 156.6 112 185.4Q131.7 214.2 163.5 236.9Q195.3 259.6 230.6 282.1Q268.3 305.2 302.6 330.9Q337 356.6 359.5 390.5Q382 424.5 382 472.5Q382 523.6 355.2 563.1Q328.3 602.7 280.8 625.4Q233.2 648 169.6 648Q141.8 648 112.3 642.8Q82.8 637.7 57.4 629.1Q32 620.5 16.2 609.7Q11.9 606.7 9.3 602.9Q6.7 599.1 6.5 590.7L0.2 439.6Q-0.8 434.6 4.7 434.1Q10.2 433.6 11.2 437.6Q23.1 468.4 39.5 501.6Q55.8 534.9 77.8 562.8Q99.7 590.7 128.4 608.4Q157.1 626 194.5 626Q219.7 626 242.9 617.1Q266.1 608.1 281 585.7Q295.8 563.3 295.8 524.1Q295.8 476.6 274.7 443.4Q253.6 410.1 220.6 385.2Q187.6 360.2 151.3 337.8Q116.3 315.3 84 291.3Q51.7 267.2 31.6 235.7Q11.5 204.2 11.5 159.3Q11.5 104.4 41.4 69.2Q71.4 34 118 17Q164.6 0 213.2 0Q246.5 0 280.4 6.2Q314.3 12.4 338.1 22.6Q347.5 26.3 350.3 31.1Q353.1 36 353.1 41.7L355.6 177.4Q355.6 180.7 350.8 181.8Q346 182.9 344.3 179.6Q339.4 164.9 329.1 138.5Q318.8 112.1 301.2 84.8Q283.6 57.6 256.3 38.5Q229 19.5 190.1 19.5Q160.1 19.5 138.2 31.7Q116.4 43.9 104.3 65.5Q92.2 87.1 92.2 117.5Z M670.2 649Q608.3 649 562.9 620Q517.6 591 493 542.5Q468.5 494 468.5 438Q468.5 386 488.2 348Q507.9 310 540.5 285.5Q573.1 261 611.5 249Q650 237 687.4 237Q750.3 237 795.1 267Q840 297 863.7 344Q887.4 391 887.4 443.7Q887.4 505.6 857.3 551.9Q827.2 598.3 777.9 623.6Q728.6 649 670.2 649ZM699.6 628.8Q744 628.8 767.9 590.2Q791.7 551.7 791.7 476.2Q791.7 406.6 772.5 357.8Q753.3 309.1 722 283.3Q690.7 257.4 653.7 257.4Q609.8 257.4 586.1 293.7Q562.4 329.9 562.4 403.2Q562.4 468.7 580.4 520.1Q598.4 571.4 629.6 600.1Q660.8 628.8 699.6 628.8ZM553.2 159Q548 159 545.8 150.3Q543.5 141.6 545.8 133.3Q548 125 553.2 125H804.2Q810.3 125 812.4 133.3Q814.5 141.6 812.4 150.3Q810.3 159 804.2 159Z M957.1 624 1185.9 271.2Q1189.9 264.2 1180.9 264.2Q1121 264.2 1077.7 274Q1034.4 283.9 1007.2 305.5Q980.1 327.1 967.7 364.4Q966.7 366.7 961 365.5Q955.4 364.4 956.4 361.7L995.6 214.3Q996.6 212.3 1002.6 213.2Q1008.6 214 1006.9 216.8Q1002.2 237.1 1013.9 243.6Q1025.6 250 1056.1 250Q1094 250 1150.1 250Q1206.1 250 1279.8 250Q1284.5 250 1287.1 254Q1289.8 258 1287.8 262L1057 612.1Q1053.7 619.1 1062 619.1Q1117.9 619.1 1156.8 613.5Q1195.6 607.9 1221.4 595.4Q1247.2 582.9 1262.3 561.9Q1277.4 541 1285.1 510.3Q1286.1 507.6 1291.4 507.6Q1296.8 507.6 1296.8 510.3L1294.8 625Q1294.8 629 1292.3 632.5Q1289.8 636 1285.1 636Q1236.6 636 1180.8 636Q1124.9 636 1069.1 636Q1013.4 636 964.1 636Q960.1 636 957.6 632Q955.1 628 957.1 624Z M1561.2 649Q1499.3 649 1453.9 620Q1408.6 591 1384 542.5Q1359.5 494 1359.5 438Q1359.5 386 1379.2 348Q1398.9 310 1431.5 285.5Q1464.1 261 1502.5 249Q1541 237 1578.4 237Q1641.3 237 1686.1 267Q1731 297 1754.7 344Q1778.4 391 1778.4 443.7Q1778.4 505.6 1748.3 551.9Q1718.2 598.3 1668.9 623.6Q1619.6 649 1561.2 649ZM1590.6 628.8Q1635 628.8 1658.9 590.2Q1682.7 551.7 1682.7 476.2Q1682.7 406.6 1663.5 357.8Q1644.3 309.1 1613 283.3Q1581.7 257.4 1544.7 257.4Q1500.8 257.4 1477.1 293.7Q1453.4 329.9 1453.4 403.2Q1453.4 468.7 1471.4 520.1Q1489.4 571.4 1520.6 600.1Q1551.8 628.8 1590.6 628.8ZM1444.2 159Q1439 159 1436.8 150.3Q1434.5 141.6 1436.8 133.3Q1439 125 1444.2 125H1695.2Q1701.3 125 1703.4 133.3Q1705.5 141.6 1703.4 150.3Q1701.3 159 1695.2 159Z"/></svg></p>
+      <p class="sz-tagline" aria-hidden="true">Heal your heart<br>Grown your faith<br>Glow your spirit</p>
+      <span class="loader-rule"><i id="loaderBar"></i></span>
+    </div>
+  </div>
+
+  <!-- ══════════ CONTENU ══════════ -->
+  <main class="smooth" id="smooth">
+
+    <!-- ─── 1 · ACCROCHE — nuage de lecteurs → image entre les mots ─── -->
+    <section class="scene s-hero" id="hero" data-pin="5">
+      <div class="pin">
+
+        <div class="floaters" aria-hidden="true">
+          <figure class="fl" style="--x:-4%;  --y:13%; --w:196px" data-d="0.55"><img src="" alt=""></figure>
+          <figure class="fl" style="--x:21%;   --y:3%; --w:142px" data-d="0.90"><img src="" alt=""></figure>
+          <figure class="fl" style="--x:40%;  --y:-8%; --w:232px" data-d="0.40"><img src="" alt=""></figure>
+          <figure class="fl" style="--x:63%;  --y:7%; --w:126px" data-d="0.75"><img src="" alt=""></figure>
+          <figure class="fl" style="--x:85%;  --y:1%; --w:208px" data-d="1.00"><img src="" alt=""></figure>
+          <figure class="fl" style="--x:-2%;  --y:45%; --w:116px" data-d="0.50"><img src="" alt=""></figure>
+          <figure class="fl" style="--x:94%;  --y:37%; --w:172px" data-d="0.70"><img src="" alt=""></figure>
+          <figure class="fl" style="--x:13%;  --y:71%; --w:248px" data-d="0.35"><img src="" alt=""></figure>
+          <figure class="fl" style="--x:44%;  --y:81%; --w:134px" data-d="0.85"><img src="" alt=""></figure>
+          <figure class="fl" style="--x:73%;  --y:64%; --w:188px" data-d="0.60"><img src="" alt=""></figure>
+        </div>
+
+        <div class="hero-copy">
+          <p class="hero-kicker mono" id="heroKicker"></p>
+          <h1 class="hero-title">
+            <span class="hero-line1" id="heroLine1"></span>
+            <span class="hero-line2" id="heroLine2">
+              <span class="hl"></span>
+              <span class="grow" id="grow1"><img src="" alt=""></span>
+              <span class="hl"></span>
+            </span>
+          </h1>
+        </div>
+
+        <div class="spot" id="spot" aria-hidden="true">
+          <h2 class="spot-intro" id="spotIntro"></h2>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─── 2 · MANIFESTE (remplissage caractère par caractère + ovale) ─── -->
+    <section class="scene s-fill" id="manifeste" data-pin="3.5">
+      <div class="pin">
+        <p class="fill-text" id="fillText"></p>
+      </div>
+    </section>
+
+    <!-- ─── 3 · ILS LISENT, ILS ÉCRIVENT (masonry parallaxe) ─── -->
+    <section class="collection" id="travaux">
+      <header class="coll-head">
+        <p class="mono ash"></p>
+        <h2 class="coll-title" id="collTitle"></h2>
+        <p class="coll-sub"></p>
+        <p class="mono ash"></p>
+      </header>
+      <div id="collGrid"></div>
+    </section>
+
+    <!-- ─── 4 · TEXTE ENCRÉ — les lecteurs, des visages entourés à la plume ─── -->
+    <section class="scene s-ink" id="lecteurs" data-pin="3.6">
+      <div class="pin">
+        <div class="ink-wrap">
+          <p class="ink-kicker mono ash" data-content="inkReaders.kicker"></p>
+          <p class="ink-text" data-content="inkReaders.text"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── 5 · LA BIBLIOTHÈQUE — promesses, étagère, catégories ─── -->
+    <section class="sz-library" id="bibliotheque">
+      <ul class="sz-promises" id="szPromises"></ul>
+
+      <header class="sz-head">
+        <p class="mono ash reveal">LA BIBLIOTHÈQUE</p>
+        <h2 class="sz-title" data-ink id="libTitle"></h2>
+        <p class="sz-sub reveal" id="libSub"></p>
+      </header>
+
+      <div class="sz-shelves" id="szShelves" aria-label="Étagère de livres fictifs"></div>
+      <p class="sz-note mono ash">TITRES ET AUTEURS FICTIFS — CLIQUEZ UN LIVRE POUR L'OUVRIR DANS LA DÉMO</p>
+
+      <div class="sz-cats-head">
+        <h3 class="sz-title sz-title--sm" data-ink id="catsTitle"></h3>
+        <a class="sz-link mono" href="app/decouvrir.html">TOUTES LES CATÉGORIES →</a>
+      </div>
+      <div class="sz-cats" id="szCats"></div>
+    </section>
+
+    <!-- ─── 6 · DEVISE — train de mots sur bande vermillon ─── -->
+    <div class="band" id="temps">
+      <div class="diag to-lime" aria-hidden="true"></div>
+      <section class="scene s-motto" data-pin="4">
+        <div class="pin motto-pin">
+          <p class="motto-kicker mono" id="mottoKicker"></p>
+          <div class="motto-track" id="mottoTrack"></div>
+          <p class="motto-hint mono" id="mottoHint"></p>
+        </div>
+      </section>
+      <div class="diag from-lime" aria-hidden="true"></div>
+    </div>
+
+    <!-- ─── 7 · LE LIVRE EN 3D — chaque page dit ce qu'elle est ─── -->
+    <section class="scene s-book" id="pages" data-pin="6">
+      <div class="pin">
+        <div class="bk-copy">
+          <p class="mono ash">CE QUE VOIT LE LECTEUR</p>
+          <h2 class="bk-title" id="bkTitle"></h2>
+          <ol class="bk-legend" id="bkLegend"></ol>
+          <p class="bk-note mono ash">LIVRE, PRIX ET DATES FICTIFS — AUCUN PAIEMENT N'EST BRANCHÉ</p>
+        </div>
+        <div class="bk-stage" aria-hidden="true">
+          <div class="bk-book" id="bkBook"></div>
+          <div class="bk-shadow"></div>
+        </div>
+        <!-- repli « mouvement réduit » : les cinq états, à plat -->
+        <div class="bk-flat" id="bkFlat"></div>
+      </div>
+    </section>
+
+    <!-- ─── 8 · « UN LIVRE, 3 GESTES » → LE PROCESSUS ─── -->
+    <section class="scene s-night" id="explorer" data-pin="9">
+      <div class="pin">
+        <div class="night-line" id="nightLine">
+          <span class="hl nw" id="nw1"></span>
+          <span class="hl nw" id="nw2"></span>
+          <span class="grow" id="grow2"><img src="" alt=""></span>
+          <span class="hl nw" id="nw3"></span>
+        </div>
+        <div class="bignum" id="bigNum" aria-hidden="true"><span class="bignum-fixed">0</span><span class="bignum-roll"><span id="bigRoll"></span></span></div>
+        <div class="psteps" id="psteps"></div>
+        <p class="steps-cta" id="stepsCta">
+          <a href="app/studio.html" id="stepsCtaLink">Ouvrir le studio →<svg class="cta-oval" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path id="ctaOval" d="M50,6 C88,4 98,22 97,50 C96,82 76,96 49,95 C16,94 3,76 4,48 C5,18 20,7 50,6 Z"/></svg></a>
+        </p>
+        <div class="wipe" id="nightWipe" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </section>
+
+    <!-- ─── 9 · QUATRE LIBERTÉS (bento) ─── -->
+    <section class="collection sz-bento" id="libertes">
+      <header class="coll-head">
+        <p class="mono ash" id="bentoKicker"></p>
+        <h2 class="coll-title" id="bentoTitle"></h2>
+        <p class="coll-sub" id="bentoSub"></p>
+        <p class="mono ash" id="bentoMeta"></p>
+      </header>
+      <div class="bento-grid" id="bentoGrid"></div>
+    </section>
+
+    <!-- ─── 10 · TEXTE ENCRÉ — les auteurs ─── -->
+    <section class="scene s-ink" id="auteurs" data-pin="3.6">
+      <div class="pin">
+        <div class="ink-wrap">
+          <p class="ink-kicker mono ash" data-content="inkAuthors.kicker"></p>
+          <p class="ink-text" data-content="inkAuthors.text"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── 10 bis · LA BIBLE INTÉGRÉE — une référence, un clic ─── -->
+    <section class="sz-bible" id="bible">
+      <div class="sz-bible-copy">
+        <p class="mono ash reveal">LA BIBLE, INTÉGRÉE</p>
+        <h2 class="sz-title" data-ink>Une référence, [[un clic]].</h2>
+        <p class="sz-sub reveal">Quand un auteur cite un verset — « Ps 46:2 », « Jean 3:16 », « Ésaïe 26:4 » — le lecteur le touche et le passage s’ouvre, sans quitter sa page. Toute la Bible Louis Segond 1910 est dans Sōzō, et ne coûte rien à personne.</p>
+        <a class="sz-link mono reveal" href="app/bible.html">OUVRIR LA BIBLE →</a>
+      </div>
+      <figure class="sz-bible-page reveal">
+        <p class="mono">CROIX DE BOIS, ACTES DE FOI — PAGE 3</p>
+        <p>Entre la douleur et l’espérance, il n’y a parfois qu’une nuit.</p>
+        <p>Il reste cette foi, même quand tout vacille (<a class="bref" href="app/bible.html?b=19&c=46&v=2" data-b="19" data-c="46" data-v1="2" data-v2="2">Psaume 46:2</a>).</p>
+        <div class="sz-verse" aria-hidden="true"><strong>Psaumes 46:2</strong><span id="szVerse">« Dieu est pour nous un refuge et un appui, Un secours qui ne manque jamais dans la détresse. »</span><em>LOUIS SEGOND 1910</em></div>
+        <figcaption class="mono ash">TEXTE D’AUTEUR DE DÉMONSTRATION · VERSET AFFICHÉ D’APRÈS LA BIBLE INTÉGRÉE</figcaption>
+      </figure>
+    </section>
+
+    <!-- ─── 10 ter · OFFRES AUTEUR — publier est gratuit, Plume va plus loin ─── -->
+    <section class="sz-plans" id="offres">
+      <header class="sz-head">
+        <p class="mono ash reveal">POUR LES AUTEURS</p>
+        <h2 class="sz-title" data-ink>Publier est [[gratuit]].</h2>
+        <p class="sz-sub reveal">Vous choisissez : un livre offert, un livre payant, ou les deux à la fois. Quand vous vendez, Sōzō prend une commission. Et si vous voulez aller plus loin, il y a Plume.</p>
+      </header>
+      <div class="sz-plan-grid">
+        <article class="sz-plan reveal">
+          <p class="mono">GRATUIT</p>
+          <p class="sz-price">0 $<span> / pour toujours</span></p>
+          <ul>
+            <li>Écrire dans l’éditeur ou importer un PDF, un EPUB, un DOCX</li>
+            <li>Livre gratuit, payant ou mixte, prix à la page, au chapitre ou au livre</li>
+            <li>Calendrier libre : une page aujourd’hui, trois dans un mois</li>
+            <li>Lecteurs prévenus à chaque parution</li>
+            <li>Sur chaque vente : commission Sōzō de <strong>15 %</strong></li>
+          </ul>
+          <a class="sz-plan-cta mono" href="app/studio.html">OUVRIR LE STUDIO →</a>
+        </article>
+        <article class="sz-plan sz-plan--plume reveal" style="--i:1">
+          <p class="mono">PLUME</p>
+          <p class="sz-price">4,99 $<span> / mois</span></p>
+          <ul>
+            <li><strong>Corriger une page déjà publiée</strong> : une nouvelle version, sans rien retirer aux lecteurs qui l’ont achetée</li>
+            <li>Historique de chaque page, retour à une version précédente</li>
+            <li>Statistiques : pages lues, abandons, ventes par chapitre</li>
+            <li>Mise en page du livre : ornements, lettrines, couverture</li>
+            <li>Commission réduite à <strong>10 %</strong></li>
+          </ul>
+          <a class="sz-plan-cta mono" href="app/studio.html#offre">DÉCOUVRIR PLUME →</a>
+        </article>
+      </div>
+      <p class="sz-note mono ash">PRIX ET TAUX PROPOSÉS POUR LA DÉMONSTRATION — À FIXER PAR LE PORTEUR DU PROJET · AUCUN PAIEMENT N’EST BRANCHÉ</p>
+    </section>
+
+    <!-- ─── 11 · PREUVE SOCIALE ─── -->
+    <section class="scene s-quote" id="temoignage" data-pin="3">
+      <div class="pin">
+        <div class="q-stack">
+          <span class="q-glyph" aria-hidden="true">“</span>
+          <blockquote class="q-block">
+            <p class="q-text" id="quoteText"></p>
+          </blockquote>
+          <div class="q-sign">
+            <span class="q-rule" aria-hidden="true"></span>
+            <div class="q-sign-row" id="quoteAuthorWrap">
+              <p class="q-name" id="quoteAuthor"></p>
+              <p class="q-ctx mono ash" id="figKicker"></p>
+              <p class="q-fig" id="bigFigure"><span class="fig-pre" id="figPre"></span><span class="fig-val" id="figVal">0</span><span class="fig-unit" id="figUnit"></span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── 12 · OBJECTIONS + TRAÎNÉE DE LECTEURS SOUS LA SOURIS ─── -->
+    <section class="scene s-final" id="final" data-pin="2.6">
+      <div class="pin">
+        <p class="final-text">
+          <span class="fs" id="fs1"></span>
+          <span class="fs" id="fs2"></span>
+          <span class="fs" id="fs3"></span><br>
+          <span class="fs" id="fs4"></span>
+        </p>
+        <div class="trail" id="trail" aria-hidden="true">
+          <img src="" style="--tw:150px" alt=""><img src="" style="--tw:190px" alt=""><img src="" style="--tw:120px" alt=""><img src="" style="--tw:200px" alt="">
+          <img src="" style="--tw:96px" alt=""><img src="" style="--tw:170px" alt=""><img src="" style="--tw:34px" alt=""><img src="" style="--tw:140px" alt="">
+          <img src="" style="--tw:200px" alt=""><img src="" style="--tw:110px" alt=""><img src="" style="--tw:28px" alt=""><img src="" style="--tw:160px" alt="">
+          <img src="" style="--tw:130px" alt=""><img src="" style="--tw:180px" alt=""><img src="" style="--tw:40px" alt=""><img src="" style="--tw:150px" alt="">
+          <img src="" style="--tw:120px" alt=""><img src="" style="--tw:200px" alt=""><img src="" style="--tw:100px" alt=""><img src="" style="--tw:170px" alt="">
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── FOOTER ─── -->
+    <footer class="footer" id="contact">
+      <p class="footer-kicker mono ash reveal"></p>
+      <a class="footer-mail reveal" href="app/decouvrir.html"><span class="footer-mail-text"></span></a>
+      <p class="footer-reassurance mono ash reveal"></p>
+      <h2 class="footer-name" id="footerName" aria-label="Sōzō">Sōzō</h2>
+      <span class="sz-rule" aria-hidden="true"></span>
+      <p class="sz-tagline">Heal your heart · Grown your faith · Glow your spirit</p>
+      <div class="footer-bottom">
+        <p class="mono ash"></p>
+        <p class="mono"></p>
+        <p class="mono ash"></p>
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- ══════════ CHROME FIXE — barre flottante ══════════ -->
+  <header class="dock" id="dock">
+    <a class="dock-wordmark sz-wordmark" href="#hero" data-nav aria-label="Sōzō, retour en haut"><svg class="sozo-logo" viewBox="-52 -1029 1882 1730" role="img" aria-label="Sōzō"><g class="sozo-logo__feather" transform="translate(782.5,13.0) rotate(-60.0) scale(1.0060)"><path class="sozo-logo__vane" d="M220,-8 C300,-60 400,-110 520,-150 L548,-128 C600,-170 690,-196 790,-200 L806,-176 C870,-196 960,-190 1050,-150 C990,-110 920,-70 850,-45 L838,-28 C760,-5 640,22 520,30 C420,36 320,28 220,-8 Z"/><path class="sozo-logo__hi" d="M220,-8 C320,28 420,36 520,30 C640,22 760,-5 838,-28 L850,-45 C920,-70 990,-110 1050,-150 C900,-110 700,-70 520,-40 C380,-20 280,-10 220,-8 Z"/><path class="sozo-logo__cut" d="M600,-82 L668,-160 M440,-48 L494,-106 M720,-108 L770,-40"/><path class="sozo-logo__rachis" d="M0,12 C250,-4 600,-62 1046,-148"/></g><path class="sozo-logo__ink" d="M92.2 117.5Q92.2 156.6 112 185.4Q131.7 214.2 163.5 236.9Q195.3 259.6 230.6 282.1Q268.3 305.2 302.6 330.9Q337 356.6 359.5 390.5Q382 424.5 382 472.5Q382 523.6 355.2 563.1Q328.3 602.7 280.8 625.4Q233.2 648 169.6 648Q141.8 648 112.3 642.8Q82.8 637.7 57.4 629.1Q32 620.5 16.2 609.7Q11.9 606.7 9.3 602.9Q6.7 599.1 6.5 590.7L0.2 439.6Q-0.8 434.6 4.7 434.1Q10.2 433.6 11.2 437.6Q23.1 468.4 39.5 501.6Q55.8 534.9 77.8 562.8Q99.7 590.7 128.4 608.4Q157.1 626 194.5 626Q219.7 626 242.9 617.1Q266.1 608.1 281 585.7Q295.8 563.3 295.8 524.1Q295.8 476.6 274.7 443.4Q253.6 410.1 220.6 385.2Q187.6 360.2 151.3 337.8Q116.3 315.3 84 291.3Q51.7 267.2 31.6 235.7Q11.5 204.2 11.5 159.3Q11.5 104.4 41.4 69.2Q71.4 34 118 17Q164.6 0 213.2 0Q246.5 0 280.4 6.2Q314.3 12.4 338.1 22.6Q347.5 26.3 350.3 31.1Q353.1 36 353.1 41.7L355.6 177.4Q355.6 180.7 350.8 181.8Q346 182.9 344.3 179.6Q339.4 164.9 329.1 138.5Q318.8 112.1 301.2 84.8Q283.6 57.6 256.3 38.5Q229 19.5 190.1 19.5Q160.1 19.5 138.2 31.7Q116.4 43.9 104.3 65.5Q92.2 87.1 92.2 117.5Z M670.2 649Q608.3 649 562.9 620Q517.6 591 493 542.5Q468.5 494 468.5 438Q468.5 386 488.2 348Q507.9 310 540.5 285.5Q573.1 261 611.5 249Q650 237 687.4 237Q750.3 237 795.1 267Q840 297 863.7 344Q887.4 391 887.4 443.7Q887.4 505.6 857.3 551.9Q827.2 598.3 777.9 623.6Q728.6 649 670.2 649ZM699.6 628.8Q744 628.8 767.9 590.2Q791.7 551.7 791.7 476.2Q791.7 406.6 772.5 357.8Q753.3 309.1 722 283.3Q690.7 257.4 653.7 257.4Q609.8 257.4 586.1 293.7Q562.4 329.9 562.4 403.2Q562.4 468.7 580.4 520.1Q598.4 571.4 629.6 600.1Q660.8 628.8 699.6 628.8ZM553.2 159Q548 159 545.8 150.3Q543.5 141.6 545.8 133.3Q548 125 553.2 125H804.2Q810.3 125 812.4 133.3Q814.5 141.6 812.4 150.3Q810.3 159 804.2 159Z M957.1 624 1185.9 271.2Q1189.9 264.2 1180.9 264.2Q1121 264.2 1077.7 274Q1034.4 283.9 1007.2 305.5Q980.1 327.1 967.7 364.4Q966.7 366.7 961 365.5Q955.4 364.4 956.4 361.7L995.6 214.3Q996.6 212.3 1002.6 213.2Q1008.6 214 1006.9 216.8Q1002.2 237.1 1013.9 243.6Q1025.6 250 1056.1 250Q1094 250 1150.1 250Q1206.1 250 1279.8 250Q1284.5 250 1287.1 254Q1289.8 258 1287.8 262L1057 612.1Q1053.7 619.1 1062 619.1Q1117.9 619.1 1156.8 613.5Q1195.6 607.9 1221.4 595.4Q1247.2 582.9 1262.3 561.9Q1277.4 541 1285.1 510.3Q1286.1 507.6 1291.4 507.6Q1296.8 507.6 1296.8 510.3L1294.8 625Q1294.8 629 1292.3 632.5Q1289.8 636 1285.1 636Q1236.6 636 1180.8 636Q1124.9 636 1069.1 636Q1013.4 636 964.1 636Q960.1 636 957.6 632Q955.1 628 957.1 624Z M1561.2 649Q1499.3 649 1453.9 620Q1408.6 591 1384 542.5Q1359.5 494 1359.5 438Q1359.5 386 1379.2 348Q1398.9 310 1431.5 285.5Q1464.1 261 1502.5 249Q1541 237 1578.4 237Q1641.3 237 1686.1 267Q1731 297 1754.7 344Q1778.4 391 1778.4 443.7Q1778.4 505.6 1748.3 551.9Q1718.2 598.3 1668.9 623.6Q1619.6 649 1561.2 649ZM1590.6 628.8Q1635 628.8 1658.9 590.2Q1682.7 551.7 1682.7 476.2Q1682.7 406.6 1663.5 357.8Q1644.3 309.1 1613 283.3Q1581.7 257.4 1544.7 257.4Q1500.8 257.4 1477.1 293.7Q1453.4 329.9 1453.4 403.2Q1453.4 468.7 1471.4 520.1Q1489.4 571.4 1520.6 600.1Q1551.8 628.8 1590.6 628.8ZM1444.2 159Q1439 159 1436.8 150.3Q1434.5 141.6 1436.8 133.3Q1439 125 1444.2 125H1695.2Q1701.3 125 1703.4 133.3Q1705.5 141.6 1703.4 150.3Q1701.3 159 1695.2 159Z"/></svg></a>
+    <nav class="dock-nav" aria-label="Navigation principale">
+      <a class="dock-link mono" href="#bibliotheque" data-nav>BIBLIOTHÈQUE</a>
+      <a class="dock-link mono" href="#explorer" data-nav data-landing="0.8">AUTEURS</a>
+    </nav>
+    <button class="sz-theme mono" type="button" id="themeToggle" aria-pressed="false" aria-label="Passer en thème sombre"><span aria-hidden="true">◐</span></button>
+    <a class="dock-cta mono" href="app/decouvrir.html">OUVRIR Sōzō</a>
+  </header>
+
+  <script src="content.js?v=10"></script>
+  <script src="app/data.js?v=10"></script>
+  <script src="app/ui.js?v=10"></script>
+  <script src="app/bible-refs.js?v=10"></script>
+  <script src="sozo.js?v=10"></script>
+  <script src="app.js?v=10"></script>
+</body>
+</html>

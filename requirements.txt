@@ -1,0 +1,4 @@
+# Sōzō — dépendances d'exécution (production). Seuls les paquets importés.
+Flask==3.1.3
+psycopg[binary]==3.2.13
+gunicorn==23.0.0

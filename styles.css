@@ -1,0 +1,883 @@
+/* ═══════════════════════════════════════════════════════════
+   TEMPLATE « SITE IMMERSIF » — feuille de style canonique
+   NE PAS MODIFIER en dehors des tokens :root (thème + accent).
+   Le thème se choisit par <html data-theme="dark"> (light par
+   défaut) ; l'accent par --lime / --lime-ink.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ═══ Sōzō — identité fournie par le propriétaire (13/10/2026) :
+   bordeaux #6B0F1A, blanc cassé #F8F5EB, or #D4AF37 ; titres en serif.
+   Contrastes WCAG vérifiés : texte/papier 16,3:1 · gris/papier 5,9:1 ·
+   blanc cassé sur bordeaux 11,3:1 · bordeaux nuit sur or 7,4:1 (sombre). */
+:root {
+  --ink-rgb: 42, 16, 20;
+  --bone: #F8F5EB;                /* blanc cassé */
+  --ink: #2A1014;                 /* encre bordeaux très sombre */
+  --ash: #6E5A57;
+  --white: #FFFDF8;
+
+  --lime: #6B0F1A;                /* bordeaux : CTA, bande devise */
+  --lime-ink: #F8F5EB;
+  --verm-text: #6B0F1A;           /* accent lisible en petit texte */
+  --gold: #D4AF37;                /* or : plume, ovales, filets */
+  --gold-line: #C29B2E;
+  --gold-text: #8C6B2A;           /* or lisible sur blanc cassé (4,5:1) */
+  --logo-ink: #6B0F1A;
+
+  --ink-faint: rgba(var(--ink-rgb), 0.16);
+
+  --sans: 'Cormorant Garamond', 'Cormorant', Georgia, serif;
+  --geo: var(--sans);
+  --mono: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --t-heading: clamp(38px, 5vw, 64px);
+  --radius: 2px;
+  --gutter: clamp(20px, 4vw, 64px);
+
+  --ease-out: cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-inout: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* ═══ THÈME SOMBRE — bordeaux nuit, or ═══ */
+html[data-theme="dark"] {
+  --ink-rgb: 248, 245, 235;
+  --bone: #2B070D;
+  --ink: #F8F5EB;
+  --ash: #CDB9AE;
+  --white: #3A0B13;
+  --lime: #D4AF37;
+  --lime-ink: #3A0810;
+  --verm-text: #E9CD72;
+  --gold: #D4AF37;
+  --gold-line: #D4AF37;
+  --gold-text: #E9CD72;
+  --logo-ink: #F8F5EB;
+  --ink-faint: rgba(var(--ink-rgb), 0.16);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: auto; }
+body {
+  background: var(--bone);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: 20px;
+  letter-spacing: 0;
+  line-height: 1.35;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+img { display: block; max-width: 100%; border-radius: var(--radius); }
+ul { list-style: none; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3 { font-weight: 500; }
+
+.mono {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+.ash { color: var(--ash); }
+
+/* ═══════════ SMOOTH WRAPPER ═══════════ */
+body.is-smooth .smooth {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  will-change: transform;
+}
+
+/* ═══════════ PRELOADER ═══════════ */
+/* preloader : le nom + un trait qui se remplit. À la fin le voile
+   s'efface et le nom REJOINT sa place dans le dock — la page ne se
+   substitue pas au loader, elle en sort. */
+.loader {
+  position: fixed; inset: 0;
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+}
+.loader::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--bone);
+  transition: opacity .75s var(--ease-inout);
+}
+.loader.done { pointer-events: none; }
+.loader.done::before { opacity: 0; }
+.loader-inner {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+}
+.loader-wordmark {
+  font-size: 23px; letter-spacing: -0.007em; font-weight: 500;
+  transform-origin: center center;
+  transition: transform .9s var(--ease-inout);
+  will-change: transform;
+}
+/* posé : le nom du loader s'efface pendant que le dock se révèle, sur la
+   MÊME durée et au même endroit — un fondu croisé, jamais une bascule
+   sèche ni un instant sans nom à l'écran */
+.loader-wordmark.landed { opacity: 0; transition: opacity .32s var(--ease-out); }
+.loader-rule {
+  display: block; width: 128px; height: 1px;
+  background: var(--ink-faint); overflow: hidden;
+  transition: opacity .3s var(--ease-out), transform .5s var(--ease-inout);
+}
+.loader.done .loader-rule { opacity: 0; transform: scaleX(0.4); }
+.loader-rule i {
+  display: block; width: 100%; height: 100%;
+  background: var(--ink);
+  transform: scaleX(0); transform-origin: left;
+}
+/* pendant le relais le dock est déjà à sa place, simplement invisible :
+   il ne descend pas en même temps que le wordmark vole vers lui. */
+body.handoff .dock {
+  transform: translate(-50%, 0);
+  opacity: 0;
+  transition: none;
+}
+
+/* ═══════════ SCÈNES (pin émulé) ═══════════ */
+.scene { position: relative; }
+.scene .pin {
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  will-change: transform;
+}
+
+/* ═══════════ RÉVÉLATIONS GÉNÉRIQUES ═══════════ */
+.reveal {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity 1s var(--ease-out), transform 1s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 90ms);
+}
+.reveal.in-view { opacity: 1; transform: translateY(0); }
+
+/* ═══════════ S1 · HERO ═══════════ */
+.s-hero .pin { background: var(--bone); }
+
+.floaters { position: absolute; inset: 0; z-index: 1; }
+.fl {
+  position: absolute;
+  left: var(--x); top: var(--y);
+  width: var(--w);
+  overflow: hidden;
+  border-radius: var(--radius);
+  will-change: transform;
+  clip-path: inset(100% 0 0 0);
+  transition: clip-path 1.2s var(--ease-inout);
+  transition-delay: calc(var(--fi, 0) * 90ms + .15s);
+}
+.fl img { width: 100%; height: auto; transform: scale(1.3); transition: transform 1.7s var(--ease-out); transition-delay: calc(var(--fi, 0) * 90ms + .15s); }
+body.is-ready .fl { clip-path: inset(0 0 0 0); }
+body.is-ready .fl img { transform: scale(1); }
+
+.hero-copy {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 2;
+  text-align: center;
+  pointer-events: none;
+}
+.hero-kicker { margin-bottom: 28px; will-change: opacity; }
+.hero-title { font-size: var(--t-heading); letter-spacing: -0.02em; line-height: 1.12; font-weight: 400; }
+.hero-line1 { display: block; will-change: opacity; }
+.hero-line2 {
+  display: flex; align-items: center; justify-content: center;
+  white-space: nowrap;
+}
+.hero-line2 .hl { flex: 0 0 auto; }
+
+/* image qui naît puis grandit dans le texte */
+.grow {
+  display: block; flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: var(--radius);
+  width: 0; height: 0;
+  will-change: width, height;
+  position: relative;
+}
+.grow img {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100vw; height: 100vh;
+  object-fit: cover;
+  border-radius: 0;
+  max-width: none;
+}
+
+/* calque série en lumière */
+.spot { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.spot-intro {
+  position: absolute; top: 44%; left: 0;
+  width: 100%;
+  text-align: center;
+  color: #ffffff;
+  font-size: var(--t-heading); letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.spot-intro span { display: inline-block; will-change: opacity, transform; opacity: 0; }
+/* ═══════════ S2 · MANIFESTE ═══════════ */
+.s-fill .pin {
+  background: var(--bone);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fill-text {
+  width: min(880px, 74vw);
+  font-size: clamp(28px, 3.6vw, 52px);
+  letter-spacing: -0.02em; line-height: 1.16;
+  text-align: left;
+}
+.fill-text .fc { color: var(--ink-faint); transition: color .25s linear; }
+.fill-text .fc.on { color: var(--ink); }
+.fill-text.greyed .fc { color: rgba(var(--ink-rgb), 0.34); transition: color .6s; }
+
+.boxed { position: relative; white-space: nowrap; }
+.box-svg { position: absolute; inset: -0.22em -0.35em; width: calc(100% + 0.7em); height: calc(100% + 0.44em); overflow: visible; }
+.box-svg path {
+  fill: none; stroke: var(--ink); stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+.fill-text.greyed .box-svg path { stroke: var(--ink-faint); transition: stroke .6s; }
+
+/* ═══════════ S3 · SÉLECTION ═══════════ */
+.collection {
+  position: relative;
+  background: var(--white);
+  padding: 14vh var(--gutter) 30vh;
+  margin-top: -100vh; /* recouvre le manifeste grisé SUR PLACE, pendant son épinglage */
+  z-index: 2;
+  overflow: visible;
+}
+.coll-head { text-align: center; margin-bottom: 10vh; position: relative; z-index: 1; }
+.coll-title { font-size: var(--t-heading); letter-spacing: -0.02em; margin: 16px 0 10px; }
+.coll-sub { color: var(--ash); margin-bottom: 18px; }
+.coll-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(14px, 1.8vw, 28px);
+  align-items: start;
+  position: relative; z-index: 2;
+}
+.col { display: grid; gap: clamp(44px, 5vw, 84px); will-change: transform; }
+.col:nth-child(2) { margin-top: 14vh; }
+.col:nth-child(3) { margin-top: 4vh; }
+.col:nth-child(4) { margin-top: 9vh; }
+.card { position: relative; }
+.card-img { position: relative; overflow: hidden; border-radius: var(--radius); }
+.card-img img { width: 100%; transition: transform .9s var(--ease-out); }
+.card:hover .card-img img { transform: scale(1.045); }
+.card figcaption { margin-top: 12px; font-size: 19px; letter-spacing: -0.007em; }
+.card figcaption .mono { display: block; color: var(--ash); margin-top: 3px; }
+
+/* carte vedette : voyage du centre du titre vers sa case */
+#featuredCard { will-change: transform; position: relative; z-index: 3; }
+
+/* ═══════════ S3bis · FEATURES BENTO ═══════════ */
+/* VRAI bento : 4 tuiles de tailles CONTRASTÉES, jamais 4 cases égales
+   (une grille régulière n'est pas un bento). 3 colonnes, 4 rangées :
+   une grande, une haute, une haute, une grande — en diagonale.
+   Toutes couvrent 2 rangées : aucune tuile écrasée en bandeau. */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: minmax(230px, 31vh);
+  gap: clamp(12px, 1.4vw, 20px);
+  position: relative; z-index: 2;
+}
+.b-big  { grid-column: span 2; grid-row: span 2; }
+.b-tall { grid-column: span 1; grid-row: span 2; }
+.bento-grid .card {
+  background: var(--white);
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-radius: var(--radius);
+  padding: 12px 12px 16px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.bento-grid .card-img { flex: 1; min-height: 0; }
+.bento-grid .card-img img { width: 100%; height: 100%; object-fit: cover; }
+.bento-grid figcaption { margin-top: 12px; }
+
+/* ═══════════ S4 · BANDE LIME ═══════════ */
+.band { position: relative; z-index: 3; margin-top: -20vh; }
+.diag { height: 12vw; position: relative; margin: -1px 0; }
+.to-lime   { background: linear-gradient(to bottom right, transparent 49.7%, var(--lime) 50.3%); }
+.from-lime { background: linear-gradient(to bottom right, var(--lime) 49.7%, transparent 50.3%); }
+/* ═══════════ 5 · DEVISE — train de mots-clés (scène épinglée) ═══════════ */
+.s-motto .pin { background: var(--lime); overflow: hidden; }
+.motto-kicker {
+  position: absolute; top: 13vh; left: 50%;
+  transform: translateX(-50%);
+  color: var(--lime-ink); opacity: 0.7;
+}
+.motto-track {
+  position: absolute; top: 50%; left: 0;
+  display: flex; align-items: baseline;
+  gap: 7vw;
+  white-space: nowrap;
+  will-change: transform;
+}
+.mw {
+  font-family: var(--geo);
+  font-weight: 300;
+  font-size: clamp(96px, 16vw, 250px);
+  letter-spacing: -0.02em; line-height: 1;
+  color: var(--lime-ink);
+  will-change: opacity;
+}
+.mw .sc { display: inline-block; will-change: transform; }
+.motto-hint {
+  position: absolute; bottom: 14vh; left: 50%;
+  transform: translateX(-50%);
+  color: var(--lime-ink);
+  transition: opacity .25s;
+  text-align: center;
+  max-width: 80vw;
+}
+.motto-hint.swap { opacity: 0; }
+
+/* ═══════════ S5 · NUIT + EXPLORER ═══════════ */
+.s-night .pin { background: var(--bone); }
+.night-line {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  white-space: nowrap;
+  font-size: var(--t-heading); letter-spacing: -0.02em;
+  z-index: 2;
+}
+.night-line .nw { will-change: opacity, transform; opacity: 0; }
+.night-line .nw + .nw { margin-left: 0.28em; }
+/* compteur monumental : le numéro d'étape, en filigrane, qui défile */
+.bignum {
+  position: absolute; right: var(--gutter); top: 50%;
+  transform: translateY(-50%);
+  display: flex; align-items: flex-start;
+  font-size: min(44vh, 30vw);
+  font-weight: 300; line-height: 1;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+  z-index: 11; opacity: 0; pointer-events: none;
+}
+.bignum-roll { display: block; height: 1em; overflow: hidden; }
+.bignum-roll > span { display: block; will-change: transform; }
+.bignum-roll i { display: block; height: 1em; font-style: normal; letter-spacing: normal; padding-right: 0.06em; }
+/* rideau de lames : couvre puis découvre, l'image ne recule jamais */
+/* débord de 2 px sur les quatre côtés : le pin est translaté sur des
+   valeurs fractionnaires, et un rideau calé à 0 laisse transparaître une
+   ligne d'image sur les bords. */
+.wipe { position: absolute; inset: -2px; z-index: 9; display: flex; pointer-events: none; overflow: hidden; }
+.wipe span {
+  flex: 1 1 0; position: relative; margin-right: -2px;
+  min-width: 0;
+  background: var(--bone);
+  transform: scaleY(0); transform-origin: bottom;
+  will-change: transform;
+}
+/* PAS d'arête dessinée sur les lames. Une lame rétractée sur un fond de
+   même couleur ne doit RIEN laisser : un liseré ::before/::after y trace
+   des traits parasites en travers de l'écran pendant le relais entre deux
+   étapes (visibles en accent comme en neutre). La lame se lit à son
+   remplissage quand elle passe sur l'image, pas à un filet. */
+.wipe span:last-child { margin-right: 0; }
+/* contenu de l'étape à gauche */
+.psteps { position: absolute; left: var(--gutter); top: 50%; width: min(560px, 42vw); z-index: 12; }
+.pstep {
+  position: absolute; left: 0; top: 0;
+  opacity: 0;
+  will-change: opacity, transform;
+}
+.pstep-meta { display: block; margin-bottom: 14px; }
+.pstep h3 {
+  font-size: clamp(38px, 4.6vw, 64px);
+  letter-spacing: -0.018em;
+  margin-bottom: 16px;
+}
+.pstep p { font-size: 19px; line-height: 1.45; max-width: 26em; }
+
+/* CTA de conversion en fin de processus */
+.steps-cta {
+  position: absolute; left: 50%; bottom: 8vh;
+  transform: translateX(-50%);
+  font-size: clamp(24px, 2.6vw, 34px);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  opacity: 0;
+  z-index: 12;
+  will-change: opacity, transform;
+}
+.steps-cta a { position: relative; display: inline-block; padding: 0.28em 0.55em; }
+.cta-oval {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  overflow: visible; pointer-events: none;
+}
+.cta-oval path { fill: none; stroke: var(--ink); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+
+/* ═══════════ 9 · OBJECTIONS (FINALE) ═══════════ */
+.s-final .pin {
+  background: var(--bone);
+  display: flex; align-items: center; justify-content: center;
+}
+.final-text {
+  position: relative; z-index: 2;
+  text-align: center;
+  font-size: var(--t-heading); letter-spacing: -0.02em; line-height: 1.2;
+  padding: 0 var(--gutter);
+  max-width: min(940px, 74vw); margin: 0 auto;
+}
+.fs { color: var(--ink-faint); transition: color .5s; }
+.fs.on { color: var(--ink); }
+.pill { position: relative; white-space: nowrap; }
+.pill-svg {
+  position: absolute; inset: -0.2em -0.3em;
+  width: calc(100% + 0.6em); height: calc(100% + 0.4em);
+  overflow: visible;
+}
+.pill-svg path {
+  fill: none; stroke: var(--ink); stroke-width: 1.3;
+  vector-effect: non-scaling-stroke;
+}
+.trail {
+  position: absolute; inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+.trail img {
+  position: absolute; top: 0; left: 0;
+  width: var(--tw, 150px);
+  max-width: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* ═══════════ 8 · PREUVE SOCIALE (scène épinglée) ═══════════ */
+.s-quote .pin {
+  background: var(--bone);
+  display: flex; align-items: center; justify-content: center;
+}
+/* témoignage : guillemet, parole, filet, signature — la grammaire d'un avis */
+.q-stack { position: relative; z-index: 2; width: min(980px, 84vw); }
+.q-glyph {
+  display: block;
+  font-size: clamp(88px, 8.5vw, 146px); line-height: 0.62;
+  color: var(--ink-faint);
+  margin-bottom: 6px;
+  opacity: 0; will-change: opacity, transform;
+}
+.q-block { position: relative; }
+.q-text {
+  font-size: clamp(25px, 3vw, 46px);
+  line-height: 1.28; letter-spacing: -0.018em;
+  color: var(--ink);
+  opacity: 0; will-change: opacity, transform;
+}
+.q-sign { margin-top: clamp(34px, 4.4vw, 58px); }
+.q-rule {
+  display: block; height: 1px; background: var(--ink-faint);
+  transform: scaleX(0); transform-origin: left;
+}
+.q-sign-row {
+  display: flex; align-items: baseline; gap: 20px;
+  padding-top: 18px;
+}
+.q-name { font-size: 20px; font-weight: 500; opacity: 0; }
+.q-ctx { flex: 1; opacity: 0; }
+.q-fig {
+  font-size: clamp(30px, 3.2vw, 46px);
+  font-weight: 300; letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  opacity: 0;
+}
+.q-fig .fig-pre { font-size: 0.58em; }
+.q-fig .fig-unit { font-size: 0.46em; margin-left: 0.08em; }
+/* pas de chiffre fourni : la signature se resserre, rien ne flotte */
+.q-stack.no-fig .q-fig { display: none; }
+
+.s-final .pin {
+  background: var(--bone);
+  display: flex; align-items: center; justify-content: center;
+}
+/* ═══════════ FOOTER ═══════════ */
+.footer {
+  position: relative; z-index: 2;
+  background: var(--bone);
+  padding: 16vh var(--gutter) 120px;
+  text-align: center;
+  overflow: hidden;
+}
+.footer-kicker { margin-bottom: 22px; }
+.footer-mail {
+  display: inline-block;
+  font-size: var(--t-heading); letter-spacing: -0.02em;
+  position: relative;
+}
+.footer-mail-text { position: relative; }
+.footer-mail-text::after {
+  content: '';
+  position: absolute; left: 0; bottom: -4px;
+  width: 100%; height: 1px; background: var(--ink);
+  transform: scaleX(0); transform-origin: right;
+  transition: transform .6s var(--ease-inout);
+}
+.footer-mail:hover .footer-mail-text::after { transform: scaleX(1); transform-origin: left; }
+.footer-reassurance { margin-top: 18px; }
+.footer-name {
+  margin-top: 6vh;
+  font-size: clamp(60px, 12vw, 240px);
+  letter-spacing: -0.02em; line-height: 1.05;
+  white-space: nowrap;
+}
+.footer-name .ch { display: inline-block; overflow: hidden; vertical-align: bottom; }
+.footer-name .chi {
+  display: inline-block;
+  transform: translateY(108%);
+  transition: transform 1.1s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 30ms);
+}
+.footer-name.in-view .chi { transform: translateY(0); }
+.footer-bottom {
+  display: flex; justify-content: space-between; gap: 24px;
+  margin-top: 8vh; padding-top: 19px;
+  border-top: 1px solid var(--ink);
+  text-align: left;
+}
+
+/* ═══════════ CHROME FIXE — barre flottante en haut ═══════════ */
+.dock {
+  position: fixed; top: 14px; left: 50%;
+  transform: translate(-50%, -180%);
+  background: var(--white);
+  border-radius: var(--radius);
+  display: flex; align-items: center;
+  gap: 6px;
+  padding: 8px 8px 8px 18px;
+  z-index: 100;
+  transition: transform .9s var(--ease-out) .15s, opacity .32s var(--ease-out);
+}
+body.is-ready .dock { transform: translate(-50%, 0); }
+.dock-wordmark { font-size: 19px; letter-spacing: -0.01em; font-weight: 500; margin-right: 14px; }
+.dock-nav { display: flex; gap: 4px; margin-right: 8px; }
+.dock-link { padding: 9px 10px; position: relative; }
+.dock-link::after {
+  content: '';
+  position: absolute; left: 10px; right: 10px; bottom: 5px;
+  height: 1px; background: var(--ink);
+  transform: scaleX(0); transform-origin: right;
+  transition: transform .45s var(--ease-inout);
+}
+.dock-link:hover::after { transform: scaleX(1); transform-origin: left; }
+.dock-cta {
+  background: var(--lime);
+  color: var(--lime-ink);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  transition: filter .3s;
+}
+.dock-cta:hover { filter: brightness(0.96); }
+
+body.is-ready body.is-scrolled @keyframes chev { 0%,100% { transform: translateY(-1px); } 50% { transform: translateY(2px); } }
+
+/* ═══════════ MODE STATIQUE (tactile / réduit / étroit) ═══════════ */
+body.static .scene { height: auto !important; }
+body.static .scene .pin { height: auto; overflow: visible; }
+
+body.static .s-hero .pin { min-height: 92vh; padding: 16vh 0 8vh; }
+body.static .fl, body.static .fl img { clip-path: none; transform: none; transition: none; }
+body.static .floaters { z-index: 0; }
+body.static .hero-copy { position: relative; inset: auto; min-height: 56vh; z-index: 5; padding: 0 var(--gutter); }
+body.static .grow { width: 1.6em; height: 1em; margin: 0 0.18em; }
+body.static .grow img { width: 100%; height: 100%; position: static; transform: none; object-fit: cover; }
+body.static .spot { position: relative; inset: auto; height: 92vh; pointer-events: auto; overflow: hidden; }
+body.static .spot::before {
+  content: ''; position: absolute; inset: 0;
+  background: url('images/hero-crepuscule.jpg') center/cover;
+}
+body.static .spot-intro { top: 50%; transform: translateY(-50%); }
+body.static .spot-intro span { opacity: 1; transform: none; }
+body.static .callout { display: none; }
+
+body.static .s-fill .pin { padding: 14vh 0; }
+body.static .fill-text { width: auto; max-width: 800px; padding: 0 var(--gutter); }
+body.static .fill-text .fc { color: var(--ink); }
+body.static .collection { padding-bottom: 26vh; margin-top: 0; }
+body.static .coll-grid { grid-template-columns: repeat(2, 1fr); }
+body.static .bento-grid { grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(240px, auto); }
+body.static .b-big  { grid-column: span 2; grid-row: span 1; }
+body.static .b-tall { grid-column: span 1; grid-row: span 1; }
+body.static .col { margin-top: 0 !important; }
+
+body.static .band { margin-top: 0; }
+
+body.static .s-night .pin { padding: 0; }
+body.static .night-line { position: relative; inset: auto; height: 46vh; }
+body.static .night-line .nw { opacity: 1; }
+/* les étapes s'empilent normalement : sans ça elles restent superposées
+   et invisibles (elles sont absolues + opacity 0 pour la scène scrubée) */
+body.static .psteps { position: static; width: auto; padding: 20px var(--gutter) 6vh; }
+body.static .pstep {
+  position: static; opacity: 1 !important; transform: none !important;
+  padding: 24px 0; border-top: 1px solid var(--ink-faint);
+}
+body.static .steps-cta {
+  position: static; opacity: 1 !important; transform: none !important;
+  text-align: center; padding-bottom: 8vh;
+}
+body.static .disc-bgs, body.static .disc-shade, body.static .disc-thumbs, body.static .disc-card { display: none; }
+body.static .disc-ui { position: relative; inset: auto; opacity: 1; }
+body.static .disc-label { position: static; color: var(--ash); padding: 0 var(--gutter); font-family: var(--mono); font-size: 12px; text-transform: uppercase; }
+body.static .disc-list { position: static; padding: 16px var(--gutter) 8vh; }
+body.static .disc-list li {
+  height: auto; padding: 20px 0;
+  color: var(--ink); opacity: 1;
+  border-top: 1px solid var(--ink);
+  flex-direction: column; align-items: flex-start;
+}
+body.static .disc-desc { opacity: 1 !important; color: var(--ink); }
+
+body.static .s-motto .pin { padding: 12vh var(--gutter); }
+body.static .motto-kicker { position: static; transform: none; margin-bottom: 26px; }
+body.static .motto-track { position: static; transform: none !important; flex-direction: column; align-items: flex-start; gap: 12px; white-space: normal; }
+body.static .mw { opacity: 1 !important; font-size: clamp(56px, 13vw, 110px); }
+body.static .mw .sc { transform: none !important; }
+body.static .motto-hint { display: none; }
+body.static .disc-cta { position: static; transform: none !important; opacity: 1 !important; color: var(--ink); margin: 4vh var(--gutter) 8vh; display: inline-block; }
+body.static .disc-cta .cta-oval path { stroke: var(--ink); }
+body.static .s-quote .pin { padding: 12vh var(--gutter); }
+body.static .wipe, body.static .bignum { display: none; }
+body.static .q-glyph, body.static .q-text, body.static .q-name,
+body.static .q-ctx, body.static .q-fig { opacity: 1; }
+body.static .q-rule { transform: scaleX(1); }
+body.static .q-sign-row { flex-wrap: wrap; gap: 10px; }
+
+body.static .s-final .pin { min-height: 60vh; padding: 14vh 0; }
+body.static .fs { color: var(--ink); }
+body.static .trail { display: none; }
+body.static .footer-name .chi { transform: none; }
+
+/* ═══════════ RESPONSIVE ÉTROIT ═══════════ */
+@media (max-width: 900px) {
+  :root {
+    --gutter: 20px;
+    --t-heading: clamp(27px, 6.6vw, 40px);
+  }
+  body { font-size: 17px; }
+
+  /* ── barre de navigation : pleine largeur, ancrée en haut, pas une
+     pilule flottante. Elle entre en glissant du haut, comme sur desktop. */
+  .dock {
+    top: 10px; left: 10px; right: 10px;
+    width: auto; max-width: none;
+    border-radius: var(--radius);
+    transform: translateY(calc(-100% - 16px));
+    justify-content: space-between;
+    padding: 11px 12px 11px 16px;
+    gap: 10px; white-space: nowrap;
+    transition: transform .8s var(--ease-out) .1s, opacity .32s var(--ease-out);
+  }
+  body.is-ready .dock { transform: translateY(0); }
+  body.handoff .dock { transform: translateY(0); opacity: 0; }
+  .dock-wordmark { font-size: 17px; margin-right: 0; white-space: nowrap; }
+  /* une seule ancre tient à côté du CTA sur un écran étroit */
+  .dock-nav { display: flex; margin-right: 0; margin-left: auto; }
+  .dock-nav .dock-link:first-child { display: none; }
+  .dock-cta { padding: 9px 12px; font-size: 11px; white-space: nowrap; }
+  .loader-rule { width: 96px; }
+
+      body.is-scrolled 
+  /* ── hero : le nuage reste DENSE et grand, il déborde des bords ; ce qui
+     protège le titre, c'est le vide au centre, pas le nombre d'images.
+     Les deux visuels de la bande centrale sont renvoyés en haut et en bas
+     (leur `top` vient de --y en style inline, on surcharge `top`). */
+  .hero-title { font-size: clamp(26px, 7vw, 40px); }
+  .hero-kicker {
+    font-size: 10px; line-height: 1.5; margin-bottom: 18px;
+    white-space: normal; padding: 0 var(--gutter);
+  }
+  /* échelle bornée : sans plancher ni plafond, un 3:2 tombe à 70 px de
+     large (un timbre) pendant qu'un 2:3 monte à 250 px. Le clamp resserre
+     les extrêmes pour que les dix visuels pèsent le même poids visuel. */
+  /* La largeur doit suivre celle de l'écran, pas rester en px fixes : le pas
+     entre deux visuels d'une bande est de ~21 % de l'écran, donc en dessous
+     de ~24 vw ils cessent de se toucher et la bande se troue (net à 768 px).
+     Le plancher en vw garantit le recouvrement, le plafond évite qu'un 2:3
+     ne fasse trois fois la hauteur des autres. */
+  .fl { width: calc(var(--w) * 0.52); }
+  /* les visuels débordent des DEUX bords. À gauche c'est gratuit (un `left`
+     négatif n'allonge pas le document), à droite non : sans ce clip, le
+     dernier visuel de chaque bande pousse scrollWidth au-delà de innerWidth
+     et le mobile défile latéralement. On coupe au cadre, qui fait exactement
+     la largeur de l'écran : le débord reste visible, le scroll disparaît. */
+  .floaters { overflow: hidden; }
+  /* placement explicite en DEUX BANDES : 0-30 % en haut, 70-100 % en bas.
+     La bande centrale reste entièrement libre — c'est le vide qui rend le
+     titre lisible, pas la suppression des visuels. Certains débordent
+     volontairement des bords, comme sur la référence. */
+  /* Deux bandes, centre libre pour le kicker + le titre.
+     La bande HAUTE est ancrée par le BAS (`bottom`, `top:auto`) : ancrée
+     par le haut, un visuel portrait descend dans la boîte du titre — la
+     hauteur d'un .fl dépend du ratio de l'image, donc elle varie d'un
+     site à l'autre. Ancrée par le bas, l'arête basse est garantie. */
+  /* Chaque bande porte CINQ visuels, posés sur un pas régulier d'environ
+     21 % : un qui déborde à gauche, trois dans le cadre, un qui déborde à
+     droite. Les `left` d'une même bande ne doivent jamais laisser de trou
+     de plus de ~25 % — c'est un trou au milieu d'une bande qui fait
+     « images jetées au hasard », pas le chevauchement.
+     L'amplitude verticale d'une bande reste dans 8 % : au-delà, les
+     visuels s'égrènent en diagonale au lieu de faire bloc. */
+  /* Les visuels gardent les positions --x/--y posées dans index.html : le
+     hero fait exactement 100 vh, ces pourcentages retombent donc juste et
+     le nuage s'éparpille tout autour du titre, comme sur desktop. La
+     variété des largeurs vient de --w, qui change d'une position à
+     l'autre — c'est elle qui empêche le nuage de se lire comme une grille,
+     ne pas la remplacer par une largeur unique.
+     Seuls trois visuels sont décalés, et VERTICALEMENT seulement : au
+     début de la scène le moteur resserre le nuage vers le centre (pull de
+     16 %), et sur un écran étroit ce resserrement pose 1, 6 et 7 en plein
+     sur le titre. On les sort de sa bande sans toucher leur flanc, pour
+     garder l'éparpillement gauche/droite. Décaler en `top` est sans risque :
+     `measureFloaters()` lit la position de repos APRÈS le CSS. */
+  .floaters .fl:nth-child(3) { top:  2%; }   /* x 40 % */
+  .floaters .fl:nth-child(5) { top:  5%; }   /* x 85 % */
+  .floaters .fl:nth-child(2) { top: 11%; }   /* x 21 % */
+  .floaters .fl:nth-child(4) { top: 17%; }   /* x 63 % */
+  .floaters .fl:nth-child(1) { top: 23%; }   /* x -4 % */
+  .floaters .fl:nth-child(7)  { top: 59%; }  /* x 94 % */
+  .floaters .fl:nth-child(10) { top: 63%; }  /* x 73 % */
+  .floaters .fl:nth-child(6)  { top: 68%; }  /* x -2 % */
+  .floaters .fl:nth-child(8)  { top: 73%; }  /* x 13 % */
+  .floaters .fl:nth-child(9)  { top: 79%; }  /* x 44 % */
+  /* le positionnement est en nowrap sur grand écran : il doit pouvoir
+     revenir à la ligne ici, sinon il sort du cadre */
+  .spot-intro {
+    white-space: normal;
+    font-size: clamp(23px, 6.2vw, 34px); line-height: 1.16;
+    padding: 0 var(--gutter);
+  }
+
+  /* manifeste, sélection, devise */
+  .fill-text { font-size: clamp(20px, 5.4vw, 28px); }
+  .coll-title { font-size: clamp(27px, 7vw, 38px); }
+  .coll-sub { font-size: 17px; }
+  .coll-grid { grid-template-columns: 1fr 1fr !important; }
+  .bento-grid { grid-template-columns: 1fr 1fr; }
+  .card figcaption { font-size: 15px; }
+  .mw { font-size: clamp(40px, 13vw, 68px); }
+
+  /* processus */
+  .pstep h3 { font-size: clamp(29px, 7.8vw, 42px); }
+  .pstep p { font-size: 16px; }
+  .steps-cta { font-size: clamp(21px, 5.8vw, 28px); }
+
+  /* témoignage */
+  .q-glyph { font-size: clamp(54px, 15vw, 88px); }
+  .q-text { font-size: clamp(20px, 5.6vw, 30px); }
+  .q-name { font-size: 17px; }
+  .q-fig { font-size: clamp(26px, 7.4vw, 36px); }
+
+  /* objections + footer */
+  .final-text { max-width: none; }
+  .footer-mail { font-size: clamp(26px, 8.4vw, 44px); }
+  .footer-name { font-size: clamp(40px, 16vw, 78px); }
+  .footer-bottom { flex-direction: column; gap: 10px; }
+
+  /* ── RYTHME VERTICAL : les paddings du mode statique sont en vh et
+     mangent 70 % d'un écran mobile. On les resserre section par section. */
+  /* la copie du hero tient une hauteur d'écran : c'est elle qui donne au
+     nuage la place de s'éparpiller AUTOUR du titre. À 44vh il ne restait
+     que ~8vh sous le titre, donc les visuels du bas s'alignaient en une
+     rangée collée au texte au lieu d'entourer la zone. */
+  body.static .s-hero .pin { min-height: 88vh; padding: 10vh 0 6vh; }
+  body.static .hero-copy { min-height: 64vh; }
+  body.static .spot { height: 74vh; }
+  body.static .s-fill .pin { padding: 9vh 0; }
+  body.static .collection { padding-bottom: 12vh; }
+  body.static .s-motto .pin { padding: 8vh var(--gutter); }
+  body.static .s-quote .pin { padding: 9vh var(--gutter); }
+  body.static .s-final .pin { min-height: 0; padding: 9vh 0; }
+  body.static .psteps { padding: 14px var(--gutter) 4vh; }
+  body.static .steps-cta { padding-bottom: 5vh; }
+  body.static .night-line { height: 34vh; }
+  /* la devise doit rester monumentale, c'est son rôle */
+  body.static .mw { font-size: clamp(46px, 17vw, 92px) !important; }
+
+  /* ══ SCÈNES ANIMÉES SUR MOBILE ══
+     Le mode statique ne se déclenche plus que sur « prefers-reduced-motion » :
+     les scènes scrubées tournent donc aussi sur téléphone, et trois mises en
+     page pensées pour un grand écran doivent y être reprises. Les règles
+     `body.static` plus haut ne suffisent pas — elles ne s'appliquent plus. */
+
+  /* Processus : le texte de l'étape et le compteur géant sont CÔTE À CÔTE sur
+     desktop (texte à gauche sur 42vw, chiffre à droite). À 375 px ça donne
+     deux colonnes de 150 px illisibles — on les EMPILE, chiffre au-dessus,
+     texte en dessous, chacun sur toute la largeur. */
+  .psteps {
+    left: var(--gutter); right: var(--gutter);
+    width: auto; top: 40%;
+  }
+  .pstep h3 { font-size: clamp(32px, 9vw, 46px); }
+  .pstep p { font-size: 17px; max-width: none; }
+  .bignum {
+    top: 11vh; bottom: auto; transform: none;
+    font-size: min(30vh, 46vw);
+  }
+
+  /* CTA du processus : il est posé en `left: 50%`, donc sa largeur utile
+     n'est que la moitié droite de l'écran et « Réserver une séance → » passe
+     à la ligne. On lui rend toute la largeur et on interdit la coupure. */
+  .steps-cta {
+    /* NE PAS toucher à `left` ni à `transform` : app.js repose en inline un
+       `translate(-50%, …)` pour l'entrée du CTA, il écrase tout `transform`
+       posé en CSS. L'élément DOIT donc rester en `left: 50%`. Le vrai
+       problème est ailleurs : sans largeur, un absolu posé à 50 % ne
+       dispose que de la moitié droite de l'écran, et le libellé passe à la
+       ligne. On lui donne sa largeur naturelle, bornée à l'écran. */
+    width: max-content;
+    max-width: calc(100% - 2 * var(--gutter));
+    font-size: clamp(17px, 5.2vw, 26px);
+  }
+  .steps-cta a { white-space: nowrap; }
+
+  /* Témoignage : nom / contexte / chiffre sont une rangée flex de trois
+     colonnes. À cette largeur le contexte se réduit à une colonne de mots
+     coupés — on empile, en gardant l'ordre parole → signature → chiffre. */
+  .q-sign-row {
+    flex-direction: column; align-items: flex-start;
+    gap: 10px; padding-top: 16px;
+  }
+  .q-ctx { flex: none; }
+}
+
+@media (max-width: 480px) {
+  :root { --gutter: 18px; }
+  /* 8 projets en une seule colonne font cinq écrans de haut : on reste
+     sur deux colonnes, quitte à réduire les légendes. */
+  .coll-grid { grid-template-columns: 1fr 1fr !important; }
+  .bento-grid { grid-template-columns: 1fr; }
+  .card figcaption { font-size: 13px; }
+
+  .dock-nav { display: none; }   /* sous 480 px, wordmark + CTA seulement */
+
+  /* À 320-480 px le titre du hero occupe presque toute la largeur : deux
+     visuels du nuage viennent mordre dessus. On les écarte de sa bande. */
+  .floaters .fl:nth-child(1) { top: 12%; }
+  .floaters .fl:nth-child(7) { top: 66%; }
+}
+
+/* ═══════════ REDUCED MOTION ═══════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

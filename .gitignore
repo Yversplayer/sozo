@@ -1,0 +1,16 @@
+# Environnement et secrets — jamais sur GitHub (le dépôt est public)
+.env
+.env.*
+!.env.example
+backend_venv/
+__pycache__/
+*.pyc
+# Bases de développement et de test
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+# Divers
+.DS_Store
+.coverage
+_planche/
