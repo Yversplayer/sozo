@@ -6,15 +6,16 @@
    sert qu'à montrer. Le correcteur tourne dans un Web Worker.
    Le brouillon s'enregistre sur CET appareil seulement : rien n'est publié.
    ═══════════════════════════════════════════════════════════ */
-(() => {
-  const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
+window.SOZO_PRET.then(async () => {
+  const S = window.SOZO, $ = (s, c = document) => c.querySelector(s);
   S.shell('studio');
   const main = $('#main');
-  const b = S.book(S.q('id') || 'croix-de-bois') || D.books[0];
-  const n = +S.q('p') || (b.pages.length + 1);
-  const KEY = `sozo-brouillon:${b.id}:${n}`;
+  const id = S.q('id'), n = +S.q('p');
+  if (!id || !n) { location.replace('studio.html'); return; }
+  const URL_PAGE = `/api/studio/livres/${encodeURIComponent(id)}/pages/${n}`;
+  const KEY = `sozo-secours:${id}:${n}`;          // copie de secours, si le réseau tombe
   const PERSO = 'sozo-dico-perso';
-  const DEMO = `Il a manger son pain en silance, puis il a voulu sortir dehors. Les maison du quartier dormaient encore.Je ne voulais quitter cette ville , mais ils on décidé de partir sans moi.
+  const ESSAI = `Il a manger son pain en silance, puis il a voulu sortir dehors. Les maison du quartier dormaient encore.Je ne voulais quitter cette ville , mais ils on décidé de partir sans moi.
 
 Nous mange ensemble ce soir. Cette homme marchait vers la mer ; elle à peur de la nuit. J'ai du partir tôt pour monter en haut de la colline...
 
@@ -24,37 +25,56 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
   let ignored = new Set();
   let issues = [], seq = 0, ready = false;
 
-  const T = D.texts[b.id] || [];
-  let initial = null;
-  try { initial = localStorage.getItem(KEY); } catch (e) {}
-  if (initial == null) initial = T[n - 1] ? T[n - 1].join('\n') : DEMO;
-  const isDemo = initial === DEMO;
+  // La page vient du SERVEUR : texte courant, version, statut, Plume.
+  const [rp, rl] = await Promise.all([window.SOZO_API('GET', URL_PAGE), window.SOZO_API('GET', `/api/studio/livres/${encodeURIComponent(id)}`)]);
+  if (!rp.ok || !rl.ok) {
+    main.innerHTML = `<div class="wrap sec"><div class="empty"><strong>Page introuvable</strong>${S.esc(rp.d.erreur || rl.d.erreur || '')} Elle n’existe pas, ou ce livre n’est pas le vôtre.<br><br><a class="btn" href="studio.html">Retour à l’atelier</a></div></div>`;
+    S.footer(); return;
+  }
+  const page = rp.d, livre = rl.d.livre;
+  const total = livre.pages.length;
+  const verrou = page.statut === 'published' && !page.plume;     // publiée sans Plume : lecture seule
+  let enregistre = page.contenu;                                // dernier texte confirmé par le serveur
+  let version = page.version;
+  let secours = null;
+  try { secours = localStorage.getItem(KEY); } catch (e) {}
+  if (secours === enregistre) { secours = null; try { localStorage.removeItem(KEY); } catch (e) {} }
+  const ETAT = { published: ['Publiée', 'owned'], scheduled: ['Programmée', 'soon'], draft: ['Brouillon', 'draft'] }[page.statut];
 
   main.innerHTML = `<div class="wrap ed">
     <div class="ed-head">
-      <a class="icon-btn" href="studio.html?id=${b.id}" aria-label="Retour au studio">${S.icon('left')}</a>
-      <div><p class="kicker">Studio · ${S.esc(b.title)}</p><h1>Page ${n}</h1></div>
-      <span class="badge badge--draft">Brouillon</span>
-      <span class="ed-save mono ash" id="save" aria-live="polite"></span>
+      <a class="icon-btn" href="studio.html?id=${encodeURIComponent(id)}" aria-label="Retour à l’atelier">${S.icon('left')}</a>
+      <div><p class="kicker">Atelier · ${S.esc(livre.titre)}</p><h1>Page ${n} <small class="ash ed-sur">sur ${total}</small></h1></div>
+      <span class="badge badge--${ETAT[1]}">${ETAT[0]}</span>
+      <span class="ed-save mono ash" id="save" role="status" aria-live="polite">${version ? `Version ${version}` : ''}</span>
+      <span class="ed-nav">
+        ${n > 1 ? `<a class="btn btn--ghost btn--sm" href="ecrire.html?id=${encodeURIComponent(id)}&p=${n - 1}" aria-label="Page précédente">${S.icon('left')}</a>` : ''}
+        ${n < total ? `<a class="btn btn--ghost btn--sm" href="ecrire.html?id=${encodeURIComponent(id)}&p=${n + 1}" aria-label="Page suivante">${S.icon('right')}</a>` : ''}
+        <button class="btn btn--accent btn--sm" type="button" id="saveBtn"${verrou ? ' disabled' : ''}>${S.icon('check')} Enregistrer</button>
+      </span>
     </div>
-    ${isDemo ? `<p class="warn" style="margin-bottom:14px">${S.icon('edit')}<span><strong>Texte d’essai avec des fautes volontaires</strong>, pour voir le correcteur au travail. Effacez-le et écrivez librement.</span></p>` : ''}
+    ${verrou ? `<p class="warn" style="margin-bottom:14px">${S.icon('lock')}<span><strong>Page publiée.</strong> Des lecteurs ont peut-être des droits dessus : son texte ne se corrige qu’avec Plume, en nouvelle version (l’ancienne reste dans l’historique). Vous pouvez la relire et passer le correcteur. <button class="btn btn--sm" type="button" id="plumeBtn">Passer à Plume</button></span></p>` : ''}
+    ${page.statut === 'published' && page.plume ? `<p class="note" style="margin:0 0 14px">${S.icon('feather')} Page publiée, corrigée avec Plume : chaque enregistrement crée une nouvelle version ; les lecteurs voient toujours le texte courant.</p>` : ''}
+    ${secours != null && !verrou ? `<p class="warn" id="secours" style="margin-bottom:14px">${S.icon('clock')}<span>Une copie de cette page, plus récente que celle du serveur, est restée sur cet appareil (enregistrement interrompu ?). <button class="btn btn--sm" type="button" id="restaurer">Reprendre cette copie</button> <button class="btn btn--ghost btn--sm" type="button" id="oublier">L’oublier</button></span></p>` : ''}
     <div class="ed-grid">
       <section class="ed-paper" aria-label="Texte de la page">
         <div class="ed-tools" role="toolbar" aria-label="Outils">
           <span class="mono ash" id="count"></span>
+          <button class="btn btn--ghost btn--sm" type="button" id="essai"${enregistre ? ' hidden' : ''}>${S.icon('spark')} Voir le correcteur à l’œuvre</button>
           <button class="btn btn--ghost btn--sm" type="button" id="fixTypo" disabled>${S.icon('check')} Corriger la typographie</button>
         </div>
         <div class="ed-stack">
           <div class="ed-back" id="back" aria-hidden="true"></div>
-          <textarea id="ta" spellcheck="false" lang="fr" aria-label="Texte de la page ${n}" aria-describedby="status">${S.esc(initial)}</textarea>
+          <textarea id="ta" spellcheck="false" lang="fr" aria-label="Texte de la page ${n}" aria-describedby="status" placeholder="Écrivez ici…"${verrou ? ' readonly' : ''}>${S.esc(enregistre)}</textarea>
         </div>
-        <p class="note">${S.icon('book')} Les références bibliques (« Ps 23:4 », « Jean 3:16 ») deviendront des liens pour le lecteur.</p>
+        <p class="note">${S.icon('book')} Les références bibliques (« Ps 23:4 », « Jean 3:16 ») deviendront des liens pour le lecteur. Raccourci : ⌘ S ou Ctrl S pour enregistrer.</p>
       </section>
       <aside class="ed-side" aria-label="Correction">
         <div class="panel ed-status" id="status" aria-live="polite"><span class="spin" aria-hidden="true"></span> Chargement du dictionnaire…</div>
         <div class="ed-sum" id="sum" role="group" aria-label="Filtrer les remarques"></div>
         <div class="ed-list" id="list"></div>
         <div class="panel ed-word" id="word" hidden></div>
+        ${page.versions.length > 1 ? `<details class="panel ed-hist"><summary>Historique : ${page.versions.length} versions</summary><ol>${page.versions.map((v) => `<li><strong>Version ${v.version}</strong> <span class="ash">${S.esc(S.dateLong(v.created_at))}${v.remplacee_le ? '' : ' · courante'}</span></li>`).join('')}</ol><p class="ash" style="font-size:13px">Rien n’est effacé : chaque version reste conservée.</p></details>` : ''}
       </aside>
     </div>
   </div>`;
@@ -135,7 +155,7 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
   /* ─── le correcteur (Web Worker) ─── */
   const status = (h) => { $('#status').innerHTML = h; };
   let worker;
-  try { worker = new Worker('langue/correcteur.js'); } catch (e) { status(`${S.icon('x')} Ce navigateur ne peut pas lancer le correcteur.`); }
+  try { worker = new Worker('langue/correcteur.js?v=2'); } catch (e) { status(`${S.icon('x')} Ce navigateur ne peut pas lancer le correcteur.`); }
   if (worker) {
     worker.onmessage = (ev) => {
       const d = ev.data;
@@ -180,19 +200,57 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
     }, 10);
   });
 
-  /* ─── saisie, enregistrement local, compteurs ─── */
-  let tCheck, tSave;
+  /* ─── saisie, enregistrement sur le serveur, compteurs ───
+     « Enregistré » ne s'affiche qu'après la réponse du serveur. Entre-temps,
+     une copie de secours reste sur l'appareil : une coupure réseau ne fait
+     rien perdre. Pas d'enregistrement à chaque frappe : chaque envoi crée
+     une version, l'historique resterait illisible. */
+  let tCheck, tSecours, tAuto, envoi = null;
+  const sale = () => ta.value !== enregistre;
+  const marque = (t) => { $('#save').textContent = t; };
+  async function enregistrer() {
+    if (verrou || !sale()) { if (!verrou) marque(`Enregistré · version ${version}`); return; }
+    if (envoi) return envoi;
+    const texte = ta.value;
+    $('#saveBtn').disabled = true; marque('Enregistrement…');
+    envoi = window.SOZO_API('PUT', URL_PAGE, { contenu: texte }).then((r) => {
+      envoi = null; $('#saveBtn').disabled = false;
+      if (!r.ok) {
+        marque(r.status === 0 ? 'Hors ligne · copie gardée sur cet appareil' : 'Non enregistré');
+        S.toast(r.d.erreur || 'Le serveur a refusé l’enregistrement.');
+        return;
+      }
+      enregistre = texte;
+      if (r.d.version) version = r.d.version;
+      if (!sale()) { try { localStorage.removeItem(KEY); } catch (e) {} }
+      marque(`Enregistré · version ${version}`);
+    });
+    return envoi;
+  }
   function changed(now) {
     const words = (ta.value.match(/[\p{L}\d’'-]+/gu) || []).length;
     $('#count').textContent = `${words} mots · ${ta.value.length} signes · ${Math.max(1, Math.round(words / 230))} min de lecture`;
     paint();
     clearTimeout(tCheck); tCheck = setTimeout(run, now ? 0 : 450);
-    clearTimeout(tSave); tSave = setTimeout(() => {
-      try { localStorage.setItem(KEY, ta.value); $('#save').textContent = 'Enregistré sur cet appareil'; } catch (e) { $('#save').textContent = 'Non enregistré (stockage bloqué)'; }
-    }, 600);
+    if (verrou) return;
+    if (sale()) marque('Modifications non enregistrées');
+    clearTimeout(tSecours); tSecours = setTimeout(() => { try { if (sale()) localStorage.setItem(KEY, ta.value); } catch (e) {} }, 600);
+    clearTimeout(tAuto); tAuto = setTimeout(() => { if (sale()) enregistrer(); }, 20000);
   }
   ta.addEventListener('input', () => { issues = issues.filter((x) => x.e <= ta.selectionStart - 1 || x.s >= ta.value.length); changed(false); });
   ta.addEventListener('scroll', () => { back.scrollTop = ta.scrollTop; });
+  $('#saveBtn').addEventListener('click', enregistrer);
+  document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); enregistrer(); } });
+  addEventListener('beforeunload', (e) => { if (!verrou && sale()) { e.preventDefault(); e.returnValue = ''; } });
+  const essai = $('#essai');
+  if (essai) essai.addEventListener('click', () => { if (ta.value.trim()) return; ta.value = ESSAI; essai.hidden = true; S.toast('Texte d’essai, avec des fautes volontaires. Il n’est enregistré que si vous cliquez sur « Enregistrer ».'); changed(true); });
+  const rest = $('#restaurer');
+  if (rest) {
+    rest.addEventListener('click', () => { ta.value = secours; $('#secours').remove(); changed(true); });
+    $('#oublier').addEventListener('click', () => { try { localStorage.removeItem(KEY); } catch (e) {} $('#secours').remove(); });
+  }
+  const pb = $('#plumeBtn');
+  if (pb) pb.addEventListener('click', async () => { const r = await window.SOZO_API('GET', '/api/studio'); if (r.ok) S.buy.plume(r.d.plume.prix); else S.toast(r.d.erreur || 'Plume est indisponible pour le moment.'); });
   changed(true);
   S.inkAll(); S.footer();
-})();
+}).catch(window.SOZO_ERREUR);

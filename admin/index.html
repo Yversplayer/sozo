@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Administration — Sōzō</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <script src="../assets/theme.js"></script>
+  <link rel="stylesheet" href="../assets/fonts/fonts.css?v=1">
+  <link rel="stylesheet" href="../app/app.css?v=20">
+  <link rel="stylesheet" href="../app/atelier.css?v=3">
+  <link rel="stylesheet" href="admin.css?v=3">
+</head>
+<body class="ad">
+  <header class="ad-top">
+    <a class="ad-logo" href="index.html" aria-label="Sōzō — administration"><span id="logo"></span></a>
+    <span class="ad-tag">Administration</span>
+    <span class="ad-who" id="who"></span>
+    <button class="btn btn--ghost btn--sm" type="button" id="sortir" hidden>Se déconnecter</button>
+  </header>
+  <main id="main" class="ad-main"><p class="ad-wait" role="status">Vérification de la session…</p></main>
+  <dialog class="ad-dlg" id="dlg" aria-labelledby="dlgT">
+    <form method="dialog" id="dlgF">
+      <h2 id="dlgT"></h2>
+      <div id="dlgB"></div>
+      <p class="cx-err" id="dlgE" role="alert"></p>
+      <div class="ad-dlg-a"><button class="btn btn--ghost" value="annuler" type="submit" formnovalidate>Annuler</button><button class="btn btn--accent" value="ok" type="submit" id="dlgOk"></button></div>
+    </form>
+  </dialog>
+  <noscript><p style="padding:24px">L’administration a besoin de JavaScript.</p></noscript>
+  <script src="../assets/logo.js?v=16"></script>
+  <script src="admin.js?v=2"></script>
+</body>
+</html>

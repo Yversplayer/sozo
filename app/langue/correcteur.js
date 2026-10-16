@@ -176,6 +176,7 @@ const STOP = new Set('être avoir faire dire aller voir pouvoir vouloir devoir s
 const AVOIR = new Set('ai as a avons avez ont avais avait avions aviez avaient eus eut eûmes eûtes eurent aurai auras aura aurons aurez auront aurais aurait aurions auriez auraient aie aies ait ayons ayez aient'.split(' '));
 const ETRE = new Set('suis es est sommes êtes sont étais était étions étiez étaient fus fut fûmes fûtes furent serai seras sera serons serez seront serais serait serions seriez seraient sois soit soyons soyez soient'.split(' '));
 const ADVS = new Set('pas plus jamais bien déjà toujours trop beaucoup tout encore souvent vite mal guère point rien enfin aussi même presque'.split(' '));
+const NEG_AVANT = new Set('personne rien aucun aucune nul nulle ni jamais'.split(' '));
 const NEGW = new Set('pas plus jamais rien guère point personne aucun aucune que qu’ ni nul nulle nullement goutte mie brin'.split(' '));
 const SUBJ = { je: '1sg', 'j’': '1sg', tu: '2sg', il: '3sg', elle: '3sg', on: '3sg', nous: '1pl', vous: '2pl', ils: '3pl', elles: '3pl' };
 const CLAUSE = new Set(['et', 'mais', 'ou', 'donc', 'car', 'que', 'qu’', 'quand', 'si', 'lorsque', 'lorsqu’', 'puis', 'comme', 'puisque', 'parce']);
@@ -225,7 +226,9 @@ function check(text, personal = []) {
 
     // négation incomplète : « ne » sans « pas, plus, jamais… »
     if ((t.lw === 'ne' || t.lw === 'n’') && !(n.lw === 'importe')) {
-      let ok = false;
+      // « Personne ne parle », « Rien n’arrive », « Aucun ne vient » : le mot
+      // négatif est AVANT le « ne » — la négation est complète.
+      let ok = !!(p && adjacent(p, t) && NEG_AVANT.has(p.lw));
       for (let k = toks.indexOf(t) + 1; k < toks.length && k < toks.indexOf(t) + 14; k++) {
         const x = toks[k];
         if (!x.word && /[.;:!?…]/.test(x.w)) break;

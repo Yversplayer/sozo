@@ -1,5 +1,5 @@
 /* Sōzō — Découvrir : héros, catégories, parutions à venir, catalogue, auteurs. */
-(() => {
+window.SOZO_PRET.then(() => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
   S.shell('decouvrir');
   const main = $('#main');
@@ -170,4 +170,4 @@
 
   S.inkAll(); S.prepAll(); S.reveals(); S.footer();
   if (location.hash === '#catalogue' || S.q('cat')) setTimeout(() => $('#catalogue').scrollIntoView(), 50);
-})();
+}).catch(window.SOZO_ERREUR);

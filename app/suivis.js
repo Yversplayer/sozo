@@ -1,5 +1,5 @@
 /* Sōzō — mes suivis : notifications de parution + livres suivis et progression. */
-(() => {
+window.SOZO_PRET.then(() => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
   const notifs = S.notifications();
   const seen = (() => { try { return +localStorage.getItem('sozo-notif-vues') || 0; } catch (e) { return 0; } })();
@@ -60,11 +60,11 @@
         : `<div class="empty"><strong>Vous ne suivez aucun livre</strong>Suivez un livre pour voir ses nouvelles pages ici.<br><br><a class="btn" href="decouvrir.html#catalogue">Parcourir le catalogue</a></div>`}
       </section>
     </div>`;
-    document.querySelectorAll('[data-unf]').forEach((x) => x.addEventListener('click', () => { S.toggleFollow(x.dataset.unf); S.toast('Vous ne suivez plus ce livre.'); render(); }));
+    document.querySelectorAll('[data-unf]').forEach((x) => x.addEventListener('click', async () => { x.disabled = true; if (!(await S.toggleFollow(x.dataset.unf))) S.toast('Vous ne suivez plus ce livre.'); render(); }));
     const m = $('#markAll');
     if (m) m.addEventListener('click', () => { S.markSeen(); location.reload(); });
     S.inkAll();
   }
   render();
   S.footer();
-})();
+}).catch(window.SOZO_ERREUR);

@@ -1,5 +1,5 @@
 /* Sōzō — la Bible intégrée : livres, chapitres, versets ; aller à une référence. */
-(() => {
+window.SOZO_PRET.then(() => {
   const S = window.SOZO, B = S.bible, $ = (s, c = document) => c.querySelector(s);
   S.shell('bible');
   const main = $('#main');
@@ -80,4 +80,4 @@
   books();
   fetch(`bible/index.json`).then((r) => r.json()).then((ix) => { index = ix; show(); }).catch(() => show());
   S.footer();
-})();
+}).catch(window.SOZO_ERREUR);

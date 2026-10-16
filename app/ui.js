@@ -6,7 +6,8 @@
 window.SOZO = (() => {
   const D = window.SOZO_DATA;
   const root = document.documentElement.dataset.root ?? '../';   // préfixe vers la racine du site
-  const img = (name, small) => `${root}images/${name}${small ? '-480' : ''}.jpg`;
+  // Une image absente (compte sans photo) reçoit une illustration neutre du site
+  const img = (name, small) => `${root}images/${name || 'lib-vieux-livres'}${small ? '-480' : ''}.jpg`;
 
   /* Tout texte venant des données passe par esc() avant d'entrer dans le
      HTML : dans le vrai logiciel, titres et descriptions sont saisis par
@@ -80,25 +81,17 @@ window.SOZO = (() => {
     return p.status;
   }
 
-  /* ─── la règle d'accès — LE point central ───
-     Retourne ce que voit le LECTEUR de démonstration pour une page :
-       null     → page invisible (brouillon : seul l'auteur la voit)
-       'soon'   → programmée : date visible, contenu jamais affiché
-       'free'   → gratuite et publiée
-       'owned'  → payante, publiée, achetée par ce lecteur
-       'locked' → payante, publiée, non achetée : prix + achat
-     Dans le vrai logiciel, cette décision est prise côté serveur. */
+  /* ─── l'état d'une page — DÉCIDÉ PAR LE SERVEUR (acces.py) ───
+     Chaque page du catalogue arrive avec son `etat` calculé pour la personne
+     connectée : 'free', 'owned', 'locked', 'soon', ou 'auteur' (le propriétaire
+     lit tout). L'écran l'affiche ; il ne le recalcule jamais. Le texte d'une
+     page fermée n'est d'ailleurs jamais envoyé au navigateur. */
   function access(b, n) {
     const p = b.pages.find((x) => x.n === n);
     if (!p) return null;
-    const s = status(p);
-    if (s === 'draft') return null;
-    if (s === 'scheduled') return 'soon';
-    if (p.access === 'free') return 'free';
-    const bought = D.reader.purchases[b.id];
-    return bought && bought.pages.includes(n) ? 'owned' : 'locked';
+    return p.etat === 'auteur' ? 'free' : (p.etat || null);
   }
-  const readable = (st) => st === 'free' || st === 'owned';
+  const readable = (st) => st === 'free' || st === 'owned' || st === 'auteur';
   const visiblePages = (b) => b.pages.filter((p) => access(b, p.n) !== null);
 
   function stats(b) {
@@ -133,18 +126,17 @@ window.SOZO = (() => {
     return (s.length > 1 ? 'pages ' : 'page ') + parts.join(', ');
   };
 
-  /* ─── suivis (préférence locale : ce n'est pas un droit d'accès) ─── */
-  const FKEY = 'sozo-follows';
-  function follows() {
-    try { const v = JSON.parse(localStorage.getItem(FKEY)); if (Array.isArray(v)) return v; } catch (e) {}
-    return [...D.reader.follows];
-  }
-  const isFollowed = (id) => follows().includes(id);
-  function toggleFollow(id) {
-    const f = follows(); const i = f.indexOf(id);
-    if (i >= 0) f.splice(i, 1); else f.push(id);
-    try { localStorage.setItem(FKEY, JSON.stringify(f)); } catch (e) {}
-    return i < 0;
+  /* ─── suivis : enregistrés sur le serveur ───
+     L'écran ne change qu'APRÈS la réponse du serveur (aucun faux succès).
+     toggleFollow rend une promesse : vrai si le livre est désormais suivi. */
+  const follows = () => [...D.reader.follows];
+  const isFollowed = (id) => D.reader.follows.includes(id);
+  async function toggleFollow(id) {
+    const suivi = isFollowed(id);
+    const r = await window.SOZO_API(suivi ? 'DELETE' : 'POST', `/api/suivis/${encodeURIComponent(id)}`);
+    if (!r.ok) { toast(r.d.erreur || 'Action impossible pour le moment.'); return suivi; }
+    if (r.d.suivi) { if (!suivi) D.reader.follows.push(id); } else D.reader.follows = D.reader.follows.filter((x) => x !== id);
+    return !!r.d.suivi;
   }
 
   /* notifications : pages des livres suivis devenues lisibles ces 21 jours */
@@ -305,7 +297,7 @@ window.SOZO = (() => {
     const head = document.createElement('header');
     head.className = 'top';
     head.innerHTML = `
-      <p class="demo-bar mono">DÉMONSTRATION — LIVRES, AUTEURS, PRIX ET DATES FICTIFS · AUCUN PAIEMENT N'EST BRANCHÉ</p>
+      <p class="demo-bar mono">VERSION D’ESSAI — LES LIVRES DE DÉMONSTRATION SONT FICTIFS · PAIEMENTS MOBILE MONEY VÉRIFIÉS À LA MAIN PAR SŌZŌ</p>
       <div class="top-in">
         <a class="top-logo" href="${root}index.html" aria-label="Sōzō — accueil">${window.SOZO_LOGO || 'Sōzō'}</a>
         <nav class="top-nav" aria-label="Navigation">
@@ -321,6 +313,7 @@ window.SOZO = (() => {
               <p class="acct-name">${esc(sess().name || 'Mon compte')}</p>
               <p class="acct-mail">${esc(sess().email || '')}</p>
               <p class="mono ash">${sess().role === 'auteur' ? 'Lecteur et auteur' : 'Lecteur'}${sess().email_verifie ? '' : ' · e-mail à confirmer'}</p>
+              <a href="compte.html">${icon('user')} Mon compte</a>
               <a href="suivis.html">${icon('heart')} Mes suivis</a>
               <a href="studio.html">${icon('pen')} Mon studio</a>
               <button type="button" id="logout">${icon('left')} Se déconnecter</button>
@@ -358,10 +351,10 @@ window.SOZO = (() => {
     f.innerHTML = `<div class="foot-in">
       <div class="foot-brand">${window.SOZO_LOGO || ''}<p>Publier et lire, à son rythme. Gratuit, payant ou mixte : l'auteur décide, le lecteur sait.</p><p class="foot-tag">Heal your heart · Grown your faith · Glow your spirit</p></div>
       <div><p class="mono ash">LIRE</p><a href="decouvrir.html">Découvrir</a><a href="decouvrir.html#catalogue">Catalogue</a><a href="suivis.html">Mes suivis</a></div>
-      <div><p class="mono ash">ÉCRIRE</p><a href="studio.html">Studio auteur</a><a href="studio.html#import">Importer un manuscrit</a><a href="studio.html#calendrier">Calendrier</a></div>
-      <div><p class="mono ash">Sōzō</p><a href="bible.html">La Bible intégrée</a><a href="${root}index.html">La plateforme</a><a href="${root}index.html#pages">Gratuit, payant, programmé</a></div>
+      <div><p class="mono ash">ÉCRIRE</p><a href="studio.html">Studio auteur</a><a href="studio.html?tab=import">Importer un manuscrit</a><a href="studio.html#revenus">Revenus</a></div>
+      <div><p class="mono ash">Sōzō</p><a href="compte.html">Mon compte</a><a href="bible.html">La Bible intégrée</a><a href="${root}index.html">La plateforme</a><a href="${root}index.html#pages">Gratuit, payant, programmé</a></div>
     </div>
-    <p class="foot-legal mono ash">© 2026 Sōzō — PLUS QU’UNE APPLICATION, UN CHEMIN · DÉMONSTRATION · PHOTOS LIBRES (CC0) · AUCUNE DONNÉE RÉELLE</p>`;
+    <p class="foot-legal mono ash">© 2026 Sōzō — PLUS QU’UNE APPLICATION, UN CHEMIN · VERSION D’ESSAI · PHOTOS LIBRES (CC0)</p>`;
     document.body.appendChild(f);
   }
 

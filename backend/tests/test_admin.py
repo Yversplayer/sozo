@@ -56,7 +56,10 @@ class Administration(TestBase):
                     self.assertNotIn("INSERT INTO admin_users", h.read(), f)
 
     def test_code_totp_a_usage_unique(self):
-        # deux pas différents dans la fenêtre ±1 : on rejoue le même pas
+        # On rejoue le MÊME code. Il est pris au pas courant, pas au pas
+        # précédent : le hachage du mot de passe dure ~0,3 s, et un code du pas
+        # « −1 » sortait parfois de la fenêtre ±1 quand la demi-minute tournait
+        # entre-temps (r1 refusé : faux échec, constaté le 16/10/2026).
         pas = int(time.time() // 30)
         cx = db.connecter()
         try:
@@ -64,7 +67,7 @@ class Administration(TestBase):
             cx.valider()
         finally:
             cx.fermer()
-        code = admin._code(self.secret, pas - 1)
+        code = admin._code(self.secret, pas)
         _, r1 = self.connecter(code, ip="192.0.2.21")
         _, r2 = self.connecter(code, ip="192.0.2.22")
         self.assertEqual((r1.status_code, r2.status_code), (200, 401))

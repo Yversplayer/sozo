@@ -1,5 +1,5 @@
 /* Sōzō — fiche d'un livre : couverture 3D, état de chaque page, prix, calendrier. */
-(() => {
+window.SOZO_PRET.then(() => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
   S.shell('decouvrir');
   const main = $('#main');
@@ -51,7 +51,7 @@
         <div class="bk-facts">
           <div><strong>${st.published}</strong><span>pages publiées</span></div>
           ${st.scheduled ? `<div><strong>${st.scheduled}</strong><span>pages à venir</span></div>` : ''}
-          <div><strong>${S.priceFrom(b) == null ? 'Gratuit' : 'dès ' + S.money(S.priceFrom(b))}</strong><span>${b.access === 'mixed' ? `${st.free} pages offertes` : b.access === 'free' ? 'tout le livre' : 'contenu payant'}</span></div>
+          <div><strong>${S.priceFrom(b) == null ? 'Gratuit' : 'dès ' + S.money(S.priceFrom(b))}</strong><span>${b.access === 'mixed' ? `${st.free} page${st.free > 1 ? 's' : ''} offerte${st.free > 1 ? 's' : ''}` : b.access === 'free' ? 'tout le livre' : 'contenu payant'}</span></div>
           ${st.next ? `<div><strong>${S.dateShort(st.next.date)}</strong><span>prochaine page</span></div>` : ''}
         </div>
         <div class="bk-actions">
@@ -128,8 +128,9 @@
     fb.innerHTML = `${S.icon(on ? 'check' : 'heart')} ${on ? 'Suivi' : 'Suivre ce livre'}`;
     fb.setAttribute('aria-pressed', String(on));
   };
-  fb.addEventListener('click', () => {
-    const on = S.toggleFollow(b.id); syncF();
+  fb.addEventListener('click', async () => {
+    fb.disabled = true;
+    const on = await S.toggleFollow(b.id); fb.disabled = false; syncF();
     S.toast(on ? 'Livre suivi — ses nouvelles pages apparaîtront dans vos notifications.' : 'Vous ne suivez plus ce livre.');
   });
   syncF();
@@ -137,4 +138,4 @@
   if (ba) ba.addEventListener('click', () => S.buy.recap(b, allOpt));
 
   S.inkAll(); S.tilt(); S.reveals(); S.footer();
-})();
+}).catch(window.SOZO_ERREUR);

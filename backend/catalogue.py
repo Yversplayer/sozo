@@ -120,7 +120,7 @@ def enregistrer(app):
             rep = dict(base, version=version)
             if e == "owned":
                 rep["contenu"] = acces.marquer(contenu, g.user["id"])
-                rep["filigrane"] = f"Exemplaire de {g.user['nom']}"
+                rep["filigrane"] = "Exemplaire " + ("d’" if g.user["nom"][:1].lower() in "aeiouyhâàéèêîïôû" else "de ") + g.user["nom"]
             else:
                 rep["contenu"] = contenu
             cx.valider()

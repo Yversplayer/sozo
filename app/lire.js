@@ -5,7 +5,7 @@
      free / owned → le texte ; locked → le prix et l'achat ;
      soon → la date, jamais le contenu ; brouillon → la page n'existe pas.
    ═══════════════════════════════════════════════════════════ */
-(() => {
+window.SOZO_PRET.then(() => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
   const b = S.book(S.q('id') || '');
   const body = document.body;
@@ -52,18 +52,20 @@
   const ch = page ? S.chapterOf(b, n) : null;
   const st = page ? S.access(b, n) : null;
 
-  function textOf() {
+  /* Le texte vient du serveur, une page à la fois, et SEULEMENT si le serveur
+     l'autorise. Une page achetée porte le filigrane renvoyé par le serveur. */
+  function textOf(contenu, filigrane) {
     if (b.format === 'planche') {
       const k = (n * 3) % D.panels.length;
-      return `<div class="planche">${[0, 1, 2].map((i) => `<figure><img src="${S.img(D.panels[(k + i) % D.panels.length])}" alt="Case ${i + 1} de la planche ${n}"><figcaption>${S.esc(D.bubbles[(n + i) % D.bubbles.length])}</figcaption></figure>`).join('')}</div>
-        <p class="rd-filler">Planche de démonstration composée de photos libres : les vraies planches de l'autrice seront servies image par image.</p>`;
+      return `<div class="planche">${[0, 1, 2].map((i) => `<figure><img src="${S.img(D.panels[(k + i) % D.panels.length])}" alt="Case ${i + 1} de la planche ${n}"><figcaption>${S.esc(D.bubbles[(n + i) % D.bubbles.length])}</figcaption></figure>`).join('')}</div>`
+        + (contenu ? `<div class="rd-text"><p>${S.esc(contenu)}</p></div>` : '');
     }
-    const T = D.texts[b.id] || [];
     const poem = b.cat === 'Poésie' || b.verse;
     const line = (t) => (S.bible ? S.bible.linkify(t) : S.esc(t)) || '&nbsp;';   // « Ps 23:4 » → lien vers la Bible intégrée
-    if (T[n - 1]) return `<div class="rd-text${poem ? ' is-poem' : ''}">${T[n - 1].map((t) => `<p>${line(t)}</p>`).join('')}</div>`;
-    if (poem && T[0] && b.cat === 'Poésie') return `<div class="rd-text is-poem">${T[0].map((t) => `<p>${line(t)}</p>`).join('')}</div><p class="rd-filler">${S.esc(D.filler.join(' '))}</p>`;
-    return `<div class="rd-text"><p>${S.esc(b.desc)}</p></div><p class="rd-filler">${S.esc(D.filler.join(' '))}</p>`;
+    const lignes = (contenu || '').split('\n');
+    if (!contenu || !contenu.trim()) return `<div class="empty"><strong>Page vide</strong>L'auteur n'a pas encore écrit cette page.</div>`;
+    return `<div class="rd-text${poem ? ' is-poem' : ''}${filigrane ? ' is-protege' : ''}">${lignes.map((t) => `<p>${line(t)}</p>`).join('')}</div>`
+      + (filigrane ? `<p class="rd-filigrane">${S.icon('shield')} ${S.esc(filigrane)} · reproduction interdite</p>` : '');
   }
 
   const countdown = (iso) => {
@@ -83,7 +85,7 @@
       soon: `<span class="badge badge--soon">${S.icon('clock')} À venir</span>`
     }[st];
     content = `<p class="rd-chap">${ch ? S.esc(ch.t) : ''}</p><div class="rd-page-h"><h1>Page ${n}</h1>${badge}</div>`;
-    if (S.readable(st)) content += textOf();
+    if (S.readable(st)) content += `<div id="rdTexte" aria-busy="true"><p class="ash"><span class="spin" style="display:inline-block;vertical-align:-3px"></span> Chargement de la page…</p></div>`;
     else if (st === 'locked') {
       const opts = S.buy.options(b, n);
       content += `<div class="gate">
@@ -111,6 +113,36 @@
     }
   }
   main.innerHTML = `<article class="rd-main">${content}</article>`;
+
+  if (page && S.readable(st)) {
+    window.SOZO_API('GET', `/api/livres/${encodeURIComponent(b.id)}/pages/${n}`).then((r) => {
+      const zone = $('#rdTexte');
+      zone.removeAttribute('aria-busy');
+      if (r.ok) {
+        zone.innerHTML = textOf(r.d.contenu, r.d.filigrane);
+        if (r.d.etat !== 'auteur') window.SOZO_API('PUT', '/api/moi/progression', { livre: b.id, n });
+        if (r.d.filigrane) protegerCopie(zone);
+      } else if (r.status === 402 || r.status === 403) {
+        location.reload();                                   // l'état a changé depuis l'ouverture : on recharge
+      } else {
+        zone.innerHTML = `<div class="empty"><strong>Page indisponible</strong>${S.esc(r.d.erreur || 'Le serveur ne répond pas.')}</div>`;
+      }
+    });
+  }
+
+  /* Page achetée : la copie est limitée à une citation (300 signes), suivie de
+     sa source — comme les liseuses du commerce. Ce n'est pas une protection
+     absolue (rien n'empêche une photo de l'écran) : c'est une dissuasion, et la
+     marque invisible du serveur désigne le compte d'une copie qui circule. */
+  function protegerCopie(zone) {
+    zone.addEventListener('copy', (e) => {
+      const t = String(window.getSelection() || '');
+      if (t.length <= 300) return;
+      e.preventDefault();
+      e.clipboardData.setData('text/plain', t.slice(0, 300) + `… — « ${b.title} », ${a.name}, sur Sōzō`);
+      S.toast('Copie limitée à une citation de 300 signes.');
+    });
+  }
 
   /* navigation : uniquement entre pages visibles (les brouillons n'existent pas pour le lecteur) */
   const prev = visible[idx - 1], next = visible[idx + 1];
@@ -141,8 +173,9 @@
     buyBtn.addEventListener('click', () => S.buy.recap(b, opts[+(document.querySelector('input[name="opt"]:checked') || { value: 0 }).value]));
   }
   const fb = $('#followBtn');
-  if (fb) fb.addEventListener('click', () => {
-    const on = S.toggleFollow(b.id);
+  if (fb) fb.addEventListener('click', async () => {
+    fb.disabled = true;
+    const on = await S.toggleFollow(b.id); fb.disabled = false;
     fb.classList.toggle('is-on', on); fb.setAttribute('aria-pressed', String(on));
     fb.innerHTML = `${S.icon(on ? 'check' : 'bell')} ${on ? 'Vous suivez ce livre' : 'Suivre pour être prévenu'}`;
     S.toast(on ? 'Vous serez prévenu dans vos notifications à la parution.' : 'Vous ne suivez plus ce livre.');
@@ -156,4 +189,4 @@
   /* la barre s'efface quand on lit, revient quand on remonte */
   let lastY = scrollY;
   addEventListener('scroll', () => { const y = scrollY; top.classList.toggle('is-hidden', y > lastY && y > 120 && !panel.classList.contains('is-open')); lastY = y; }, { passive: true });
-})();
+}).catch(window.SOZO_ERREUR);

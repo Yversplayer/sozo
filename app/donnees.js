@@ -1,0 +1,49 @@
+/* ═══════════════════════════════════════════════════════════
+   Sōzō — les données de l'application viennent du SERVEUR.
+   Un seul appel (/api/catalogue) apporte tout ce que la personne peut voir :
+   livres, état de chaque page POUR ELLE (calculé par le serveur), auteurs,
+   suivis, progression, achats. Le texte des pages, lui, n'arrive qu'une page
+   à la fois, et seulement si le serveur l'autorise (liseuse).
+
+   Les écrans attendent `SOZO_PRET` avant de se construire.
+   ═══════════════════════════════════════════════════════════ */
+(function () {
+  var D = window.SOZO_DATA = {
+    authors: {}, books: [], reader: { purchases: {}, follows: [], progress: {} }, texts: {},
+    filler: ["La suite de cette page existe dans le manuscrit de l'auteur."],
+    panels: ['couv-capuche', 'trail-fenetre', 'lecteur-penombre', 'couv-cafe-nuit', 'livres-fenetre', 'couv-fenetre', 'couv-spirale', 'lib-vieux-livres', 'couv-plafond'],
+    bubbles: ['— Tu l’as vue ?', '— Personne ne la reconnaît.', 'Le vent se lève.', '— Ne te retourne pas.', 'Trois étages plus bas…', '— C’est elle.', 'La nuit recopie la ville.', '— Encore une fiche.', 'Silence.']
+  };
+
+  function csrf() { var m = document.cookie.match(/(?:^|; )sozo_csrf=([^;]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+
+  /* Appel d'API : JSON, jeton CSRF sur toute mutation. Rend {ok, status, d}.
+     Une coupure réseau rend une erreur lisible, jamais un faux succès. */
+  window.SOZO_API = function (methode, url, corps) {
+    var o = { method: methode, credentials: 'same-origin', headers: { 'X-CSRF-Token': csrf() } };
+    // Toute mutation porte un corps JSON (exigé par le serveur, défense CSRF) : {} à défaut
+    if (corps === undefined && methode !== 'GET') corps = {};
+    if (corps instanceof FormData) o.body = corps;
+    else if (corps !== undefined) { o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(corps); }
+    return fetch(url, o).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, d: d }; });
+    }).catch(function () { return { ok: false, status: 0, d: { erreur: 'Le serveur ne répond pas. Vérifiez votre connexion, puis réessayez.' } }; });
+  };
+
+  window.SOZO_ERREUR = function (e) {
+    var m = document.getElementById('main');
+    if (m) m.innerHTML = '<div class="wrap sec"><div class="empty"><strong>Sōzō n’a pas pu se charger</strong>' +
+      'Le serveur ne répond pas ou la connexion est coupée.<br><br><a class="btn" href="">Réessayer</a></div></div>';
+    if (window.console) console.error(e);
+  };
+
+  var page = location.pathname.split('/').pop();
+  window.SOZO_PRET = page === 'connexion.html' ? Promise.resolve() :
+    fetch('/api/catalogue', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) {
+      if (r.status === 401) { return new Promise(function () {}); }   // auth.js part vers la connexion
+      if (!r.ok) throw new Error('catalogue ' + r.status);
+      return r.json();
+    }).then(function (d) {
+      D.authors = d.authors; D.books = d.books; D.reader = d.reader;
+    });
+})();

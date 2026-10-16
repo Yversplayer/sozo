@@ -1,5 +1,5 @@
 /* Sōzō — page d'un auteur : portrait entouré à la plume, livres, calendrier. */
-(() => {
+window.SOZO_PRET.then(() => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
   S.shell('decouvrir');
   const main = $('#main');
@@ -53,11 +53,13 @@
   </div>`;
   const fa = $('#followAll');
   const sync = () => { const on = allFollowed(); fa.innerHTML = `${S.icon(on ? 'check' : 'heart')} ${on ? 'Vous suivez ses livres' : 'Suivre ses livres'}`; fa.classList.toggle('is-on', on); fa.setAttribute('aria-pressed', String(on)); };
-  fa.addEventListener('click', () => {
+  fa.addEventListener('click', async () => {
     const on = allFollowed();
-    books.forEach((b) => { if (S.isFollowed(b.id) === on) S.toggleFollow(b.id); });
+    fa.disabled = true;
+    for (const b of books) { if (S.isFollowed(b.id) === on) await S.toggleFollow(b.id); }
+    fa.disabled = false;
     sync(); S.toast(on ? `Vous ne suivez plus les livres de ${a.name}.` : `Les livres de ${a.name} sont dans vos suivis.`);
   });
   sync();
   S.inkAll(); S.reveals(); S.footer();
-})();
+}).catch(window.SOZO_ERREUR);
