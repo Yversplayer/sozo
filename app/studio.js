@@ -210,10 +210,10 @@ window.SOZO_PRET.then(() => {
       <ul class="at-promesses">
         <li>${S.icon('shield')}<span><strong>Rien n’est publié.</strong> Chaque page extraite devient un brouillon, visible par vous seul.</span></li>
         <li>${S.icon('file')}<span><strong>Le découpage suit votre fichier.</strong> Les sauts de page sont respectés ; sinon, environ 1 800 signes par page.</span></li>
-        <li>${S.icon('lock')}<span><strong>Votre manuscrit reste privé.</strong> Le fichier d’origine n’est jamais servi à personne.</span></li>
+        <li>${S.icon('lock')}<span><strong>Votre manuscrit reste privé.</strong> Le fichier d’origine n’est jamais servi à personne, et il est effacé ${livre.conservation_jours} jours après l’import : le texte, lui, reste dans vos pages.</span></li>
       </ul>
-      ${livre.imports.length ? `<h3 class="at-h3">Imports précédents</h3><div class="tbl-wrap"><table class="tbl at-tbl-min"><thead><tr><th>Fichier</th><th>Format</th><th>Taille</th><th>Pages créées</th><th>Le</th></tr></thead><tbody>
-        ${livre.imports.map((i) => `<tr><td>${S.esc(i.nom_fichier)}</td><td class="mono">${S.esc(i.nature.toUpperCase())}</td><td>${(i.taille / 1048576).toFixed(1).replace('.', ',')} Mo</td><td>${i.pages_creees}</td><td>${S.esc(S.dateLong(i.created_at))}</td></tr>`).join('')}
+      ${livre.imports.length ? `<h3 class="at-h3">Imports précédents</h3><div class="tbl-wrap"><table class="tbl at-tbl-min"><thead><tr><th>Fichier</th><th>Format</th><th>Taille</th><th>Pages créées</th><th>Le</th><th>Fichier d’origine</th></tr></thead><tbody>
+        ${livre.imports.map((i) => `<tr><td>${S.esc(i.nom_fichier)}</td><td class="mono">${S.esc(i.nature.toUpperCase())}</td><td>${(i.taille / 1048576).toFixed(1).replace('.', ',')} Mo</td><td>${i.pages_creees}</td><td>${S.esc(S.dateLong(i.created_at))}</td><td class="ash">${i.efface_le ? `effacé le ${S.esc(S.dateLong(i.efface_le).replace(/ à .*/, ''))}` : `conservé jusqu’au ${S.esc(S.dateLong(i.conserve_jusqu_au).replace(/ à .*/, ''))}`}</td></tr>`).join('')}
       </tbody></table></div>` : ''}
     </div>`;
   }

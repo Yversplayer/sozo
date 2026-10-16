@@ -14,6 +14,7 @@ import db
 import envois
 import gabarits
 import mailer
+import notifications
 import security
 import validation as v
 from app import auditer, connectee, ip_client, ouverte
@@ -198,7 +199,12 @@ def enregistrer(app):
             cx.execute("UPDATE users SET password_hash = ? WHERE id = ?", (security.hacher_mot_de_passe(nouveau), g.user["id"]))
             # Toutes les AUTRES sessions tombent : un voleur de session est mis dehors
             security.revoquer_toutes(cx, g.user["id"], sauf=g.user["session_id"])
-            _alerte_mot_de_passe(cx, u)
+            # Cloche + appareil + e-mail (la sécurité part toujours par e-mail)
+            notifications.emettre(cx, u["id"], "securite", "Votre mot de passe a changé",
+                                  "Vos autres sessions ont été fermées. Si ce n’est pas vous, répondez à l’e-mail reçu.",
+                                  "/app/compte.html", f"securite:mdp:{v.maintenant()}",
+                                  email=("Votre mot de passe a changé", ["Le mot de passe de votre compte Sōzō vient d’être modifié. Vos autres sessions ont été fermées.",
+                                                                         "Si ce n’est pas vous, répondez immédiatement à ce message : nous bloquerons le compte."]))
             auditer("compte.mot_de_passe", ressource=f"user:{g.user['id']}", cx=cx)
             cx.valider()
         finally:

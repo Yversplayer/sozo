@@ -108,7 +108,7 @@ window.SOZO_PRET.then(() => {
         <div class="band-copy">
           <p class="kicker">Suivre un livre</p>
           <h2 data-ink-text="Une page paraît, [[vous le savez]]."></h2>
-          <p>Suivez un livre : chaque nouvelle page apparaît dans vos notifications, avec sa date. L'envoi par e-mail ou push viendra avec le serveur.</p>
+          <p>Suivez un livre : chaque nouvelle page apparaît dans vos notifications, avec sa date — et, si vous le souhaitez, sur votre téléphone ou par e-mail.</p>
           <a class="btn" href="suivis.html">Voir mes suivis ${S.icon('right')}</a>
         </div>
         <img src="${S.img('cafe-lunettes')}" alt="Un livre ouvert, des lunettes et un café" loading="lazy">

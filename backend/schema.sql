@@ -358,3 +358,37 @@ CREATE TABLE IF NOT EXISTS codes (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS codes_actifs ON codes (user_id, objet, used_at);
+
+-- ── Notifications (16/10/2026) ─────────────────────────────────────────────
+-- Une notification est un FAIT adressé à une personne, dédoublonné par `cle`
+-- (une même parution, un même paiement ne notifient qu'une fois, même si la
+-- tâche tourne deux fois). Les canaux (appareil, e-mail) passent par `envois`.
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  type TEXT NOT NULL CHECK (type IN ('parution', 'paiement', 'vente', 'reversement', 'securite', 'plume', 'moderation', 'test')),
+  titre TEXT NOT NULL,
+  corps TEXT NOT NULL,
+  lien TEXT,
+  cle TEXT NOT NULL,
+  lu_le TEXT,
+  created_at TEXT NOT NULL,
+  UNIQUE (user_id, cle)
+);
+CREATE INDEX IF NOT EXISTS notifications_personne ON notifications (user_id, id);
+
+-- Appareils abonnés aux notifications (Web Push). L'adresse du service de
+-- notification est vérifiée à l'inscription : le serveur n'écrit qu'aux
+-- services connus (Google, Mozilla, Apple, Microsoft), jamais à une adresse
+-- fournie au hasard (sinon : requêtes forgées vers le réseau interne).
+CREATE TABLE IF NOT EXISTS appareils (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  libelle TEXT,
+  created_at TEXT NOT NULL,
+  dernier_succes TEXT
+);
+CREATE INDEX IF NOT EXISTS appareils_personne ON appareils (user_id);

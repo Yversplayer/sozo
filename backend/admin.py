@@ -22,6 +22,8 @@ from flask import g, jsonify, request
 
 import acces
 import argent
+import envois
+import notifications
 import config
 import db
 import security
@@ -262,6 +264,7 @@ def enregistrer(app):
                 return jsonify(erreur="Ce paiement est déjà traité (ou n'existe pas)."), 409
             _trace("paiement.confirmation", f"payment:{pid}", "confirmé", cx)
             cx.valider()
+            envois.declencher()
             return jsonify(ok=True, recu=cx.un("SELECT numero FROM receipts WHERE payment_id = ?", (pid,))["numero"])
         finally:
             cx.fermer()
@@ -277,6 +280,7 @@ def enregistrer(app):
                 return jsonify(erreur="Ce paiement est déjà traité (ou n'existe pas)."), 409
             _trace("paiement.refus", f"payment:{pid}", motif, cx)
             cx.valider()
+            envois.declencher()
             return jsonify(ok=True)
         finally:
             cx.fermer()
@@ -296,6 +300,7 @@ def enregistrer(app):
                 return jsonify(erreur="Seul un paiement confirmé, pas encore remboursé, peut l'être."), 409
             _trace("paiement.remboursement", f"payment:{pid}", motif, cx)
             cx.valider()
+            envois.declencher()
             return jsonify(ok=True)
         finally:
             cx.fermer()
@@ -330,7 +335,16 @@ def enregistrer(app):
             if cur.rowcount != 1:
                 return jsonify(erreur="Ce reversement est déjà traité (ou n'existe pas)."), 409
             _trace("reversement." + action, f"payout:{rid}", detail, cx)
+            r = cx.un("SELECT author_id, montant FROM payouts WHERE id = ?", (rid,))
+            if action == "payer":
+                notifications.emettre(cx, r["author_id"], "reversement", "Reversement envoyé",
+                                      f"{r['montant'] / 100:.2f} $ vous ont été envoyés (référence {detail}).", "/app/studio.html#revenus", f"reversement:{rid}")
+            else:
+                notifications.emettre(cx, r["author_id"], "reversement", "Reversement refusé",
+                                      f"Votre demande de {r['montant'] / 100:.2f} $ est refusée : {detail}. Le montant redevient disponible.",
+                                      "/app/studio.html#revenus", f"reversement:{rid}")
             cx.valider()
+            envois.declencher()
             return jsonify(ok=True)
         finally:
             cx.fermer()
@@ -360,7 +374,12 @@ def enregistrer(app):
             if cur.rowcount != 1:
                 return jsonify(erreur="Introuvable."), 404
             _trace("livre." + action, f"book:{bid}", motif or "rétabli", cx)
+            b = cx.un("SELECT owner_id, titre, slug FROM books WHERE id = ?", (bid,))
+            notifications.emettre(cx, b["owner_id"], "moderation", "Livre retiré du catalogue" if action == "retirer" else "Livre rétabli",
+                                  f"« {b['titre']} » : {motif}" if action == "retirer" else f"« {b['titre']} » est de nouveau visible.",
+                                  f"/app/studio.html?id={b['slug']}", f"moderation:{bid}:{action}:{acces.maintenant()}")
             cx.valider()
+            envois.declencher()
             return jsonify(ok=True)
         finally:
             cx.fermer()

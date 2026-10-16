@@ -1,9 +1,12 @@
-/* Sōzō — mes suivis : notifications de parution + livres suivis et progression. */
-window.SOZO_PRET.then(() => {
+/* Sōzō — mes suivis : notifications (venues du serveur : parutions,
+   paiements, ventes, sécurité…) + livres suivis et progression. */
+window.SOZO_PRET.then(async () => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
-  const notifs = S.notifications();
-  const seen = (() => { try { return +localStorage.getItem('sozo-notif-vues') || 0; } catch (e) { return 0; } })();
   S.shell('suivis');
+  const ICONES = { parution: 'book', paiement: 'tag', vente: 'star', reversement: 'send', plume: 'feather', moderation: 'shield', securite: 'lock', test: 'bell' };
+  let notifs = [];
+  const charger = async () => { const r = await window.SOZO_API('GET', '/api/notifications'); notifs = r.ok ? r.d.liste : null; };
+  await charger();
   const main = $('#main');
 
   function render() {
@@ -15,25 +18,21 @@ window.SOZO_PRET.then(() => {
 
     main.innerHTML = `<div class="wrap">
       <section class="sec" style="padding-top:44px">
-        <p class="kicker">Lecteur de démonstration</p>
+        <p class="kicker">Mon espace lecteur</p>
         <h1 class="sec-title" style="font-size:clamp(36px,4.6vw,62px)" data-ink-text="Mes [[suivis]]"></h1>
       </section>
       <section class="sec" id="notifications" style="padding-top:34px">
         <div class="cols">
           <div class="panel">
             <div class="sec-head" style="margin-bottom:10px"><h2 style="margin:0">Notifications</h2>
-              ${notifs.length ? `<button class="btn btn--ghost btn--sm" type="button" id="markAll">Tout marquer comme lu</button>` : ''}</div>
-            ${notifs.length ? `<div class="notifs">${notifs.map((x) => {
-              const isNew = S.parse(x.date).getTime() > seen;
-              const first = x.pages[0];
-              return `<a class="nt${isNew ? ' is-new' : ''}" href="lire.html?id=${x.book.id}&p=${first}">
-                <span class="nt-ic">${S.icon('bell')}</span>
-                <span><strong>${S.esc(S.pagesRange(x.pages).replace(/^p/, 'P'))} — ${S.esc(x.book.title)}</strong>
-                <p>${S.esc(S.author(x.book.author).name)} · ${x.pages.every((n) => S.readable(S.access(x.book, n))) ? 'à lire maintenant' : 'payante — prix affiché sur la page'}</p></span>
-                <time datetime="${x.date}">${isNew ? '<span class="dot">Nouveau</span> ' : ''}${ago(x.date)}</time></a>`;
-            }).join('')}</div>`
-            : `<div class="empty"><strong>Rien de nouveau</strong>Les pages des livres que vous suivez apparaîtront ici à leur parution.</div>`}
-            <p class="note">${S.icon('bell')} Notifications affichées dans l'application. L'envoi par e-mail ou push n'est pas encore branché.</p>
+              ${notifs && notifs.some((x) => !x.lu_le) ? `<button class="btn btn--ghost btn--sm" type="button" id="markAll">Tout marquer comme lu</button>` : ''}</div>
+            ${notifs === null ? `<p class="warn">${S.icon('x')}<span>Notifications indisponibles pour le moment.</span></p>`
+              : notifs.length ? `<div class="notifs">${notifs.map((x) => `<a class="nt${x.lu_le ? '' : ' is-new'}" href="${S.esc(x.lien || '#')}" data-nid="${x.id}">
+                <span class="nt-ic">${S.icon(ICONES[x.type] || 'bell')}</span>
+                <span><strong>${S.esc(x.titre)}</strong><p>${S.esc(x.corps)}</p></span>
+                <time datetime="${S.esc(x.created_at)}">${x.lu_le ? '' : '<span class="dot">Nouveau</span> '}${ago(x.created_at)}</time></a>`).join('')}</div>`
+            : `<div class="empty"><strong>Rien de nouveau</strong>Parutions des livres suivis, paiements, ventes et alertes de sécurité apparaîtront ici.</div>`}
+            <p class="note">${S.icon('bell')} Recevez-les aussi sur votre téléphone ou par e-mail : <a href="compte.html#notifications">régler mes notifications</a>.</p>
           </div>
           <div class="panel">
             <h2 data-ink-text="À [[venir]]"></h2>
@@ -62,7 +61,8 @@ window.SOZO_PRET.then(() => {
     </div>`;
     document.querySelectorAll('[data-unf]').forEach((x) => x.addEventListener('click', async () => { x.disabled = true; if (!(await S.toggleFollow(x.dataset.unf))) S.toast('Vous ne suivez plus ce livre.'); render(); }));
     const m = $('#markAll');
-    if (m) m.addEventListener('click', () => { S.markSeen(); location.reload(); });
+    if (m) m.addEventListener('click', async () => { m.disabled = true; const r = await window.SOZO_API('POST', '/api/notifications/lues', {}); if (!r.ok) { m.disabled = false; S.toast(r.d.erreur || 'Action impossible.'); return; } await charger(); render(); S.majCloche(); });
+    document.querySelectorAll('[data-nid]').forEach((a) => a.addEventListener('click', () => { window.SOZO_API('POST', '/api/notifications/lues', { ids: [+a.dataset.nid] }); }));
     S.inkAll();
   }
   render();

@@ -9,13 +9,14 @@ suppression. Le schéma est appliqué AVANT que le serveur n'accepte une
 requête : un déploiement échoue plutôt que d'exposer une API sans son schéma.
 """
 import os
+from datetime import datetime, timezone
 import re
 import sqlite3
 import threading
 
 import config
 
-VERSION_SCHEMA = 4
+VERSION_SCHEMA = 5
 _verrou = threading.Lock()
 
 
@@ -165,6 +166,8 @@ RLS = {
     "imports": f"user_id = {_MOI}",
     "signalements": f"user_id = {_MOI}",
     "refunds": f"user_id = {_MOI}",
+    "notifications": f"user_id = {_MOI}",
+    "appareils": f"user_id = {_MOI}",
 }
 
 
@@ -235,3 +238,12 @@ def _migrer(cx):
     # lui donne en ligne de commande (« lecture » seule par défaut).
     _ajouter_colonne(cx, "admin_users", "roles", "TEXT NOT NULL DEFAULT 'lecture'")
     _ajouter_colonne(cx, "admin_sessions", "reauth_le", "TEXT")
+    # v5 (16/10/2026) : notifications, conservation des manuscrits
+    _ajouter_colonne(cx, "users", "preferences", "TEXT")
+    _ajouter_colonne(cx, "imports", "efface_le", "TEXT")
+    if "annoncee_le" not in _colonnes(cx, "pages"):
+        _ajouter_colonne(cx, "pages", "annoncee_le", "TEXT")
+        # Les pages DÉJÀ sorties sont réputées annoncées : sans cela, la première
+        # tâche enverrait à chaque lecteur une notification pour tout l'historique.
+        cx.execute("UPDATE pages SET annoncee_le = publie_le WHERE statut <> 'draft' AND publie_le IS NOT NULL AND publie_le <= ?",
+                   (datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),))

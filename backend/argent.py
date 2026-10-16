@@ -28,6 +28,7 @@ import acces
 import config
 import db
 import security
+import envois
 import prestataires
 import validation as v
 from app import auditer, connectee, ouverte
@@ -144,9 +145,40 @@ def confirmer(cx, payment_id, par, frais=0):
     if frais:
         cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, 'frais', NULL, ?, ?)", (payment_id, frais, m))
     annee = m[:4]
+    numero = f"SZ-{annee}-{payment_id:06d}"
     cx.execute("INSERT INTO receipts (payment_id, user_id, numero, created_at) VALUES (?, ?, ?, ?)",
-               (payment_id, p["user_id"], f"SZ-{annee}-{payment_id:06d}", m))
+               (payment_id, p["user_id"], numero, m))
+    _notifier(cx, p, "confirme", numero=numero)
     return True
+
+
+def _notifier(cx, p, evenement, numero=None, motif=None):
+    """Prévient le lecteur (et l'auteur pour une vente). Dans la transaction
+    de l'événement : pas de « paiement confirmé » pour une confirmation annulée."""
+    import notifications as N
+    pid = p["id"]
+    b = cx.un("SELECT slug, titre, owner_id FROM books WHERE id = ?", (p["book_id"],)) if p["book_id"] else None
+    quoi = f"« {b['titre']} »" if b else "Plume"
+    lien = f"/app/livre.html?id={b['slug']}" if b else "/app/studio.html#revenus"
+    if evenement == "confirme":
+        if b:
+            N.emettre(cx, p["user_id"], "paiement", "Paiement confirmé", f"{quoi} : votre achat est ouvert. Reçu {numero}.", lien,
+                      f"paiement:{pid}:confirme", email=("Paiement confirmé", [f"Votre paiement de {p['montant'] / 100:.2f} $ pour {quoi} est confirmé.",
+                                                                              f"Votre accès est ouvert. Reçu n° {numero}."]))
+            net = cx.un("SELECT COALESCE(SUM(montant), 0) AS s FROM ledger WHERE payment_id = ? AND beneficiaire = 'auteur'", (pid,))["s"]
+            N.emettre(cx, b["owner_id"], "vente", "Nouvelle vente", f"{quoi} : {net / 100:.2f} $ pour vous.", "/app/studio.html#revenus", f"vente:{pid}")
+        else:
+            fin = cx.un("SELECT fin FROM subscriptions WHERE payment_id = ?", (pid,))["fin"]
+            N.emettre(cx, p["user_id"], "paiement", "Plume est active", f"Jusqu’au {fin[8:10]}/{fin[5:7]}/{fin[:4]}. Reçu {numero}.", lien,
+                      f"paiement:{pid}:confirme")
+    elif evenement == "refuse":
+        N.emettre(cx, p["user_id"], "paiement", "Paiement non confirmé", f"{quoi} : {motif}", "/app/compte.html", f"paiement:{pid}:refuse")
+    elif evenement == "rembourse":
+        N.emettre(cx, p["user_id"], "paiement", "Remboursement enregistré", f"{quoi} : {motif}. L’accès a été retiré.", "/app/compte.html",
+                  f"paiement:{pid}:rembourse")
+        if b:
+            N.emettre(cx, b["owner_id"], "vente", "Vente remboursée", f"{quoi} : la vente a été annulée par Sōzō ({motif}).",
+                      "/app/studio.html#revenus", f"vente:{pid}:rembourse")
 
 
 def rembourser(cx, payment_id, par, motif, reference=None):
@@ -175,6 +207,7 @@ def rembourser(cx, payment_id, par, motif, reference=None):
     if frais:   # le lecteur récupère tout ; les frais déjà retenus restent une perte de Sōzō
         cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, 'plateforme', NULL, ?, ?)",
                    (payment_id, -frais, m))
+    _notifier(cx, p, "rembourse", motif=motif)
     return True
 
 
@@ -195,7 +228,10 @@ def refuser(cx, payment_id, par, motif):
     """Refus (référence introuvable, montant faux…) : jamais après confirmation."""
     cur = cx.execute("UPDATE payments SET etat = 'FAILED', motif_refus = ?, confirme_par = ?, updated_at = ? WHERE id = ? AND etat IN ('CREATED', 'PENDING', 'UNKNOWN')",
                      (motif, par, _now(), payment_id))
-    return cur.rowcount == 1
+    if cur.rowcount != 1:
+        return False
+    _notifier(cx, cx.un("SELECT * FROM payments WHERE id = ?", (payment_id,)), "refuse", motif=motif)
+    return True
 
 
 def solde_auteur(cx, author_id):
@@ -389,7 +425,9 @@ def enregistrer(app):
             assert isinstance(d, dict)
         except Exception:
             raise v.Invalide("Corps JSON invalide.")
-        return jsonify(traiter_evenement(prestataire, prestataires.traduire(prestataire, d)))
+        r = traiter_evenement(prestataire, prestataires.traduire(prestataire, d))
+        envois.declencher()
+        return jsonify(r)
 
 
     @app.post("/api/paiements/<int:pid>/simulation")

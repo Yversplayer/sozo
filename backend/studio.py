@@ -23,6 +23,7 @@ import argent
 import config
 import db
 import extraction
+import manuscrits
 import security
 import validation as v
 from app import auditer, connectee
@@ -81,7 +82,9 @@ def _detail(cx, b):
         "statut": b["statut"], "retrait_motif": b["retrait_motif"], "fichier_source": b["fichier_source"],
         "chapitres": cx.tous("SELECT titre, page_de, page_a FROM chapters WHERE book_id = ? ORDER BY page_de", (b["id"],)),
         "pages": pages,
-        "imports": cx.tous("SELECT nom_fichier, nature, taille, pages_creees, created_at FROM imports WHERE book_id = ? ORDER BY id DESC", (b["id"],)),
+        "imports": [{**i, "conserve_jusqu_au": None if i["efface_le"] else manuscrits.echeance(i["created_at"])}
+                    for i in cx.tous("SELECT nom_fichier, nature, taille, pages_creees, created_at, efface_le FROM imports WHERE book_id = ? ORDER BY id DESC", (b["id"],))],
+        "conservation_jours": manuscrits.jours(),
         "suiveurs": cx.un("SELECT COUNT(*) AS n FROM follows WHERE book_id = ?", (b["id"],))["n"],
     }
 
@@ -365,6 +368,10 @@ def enregistrer(app):
             cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (m, b["id"]))
             auditer("pages.lot", ressource=f"book:{b['id']}", apres=f"{action}:{len(set(ns))}", cx=cx)
             cx.valider()
+            if action == "publier":
+                import envois, taches
+                taches.annoncer_parutions(b["id"])      # les lecteurs qui suivent le livre sont prévenus tout de suite
+                envois.declencher()
             return jsonify(ok=True, pages=len(set(ns)))
         finally:
             cx.fermer()

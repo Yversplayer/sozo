@@ -297,3 +297,20 @@ textarea[readonly] { cursor: default; }
 .at-rappel .btn { margin-left: 8px; }
 .cp-code { display: grid; gap: 6px; justify-items: start; }
 .at-form .cx-field .cx-code { height: 56px; }
+
+/* ─── Mon compte : notifications ─── */
+.cp-notif .cp-app { display: grid; gap: 10px; justify-items: start; }
+.cp-ok { display: inline-flex; gap: 8px; align-items: center; color: #2E7D4F; font-weight: 500; }
+html[data-theme="dark"] .cp-ok { color: #7FD3A0; }
+.cp-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.cp-sous { margin: 16px 0 6px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.cp-appareils { list-style: none; display: grid; gap: 6px; }
+.cp-appareils li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r); }
+.cp-appareils small { display: block; color: var(--ash); font-size: 12.5px; }
+.cp-prefs { margin-top: 18px; display: grid; gap: 10px; }
+.cp-prefs table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.cp-prefs th { text-align: left; font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--ash); padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.cp-prefs th:not(:first-child), .cp-prefs td:not(:first-child) { text-align: center; width: 84px; }
+.cp-prefs td { padding: 9px 4px; border-bottom: 1px solid var(--line); }
+.cp-prefs input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--ver); }
+.cp-prefs .btn { justify-self: start; }

@@ -157,7 +157,40 @@ window.SOZO = (() => {
   const SEEN = 'sozo-notif-vues';
   const seenAt = () => { try { return +localStorage.getItem(SEEN) || 0; } catch (e) { return 0; } };
   const markSeen = () => { try { localStorage.setItem(SEEN, String(Date.now())); } catch (e) {} };
-  const unread = () => notifications().filter((n) => parse(n.date).getTime() > seenAt()).length;
+  // Nombre de notifications non lues : vient du SERVEUR (majCloche), plus
+  // d'un calcul local qui ignorait paiements, ventes et sécurité.
+  let nonLues = 0;
+  const unread = () => nonLues;
+  function majCloche() {
+    return fetch('/api/notifications?compte=1', { credentials: 'same-origin', cache: 'no-store' }).then((r) => r.ok ? r.json() : null).then((d) => {
+      if (!d) return;
+      nonLues = d.non_lues;
+      const n = nonLues, cloche = document.querySelector('.top a[href="suivis.html#notifications"]'), lien = document.querySelector('.top-link[href="suivis.html"]');
+      if (cloche) {
+        cloche.querySelectorAll('.dot').forEach((x) => x.remove());
+        cloche.setAttribute('aria-label', `Notifications${n ? ` : ${n} nouvelle${n > 1 ? 's' : ''}` : ''}`);
+        if (n) cloche.insertAdjacentHTML('beforeend', `<span class="dot dot--abs">${n > 99 ? '99+' : n}</span>`);
+      }
+      if (lien) { lien.querySelectorAll('.dot').forEach((x) => x.remove()); if (n) lien.insertAdjacentHTML('beforeend', `<span class="dot" aria-label="${n} nouveauté${n > 1 ? 's' : ''}">${n > 99 ? '99+' : n}</span>`); }
+    }).catch(() => {});
+  }
+  /* Appareil déjà autorisé : on rappelle au serveur son abonnement une fois
+     par session (le navigateur le renouvelle parfois sans prévenir). */
+  function synchroAppareil() {
+    try { if (sessionStorage.getItem('sozo-push-sync')) return; sessionStorage.setItem('sozo-push-sync', '1'); } catch (e) { return; }
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || Notification.permission !== 'granted') return;
+    navigator.serviceWorker.getRegistration('/app/').then((reg) => reg && reg.pushManager.getSubscription()).then((sub) => {
+      if (!sub || !window.SOZO_API) return;
+      const j = sub.toJSON();
+      window.SOZO_API('POST', '/api/notifications/appareils', { endpoint: j.endpoint, keys: j.keys, libelle: libelleAppareil() });
+    }).catch(() => {});
+  }
+  function libelleAppareil() {
+    const u = navigator.userAgent;
+    const os = /iPhone|iPad/.test(u) ? 'iPhone/iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'Ordinateur';
+    const nav = /Edg\//.test(u) ? 'Edge' : /Firefox/.test(u) ? 'Firefox' : /Chrome/.test(u) ? 'Chrome' : /Safari/.test(u) ? 'Safari' : 'Navigateur';
+    return `${nav} · ${os}`;
+  }
 
   /* ─── couverture : photo + typographie (livres fictifs) ─── */
   function cover(b, opts = {}) {
@@ -341,6 +374,7 @@ window.SOZO = (() => {
     document.addEventListener('click', (e) => { if (!e.target.closest('.acct')) closeMenu(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
     head.querySelector('#logout').addEventListener('click', () => SozoAuth.close());
+    majCloche(); synchroAppareil();
     const onScroll = () => head.classList.toggle('is-scrolled', scrollY > 8);
     addEventListener('scroll', onScroll, { passive: true }); onScroll();
   }
@@ -383,5 +417,5 @@ window.SOZO = (() => {
 
   return { D, esc, icon, img, money, dateLong, dateShort, dayLong, relDays, parse, now, book, author, booksBy, status, access, readable,
            visiblePages, stats, accessLabel, priceFrom, chapterOf, pagesRange, follows, isFollowed, toggleFollow, notifications, markSeen,
-           unread, sess, cover, bookCard, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced };
+           unread, majCloche, libelleAppareil, sess, cover, bookCard, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced };
 })();

@@ -291,6 +291,8 @@ def enregistrer(app):
             cx.valider()
         finally:
             cx.fermer()
+        import manuscrits
+        manuscrits.effacer_pour(uid)            # après validation : la suppression est acquise
         rep = jsonify(ok=True)
         security.effacer_cookies(rep)
         return rep

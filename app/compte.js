@@ -51,6 +51,7 @@ window.SOZO_PRET.then(() => {
             }).join('') : `<div class="empty"><strong>Aucun achat</strong>Les livres gratuits se lisent sans rien acheter. Un achat apparaîtra ici, avec son état et son reçu.</div>`}
             <p class="note">${S.icon('shield')} Un achat « en vérification » s’ouvre dès que Sōzō a confirmé votre paiement Mobile Money. Ce que vous avez payé reste à vous, même si l’auteur modifie son livre.</p>
           </section>
+          <section class="panel cp-notif" id="notifications" aria-labelledby="hNotif"><h2 id="hNotif">Notifications</h2><div id="notifIn"><p class="ash" role="status">Chargement…</p></div></section>
           ${u.role === 'auteur' ? `<section class="panel at-plume${c.plume.actif ? ' is-on' : ''}">
             <p class="mono">Plume · ${S.money(c.plume.prix)} pour 30 jours</p>
             <p>${c.plume.actif ? `<strong>Active jusqu’au ${S.esc(S.dateLong(c.plume.fin))}.</strong>` : 'Corrigez vos pages publiées en nouvelle version, avec historique, et payez moins de commission.'}</p>
@@ -161,5 +162,80 @@ window.SOZO_PRET.then(() => {
     });
   }
 
-  charger().then(() => S.footer()).catch(window.SOZO_ERREUR);
+  /* ─── Notifications : appareil (Web Push), e-mail, préférences ─── */
+  const b64 = (t) => { const p = '='.repeat((4 - (t.length % 4)) % 4), r = atob((t + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...r].map((c) => c.charCodeAt(0))); };
+  const pushPossible = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const iOS = /iPhone|iPad/.test(navigator.userAgent), installee = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  async function abonnementCourant() {
+    if (!pushPossible()) return null;
+    const reg = await navigator.serviceWorker.getRegistration('/app/');
+    return reg ? reg.pushManager.getSubscription() : null;
+  }
+  async function notifPanneau() {
+    const el = $('#notifIn'); if (!el) return;
+    const r = await API('GET', '/api/notifications/preferences');
+    if (!r.ok) { el.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'Réglages indisponibles.')}</span></p>`; return; }
+    const d = r.d, sub = await abonnementCourant().catch(() => null);
+    let appareil;
+    if (!d.push_actif) appareil = `<p class="ash">Les notifications sur l’appareil ne sont pas encore activées sur ce serveur.</p>`;
+    else if (!pushPossible()) appareil = `<p class="ash">${iOS && !installee ? 'Sur iPhone et iPad : ajoutez d’abord Sōzō à l’écran d’accueil (bouton Partager → « Sur l’écran d’accueil »), puis ouvrez-le depuis son icône et revenez ici.' : 'Ce navigateur ne permet pas les notifications sur l’appareil.'}</p>`;
+    else if (Notification.permission === 'denied') appareil = `<p class="warn">${S.icon('lock')}<span>Vous avez bloqué les notifications de Sōzō. Autorisez-les dans les réglages du navigateur (icône du cadenas, à gauche de l’adresse), puis rechargez la page.</span></p>`;
+    else if (sub) appareil = `<p class="cp-ok">${S.icon('check')} Activées sur cet appareil.</p><div class="cp-acts"><button class="btn btn--sm" type="button" id="nTest">Envoyer une notification d’essai</button><button class="btn btn--ghost btn--sm" type="button" id="nOff">Désactiver ici</button></div>`;
+    else appareil = `<p>Recevez les nouvelles pages, vos paiements et les alertes de sécurité directement sur ce téléphone ou cet ordinateur, même Sōzō fermé.</p><button class="btn btn--accent btn--sm" type="button" id="nOn">${S.icon('bell')} Activer sur cet appareil</button>`;
+    el.innerHTML = `<div class="cp-app">${appareil}</div>
+      ${d.appareils.length ? `<p class="mono ash cp-sous">Appareils inscrits</p><ul class="cp-appareils">${d.appareils.map((a) => `<li><span>${S.esc(a.libelle || 'Appareil')}<small>depuis le ${S.esc(S.dateLong(a.created_at).replace(/ à .*/, ''))}</small></span><button class="icon-btn" type="button" data-retirer="${a.id}" aria-label="Retirer ${S.esc(a.libelle || 'cet appareil')}">${S.icon('x')}</button></li>`).join('')}</ul>` : ''}
+      <form id="fPrefs" class="cp-prefs"><table><thead><tr><th>Je veux être prévenu de…</th><th>Appareil</th><th>E-mail</th></tr></thead><tbody>
+        ${d.ordre.map((k) => [k, d.types[k]]).map(([k, l]) => `<tr><td>${S.esc(l)}</td>
+          <td><input type="checkbox" name="${k}:push" aria-label="${S.esc(l)} sur l’appareil"${d.preferences[k].push ? ' checked' : ''}></td>
+          <td><input type="checkbox" name="${k}:email" aria-label="${S.esc(l)} par e-mail"${d.preferences[k].email ? ' checked' : ''}${d.toujours_email.includes(k) ? ' disabled title="Les alertes de sécurité partent toujours par e-mail"' : ''}></td></tr>`).join('')}
+      </tbody></table>
+      ${d.email ? '' : `<p class="note">${S.icon('lock')} L’envoi d’e-mails n’est pas encore activé sur ce serveur : vos choix seront appliqués dès qu’il le sera.</p>`}
+      <p class="note">${S.icon('shield')} Les SMS et WhatsApp ne sont pas encore disponibles.</p>
+      <button class="btn btn--sm" type="submit">Enregistrer mes choix</button></form>`;
+    const on = $('#nOn');
+    if (on) on.addEventListener('click', async () => {
+      on.disabled = true;
+      try {
+        const reg = await navigator.serviceWorker.register('sw.js', { scope: '/app/' });
+        await navigator.serviceWorker.ready;
+        if (await Notification.requestPermission() !== 'granted') { notifPanneau(); return; }
+        const sub2 = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(d.cle_publique) });
+        const j = sub2.toJSON();
+        const x = await API('POST', '/api/notifications/appareils', { endpoint: j.endpoint, keys: j.keys, libelle: S.libelleAppareil() });
+        if (!x.ok) { await sub2.unsubscribe(); S.toast(x.d.erreur || 'Inscription refusée par le serveur.'); notifPanneau(); return; }
+        try { localStorage.setItem('sozo-appareil-id', String(x.d.id)); } catch (e) {}
+        S.toast('Notifications activées sur cet appareil.'); notifPanneau();
+      } catch (e) { on.disabled = false; S.toast('Activation impossible sur ce navigateur.'); }
+    });
+    const off = $('#nOff');
+    if (off) off.addEventListener('click', async () => {
+      off.disabled = true;
+      let id = null; try { id = localStorage.getItem('sozo-appareil-id'); } catch (e) {}
+      if (id) await API('DELETE', `/api/notifications/appareils/${encodeURIComponent(id)}`);
+      const s2 = await abonnementCourant(); if (s2) await s2.unsubscribe();
+      S.toast('Notifications désactivées sur cet appareil.'); notifPanneau();
+    });
+    const t = $('#nTest');
+    if (t) t.addEventListener('click', async () => {
+      t.disabled = true;
+      const x = await API('POST', '/api/notifications/test');
+      S.toast(x.ok ? `Notification d’essai envoyée${x.d.appareils ? ` à ${x.d.appareils} appareil${x.d.appareils > 1 ? 's' : ''}` : ''}. Elle arrive en quelques secondes.` : (x.d.erreur || 'Essai impossible.'));
+      setTimeout(() => { t.disabled = false; S.majCloche(); }, 4000);
+    });
+    el.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', async () => {
+      b.disabled = true;
+      const x = await API('DELETE', `/api/notifications/appareils/${b.dataset.retirer}`);
+      if (!x.ok) { b.disabled = false; S.toast(x.d.erreur || 'Action impossible.'); return; }
+      S.toast('Appareil retiré : il ne recevra plus rien.'); notifPanneau();
+    }));
+    $('#fPrefs').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.currentTarget, prefs = {};
+      d.ordre.forEach((k) => { prefs[k] = { push: f.elements[`${k}:push`].checked, email: f.elements[`${k}:email`].checked }; });
+      const x = await API('PUT', '/api/notifications/preferences', { preferences: prefs });
+      S.toast(x.ok ? 'Préférences enregistrées.' : (x.d.erreur || 'Enregistrement refusé.'));
+    });
+  }
+
+  charger().then(() => { S.footer(); notifPanneau(); if (location.hash === '#notifications') setTimeout(() => $('#notifications').scrollIntoView(), 300); }).catch(window.SOZO_ERREUR);
 }).catch(window.SOZO_ERREUR);

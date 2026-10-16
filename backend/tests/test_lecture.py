@@ -1,5 +1,7 @@
 """Étape 3 — qui lit quoi. Le texte d'une page fermée ne sort JAMAIS."""
 import os
+
+import db
 import re
 
 import acces
@@ -110,6 +112,7 @@ class Balayage(TestBase):
         "paiement_lire": [("GET", "/api/paiements/{pid}", {404})],
         "paiement_declarer": [("POST", "/api/paiements/{pid}/declaration", {404}, {"operateur": "M-Pesa", "reference": "ABC12345"})],
         "paiement_annuler": [("POST", "/api/paiements/{pid}/annulation", {404})],
+        "appareil_retirer": [("DELETE", "/api/notifications/appareils/{aid}", {404})],
         "paiement_simuler": [("POST", "/api/paiements/{pid}/simulation", {404}, {"issue": "success"})],
         "admin_rembourser": [("POST", "/api/admin/paiements/{pid}/rembourser", {401}, {"motif": "essai"})],
         "studio_livre": [("GET", "/api/studio/livres/{slug}", {404})],
@@ -145,7 +148,14 @@ class Balayage(TestBase):
         slug = a.livre(publier=())                    # que des brouillons
         vendu = Personne(self.app, "auteur").livre()
         pid = a.post("/api/paiements", {"objet": "page", "livre": vendu, "n": 3, "idempotency_key": "balayage-a"}).get_json()["paiement"]["id"]
-        cle = {"slug": slug, "slug_brouillon": slug, "pid": pid, "rid": 1, "n": 1}
+        cx = db.connecter(globale=True)       # un appareil de A, inscrit directement
+        try:
+            aid = cx.inserer("INSERT INTO appareils (user_id, endpoint, p256dh, auth, created_at) VALUES (?, ?, ?, ?, ?)",
+                             (a.id, "https://fcm.googleapis.com/fcm/send/balayage-a", "x" * 87, "y" * 22, "2026-10-16T00:00:00Z"))
+            cx.valider()
+        finally:
+            cx.fermer()
+        cle = {"slug": slug, "slug_brouillon": slug, "pid": pid, "rid": 1, "n": 1, "aid": aid}
         for ep, essais in self.ROUTES.items():
             for essai in essais:
                 meth, url, attendus = essai[:3]

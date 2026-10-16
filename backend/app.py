@@ -165,8 +165,12 @@ def creer_app():
     import catalogue
     import comptes
     import studio
-    for module in (comptes, catalogue, argent, studio, admin):
+    import notifications
+    for module in (comptes, catalogue, argent, studio, admin, notifications):
         module.enregistrer(app)
+    if os.environ.get("SOZO_TACHES_INTEGREES", "").strip() == "1":
+        import taches
+        taches.demarrer_dans_le_serveur()
 
     @app.before_request
     def session_et_csrf():

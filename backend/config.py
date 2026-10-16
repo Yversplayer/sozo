@@ -167,8 +167,16 @@ def vapid():
     """[SECRET pour la clé privée] Clés VAPID des notifications d'appareil
     (Web Push). Absentes : aucune notification d'appareil ne part, et
     l'interface le dit au lieu de faire semblant."""
-    return {"prive": os.environ.get("SOZO_VAPID_PRIVE", "").strip(), "public": os.environ.get("SOZO_VAPID_PUBLIC", "").strip(),
-            "contact": "mailto:" + email_contact()}
+    prive, public = os.environ.get("SOZO_VAPID_PRIVE", "").strip(), os.environ.get("SOZO_VAPID_PUBLIC", "").strip()
+    if not (prive and public) and _bool("SOZO_VAPID_DEV") and _bool("SOZO_MODE_TEST") and not base_distante():
+        # Poste de développement seulement : clés rangées par tools/vapid.py --dev
+        chemin = os.path.join(RACINE_BACKEND, "stockage", "vapid.json")
+        if os.path.isfile(chemin):
+            import json
+            with open(chemin) as f:
+                k = json.load(f)
+            prive, public = k.get("prive", ""), k.get("public", "")
+    return {"prive": prive, "public": public, "contact": "mailto:" + email_contact()}
 
 
 def push_actif():
