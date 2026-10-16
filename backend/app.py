@@ -217,6 +217,23 @@ def creer_app():
         taches.demarrer_dans_le_serveur()
 
     @app.before_request
+    def par_le_relais_seulement():
+        """Quand un secret de relais est réglé (production), l'API ne répond
+        qu'aux requêtes passées par le Worker Cloudflare.
+
+        Pourquoi : constaté en ligne le 16/10/2026, sozo-api.onrender.com
+        répondait aussi en direct. Rien n'y fuyait, mais ce chemin ne connaît
+        pas l'adresse du visiteur : tous ceux qui l'empruntent partagent une
+        même limite anti-abus, et le pare-feu de Cloudflare est contourné.
+        /api/sante reste ouvert : c'est la sonde de santé de Render."""
+        secret = config.secret_proxy()
+        if not secret or not request.path.startswith("/api/") or request.path == "/api/sante":
+            return None
+        if not secrets.compare_digest(secret, request.headers.get("X-Sozo-Proxy", "")):
+            return jsonify(erreur="Passez par le site."), 403
+        return None
+
+    @app.before_request
     def session_et_csrf():
         """Qui parle ? La réponse vient du cookie de session, et de lui seul."""
         import security

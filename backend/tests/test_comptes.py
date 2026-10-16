@@ -137,6 +137,21 @@ class Connexion(Base):
                 self.assertEqual(module_app.ip_client(), "198.51.100.7")
 
 
+class RelaisSeulement(TestBase):
+    """En production, l'API ne répond qu'au Worker (secret partagé)."""
+
+    def test_api_directe_refusee_quand_un_secret_est_regle(self):
+        from unittest import mock
+        c = self.app.test_client()
+        with mock.patch.dict(os.environ, {"SOZO_SECRET_PROXY": "bon-secret"}):
+            self.assertEqual(c.get("/api/etat").status_code, 403)
+            self.assertEqual(c.get("/api/etat", headers={"X-Sozo-Proxy": "faux"}).status_code, 403)
+            self.assertEqual(c.post("/api/sessions", json={"email": "x@exemple.cd", "mot_de_passe": "x"}).status_code, 403)
+            self.assertEqual(c.get("/api/etat", headers={"X-Sozo-Proxy": "bon-secret"}).status_code, 200)
+            self.assertEqual(c.get("/api/sante").status_code, 200)          # sonde de santé de Render
+        self.assertEqual(c.get("/api/etat").status_code, 200)                # sans secret (développement) : ouvert
+
+
 class Csrf(Base):
     def test_mutation_sans_jeton_refusee_et_auditee(self):
         c = self.app.test_client()

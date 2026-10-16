@@ -348,6 +348,10 @@ def enregistrer(app):
             cx.execute("""UPDATE users SET email = ?, nom = 'Compte supprimé', bio = NULL, ville = NULL, photo = NULL,
                           atelier = NULL, actif = 0, password_hash = ? WHERE id = ?""",
                        (f"supprime-{uid}@sozo.invalid", security.hacher_mot_de_passe(security.nouveau_jeton()), uid))
+            # Ses livres quittent le catalogue (constaté en ligne le 16/10/2026 :
+            # ils restaient publics, signés « Compte supprimé »). Un retrait, pas
+            # un effacement : qui a acheté garde ses pages (acces.livre).
+            cx.execute("UPDATE books SET statut = 'retire' WHERE owner_id = ?", (uid,))
             cx.execute("DELETE FROM follows WHERE user_id = ?", (uid,))
             cx.execute("DELETE FROM progress WHERE user_id = ?", (uid,))
             security.revoquer_toutes(cx, uid)

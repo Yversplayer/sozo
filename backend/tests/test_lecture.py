@@ -83,6 +83,20 @@ class Regles(TestBase):
         self.assertEqual(autre.get(f"/api/livres/{slug}/pages/1").status_code, 404)      # retiré pour les autres
         self.assertNotIn(slug, [b["id"] for b in autre.get("/api/catalogue").get_json()["books"]])
 
+    def test_auteur_supprime_ses_livres_sont_retires(self):
+        """Constaté en ligne le 16/10/2026 : un auteur qui supprimait son compte
+        laissait ses livres au catalogue, signés « Compte supprimé ». Ils sont
+        retirés — et l'acheteur garde ce qu'il a payé, comme pour tout retrait."""
+        auteur = Personne(self.app, "auteur")
+        slug = auteur.livre()
+        acheteur, autre = Personne(self.app), Personne(self.app)
+        pid = acheteur.post("/api/paiements", {"objet": "livre", "livre": slug, "idempotency_key": "achat-suppr-1"}).get_json()["paiement"]["id"]
+        confirmer_paiement(pid)
+        self.assertEqual(auteur.c.delete("/api/compte", json={"mot_de_passe": "Lumiere-2026!"}, headers=auteur._h()).status_code, 200)
+        self.assertNotIn(slug, [b["id"] for b in autre.get("/api/catalogue").get_json()["books"]])
+        self.assertEqual(autre.get(f"/api/livres/{slug}/pages/1").status_code, 404)
+        self.assertEqual(acheteur.get(f"/api/livres/{slug}/pages/3").status_code, 200)
+
     def test_limite_de_lecture(self):
         avant = security.LIMITES["lecture:compte"]
         security.LIMITES["lecture:compte"] = (3, 10)
