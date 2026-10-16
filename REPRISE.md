@@ -5,7 +5,7 @@
 ## 1. Le projet
 - **Sōzō** : plateforme de lecture et de publication page par page, pour un ami du propriétaire (l'auteur Nawezi N., « Nard »). Les livres sont gratuits, payants ou mixtes, avec parutions programmées, Bible intégrée (LSG 1910), correcteur du français, atelier d'auteur, paiement Mobile Money et administration.
 - **Propriétaire** : il vit à Kinshasa et parle français. Il juge le résultat et veut un logiciel complet et solide. Il dit « go go go » pour avancer.
-- **Dossier** : `/Users/macbookpro/sozo`. Git branche `main`, remote `git@github.com:Yversplayer/sozo.git`. **Le dépôt GitHub n'existe pas encore** : le propriétaire doit le créer (public, vide), puis on pousse. Rien n'a jamais été poussé.
+- **Dossier** : `/Users/macbookpro/sozo`. Git branche `main`, remote `git@github.com:Yversplayer/sozo.git`. Dépôt public sur GitHub : https://github.com/Yversplayer/sozo.
 - **Pile** :
   - JS natif sans compilation, CSP stricte (`script-src 'self'`), polices hébergées dans `assets/fonts` ;
   - Flask 3.1, SQLite en développement, PostgreSQL 16 en production (prévu : Supabase + Render + Cloudflare, comme Klassio) ;
@@ -28,7 +28,7 @@
 - Tarifs proposés, **non confirmés par le propriétaire** : commission de 15 % (10 % avec Plume), Plume à 4,99 $ pour 30 jours, reversement minimum de 1 $.
 
 ## 3. Ce qui fonctionne (testé)
-**Tests** : 102 sur SQLite et 102 sur PostgreSQL (RLS active), tous verts. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
+**Tests** : 132 sur SQLite et 132 sur PostgreSQL (RLS active), tous verts. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
 ```bash
 cd /Users/macbookpro/sozo && backend_venv/bin/python -m unittest discover -s backend/tests -t backend
 cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py
@@ -57,6 +57,12 @@ cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py
   - notification de prestataire signée, avec montant et devise vérifiés ;
   - frais au registre ; remboursement par lignes correctrices.
 - **Prestataires** (`backend/prestataires.py`) : le contrat des futurs agrégateurs, plus un **simulateur réservé au mode test** (`POST /api/paiements/<id>/simulation`).
+- **E-mails** (`mailer.py`, `envois.py`, `gabarits.py`) : file transactionnelle, reprises, Gmail SMTP ou Brevo. Contact et réponse : mudeyimusimwa@gmail.com.
+- **Mot de passe** : code à 6 chiffres (15 min, 5 essais, usage unique) pour l'oubli et pour le changement (avec le mot de passe actuel).
+- **Notifications** : cloche, appareil (Web Push, `app/sw.js`, clés VAPID) et e-mail selon les préférences (Mon compte → Notifications). Tâches périodiques : `taches.py`, `tools/taches.py`.
+- **Plume** : carte de membre dorée en 3D et comparaison animée (`app/plume.css`, `S.buy.plume`).
+- **Sauvegardes** : `tools/sauvegarde.py`. Restauration exercée sur SQLite et PostgreSQL le 16/10.
+- **Manuscrits d'origine** : effacés 90 jours après l'import ou à la suppression du compte (`manuscrits.py`).
 - **Administration** (`admin/`) :
   - comptes séparés, créés uniquement en ligne de commande ;
   - mot de passe + TOTP à usage unique ; rôles ; code frais (moins de 10 min) pour rembourser, verser de l'argent ou désactiver un compte ;
@@ -65,21 +71,22 @@ cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py
 
 ## 4. Ce qui n'est PAS fait — ne jamais le présenter comme fait
 - **Aucun agrégateur Mobile Money réel.** Plume n'est pas un abonnement récurrent.
-- **Les e-mails ne partent pas** (mode capture).
-- **Jamais déployé.** Aucune sauvegarde n'a été restaurée.
+- **Les e-mails sont prêts mais en mode capture** : il faut le « mot de passe d'application » Gmail du propriétaire (`SOZO_SMTP_PASSWORD`) pour qu'ils partent. SMS et WhatsApp : aucun fournisseur.
+- **Jamais déployé.** La restauration a été exercée en local (SQLite et PostgreSQL), pas sur une base de production. La planification des sauvegardes et le stockage hors site restent à mettre en place.
+- **Notifications d'appareil** : chiffrement vérifié par un test, mais jamais reçues sur un vrai téléphone (le navigateur intégré les bloque). À essayer sur un téléphone après le déploiement (HTTPS obligatoire).
 - Réorganisation des pages limitée aux brouillons placés APRÈS la dernière page sortie (`/pages/ordre`) : les droits d'achat sont liés aux numéros, une page sortie ne bouge jamais.
-- **Pour le bas de page et la mise en ligne, il manque les informations du propriétaire** : e-mail de contact, éditeur légal (nom, adresse, RCCM), numéros Mobile Money par opérateur, nom de domaine, réseaux sociaux, textes légaux (CGU, confidentialité), e-mail de l'administrateur.
+- **Pour le bas de page et la mise en ligne, il manque les informations du propriétaire** : éditeur légal (nom, adresse, RCCM), numéros Mobile Money par opérateur, nom de domaine, réseaux sociaux, textes légaux (CGU, confidentialité), e-mail de l'administrateur.
 
 ## 5. Environnement local
 - **Aperçu** : entrée « sozo » dans `/Users/macbookpro/klassio-saas/.claude/launch.json`, sur le port 4385, avec `SOZO_MODE_TEST=1`. **Relancer le serveur après toute modification du code Python** : il ne se recharge pas tout seul.
-- **Comptes d'essai locaux** (lecteur, auteur, admin avec son secret TOTP) : `backend/stockage/comptes-essai.json`. Ce dossier est ignoré par git ; ne jamais recopier ces valeurs ailleurs.
+- **Comptes d'essai locaux** (lecteur, auteur, admin avec son secret TOTP) : `backend/stockage/comptes-essai.json`. Clés VAPID de développement : `backend/stockage/vapid.json` (lues seulement avec `SOZO_VAPID_DEV=1`). Ce dossier est ignoré par git ; ne jamais recopier ces valeurs ailleurs.
 - **Base de développement** : `backend/sozo.db`, avec les données de démonstration de `backend/tools/demo.py`.
 - **Cache du navigateur** : les pages appellent `fichier.js?v=N`. Si tu modifies un fichier, **incrémente le numéro de version dans les pages qui l'appellent**.
 
 ## 6. Règles de travail
 - **Ne jamais affaiblir ni supprimer un test.** Tout nouveau garde-fou doit être vu échouer quand on retire son code, puis restauré.
 - **Les deux suites doivent être vertes avant de rendre la main.**
-- **Migrations additives uniquement** (`db._migrer`, `VERSION_SCHEMA = 4`). Pour toute table qui contient des données d'un utilisateur, ajouter sa règle dans `db.RLS`.
+- **Migrations additives uniquement** (`db._migrer`, `VERSION_SCHEMA = 5`). Pour toute table qui contient des données d'un utilisateur, ajouter sa règle dans `db.RLS`.
 - **Aucun faux succès à l'écran** : l'interface ne change qu'après la réponse du serveur. Tout texte venant de la base passe par `S.esc()`.
 - **Commits successifs**, avec une ligne `Co-Authored-By` en fin de message. Ne pousser que si le propriétaire le demande et une fois le dépôt créé. Vérifier l'absence de secrets avant.
 - **Fin de chaque rapport** : 🔴 BLOQUANTS / 🟠 NON-BLOQUANTS / 🟢 BACKLOG / 🚦 DÉCISION.

@@ -2,7 +2,7 @@
 
 Plateforme de lecture et de publication page par page : livres gratuits, payants ou mixtes, parutions programmées, Bible intégrée, correcteur du français, atelier d'auteur, paiement Mobile Money vérifié par l'équipe.
 
-> **État au 16/10/2026 : jamais déployé.** Aucun agrégateur de paiement n'est branché. L'e-mail est en mode capture (rien ne part). Aucune sauvegarde n'a été restaurée.
+> **État au 16/10/2026 : jamais déployé.** Aucun agrégateur de paiement n'est branché. L'envoi d'e-mails est prêt (Gmail SMTP ou Brevo) mais reste en mode capture tant que le mot de passe d'application n'est pas saisi. La restauration de sauvegarde a été exercée (SQLite et PostgreSQL), pas encore sur la base de production.
 
 ## Lancer en local
 
@@ -63,6 +63,44 @@ Les deux suites doivent être vertes. Chaque garde-fou a été **vu tomber** qua
   - Un code frais (moins de 10 min) est exigé pour rembourser, verser de l'argent ou désactiver un compte.
   - Journal d'audit inaltérable.
 
+## Messages, notifications, tâches
+
+- **E-mails** (`mailer.py`, `envois.py`, `gabarits.py`) :
+  - le message entre dans une file **dans la transaction** de l'action qui le cause, puis il est expédié après coup ;
+  - nouvelles tentatives à 1 min, 5 min, 30 min puis 2 h, abandon au 5ᵉ échec ;
+  - chaque message est réservé par une seule opération avant l'envoi, pour qu'il ne parte jamais deux fois ;
+  - les codes de sécurité sont effacés de la base une fois envoyés.
+  - Modes `SOZO_EMAIL_MODE` : `capture` (rien ne part), `smtp` (Gmail : mot de passe d'application), `brevo`.
+  - Contact et adresse de réponse : `SOZO_EMAIL_CONTACT` (mudeyimusimwa@gmail.com).
+- **Mot de passe oublié ou changé** : un code à 6 chiffres envoyé par e-mail.
+  - Valable 15 minutes, 5 essais au plus, à usage unique.
+  - La réponse est la même que le compte existe ou non.
+  - Une alerte de sécurité est envoyée par e-mail.
+  - Changer de mot de passe exige le mot de passe actuel **et** le code.
+- **Notifications** (`notifications.py`, `push.py`, `app/sw.js`) :
+  - trois canaux : la cloche, l'appareil (Web Push chiffré RFC 8291, VAPID) et l'e-mail selon les préférences, la sécurité partant toujours par e-mail ;
+  - dédoublonnées par fait ;
+  - le serveur n'écrit qu'aux services de notification connus (Google, Mozilla, Apple, Microsoft) ;
+  - SMS et WhatsApp : non branchés.
+- **Tâches périodiques** (`taches.py`) : annoncer les parutions, rappeler la fin de Plume, expirer les achats, effacer les manuscrits échus, expédier la file.
+  - Lancement : `backend/tools/taches.py` toutes les 5 minutes, ou `SOZO_TACHES_INTEGREES=1` (verrou PostgreSQL : un seul processus).
+- **Manuscrits d'origine** : effacés 90 jours après l'import, ou dès la suppression du compte. Le texte reste dans les pages.
+
+## Sauvegardes
+
+```bash
+backend_venv/bin/python backend/tools/sauvegarde.py cle                  # SOZO_CLE_SAUVEGARDE (à garder aussi HORS du serveur)
+backend_venv/bin/python backend/tools/sauvegarde.py exporter sozo.sauv
+backend_venv/bin/python backend/tools/sauvegarde.py verifier sozo.sauv
+backend_venv/bin/python backend/tools/sauvegarde.py restaurer sozo.sauv  # base cible VIDE uniquement
+```
+
+- **Contenu** : export logique de toutes les tables et des manuscrits conservés, chiffré (Fernet), avec une empreinte par table.
+- **Restauration** : uniquement dans une base vide, puis vérification table par table. Un octet modifié ou une mauvaise clé fait refuser la restauration.
+- **Exercice du 16/10/2026** : la base de développement (683 lignes, 24 tables) a été restaurée dans SQLite en 0,25 s et dans PostgreSQL 16 en 1,3 s, puis utilisée. Connexions, atelier, catalogue et droits sont intacts.
+- **Délai de remise en service (RTO)** : celui de la mise en route d'une base vide, plus quelques secondes de restauration.
+- **Perte de données maximale (RPO)** : l'écart entre deux sauvegardes. **La planification et le stockage hors site ne sont pas encore en place.**
+
 ## Administration
 
 ```bash
@@ -85,6 +123,7 @@ Les droits, le registre et les tests ne changent pas. Le simulateur (`POST /api/
 ## Ce qui n'est pas fait
 
 - Aucun agrégateur réel ; Plume n'est pas un abonnement récurrent (30 jours payés une fois).
-- E-mails non envoyés (mode capture).
-- Aucune sauvegarde restaurée ni procédure de reprise testée.
+- E-mails : prêts, mais en mode capture tant que `SOZO_SMTP_PASSWORD` (mot de passe d'application Gmail) n'est pas saisi.
+- Sauvegardes : outil et restauration éprouvés ; planification quotidienne et stockage hors site à mettre en place au déploiement.
+- SMS et WhatsApp : aucun fournisseur.
 - Réorganisation limitée aux brouillons de fin de livre : les droits d'achat sont attachés aux numéros de page, déplacer une page sortie les fausserait.
