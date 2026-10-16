@@ -91,7 +91,10 @@ def ip_client():
     secret = config.secret_proxy()
     fournie = request.headers.get("X-Sozo-Proxy", "")
     if secret and fournie and secrets.compare_digest(secret, fournie):
-        return request.headers.get("CF-Connecting-IP", request.remote_addr)
+        # X-Sozo-Client-IP : posé par le Worker (cloudflare/worker.js). Le
+        # serveur Render est lui-même derrière Cloudflare, qui RÉÉCRIT
+        # CF-Connecting-IP à l'entrée : il y mettrait l'adresse du Worker.
+        return request.headers.get("X-Sozo-Client-IP") or request.headers.get("CF-Connecting-IP") or request.remote_addr
     return request.remote_addr
 
 

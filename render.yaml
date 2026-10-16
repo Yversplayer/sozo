@@ -1,0 +1,57 @@
+# Sōzō — le serveur (API) sur Render. Les pages sont chez Cloudflare
+# (wrangler.jsonc), qui relaie /api ici : le navigateur ne voit qu'un domaine.
+#
+# FRANCFORT : à côté de la base Supabase (eu-central-1). La distance du
+# visiteur au serveur se paie une fois par page ; celle du serveur à la base,
+# une fois par REQUÊTE SQL (mesure de Klassio, 18/09/2026).
+#
+# PALIER GRATUIT : s'endort après 15 min sans trafic, ~50 s de réveil. Les
+# pages (Cloudflare) restent instantanées ; seule l'API attend.
+services:
+  - type: web
+    name: sozo-api
+    runtime: python
+    region: frankfurt
+    plan: free
+    branch: main
+    healthCheckPath: /api/sante
+    buildCommand: pip install -r requirements.txt
+    # Le schéma est appliqué au démarrage (creer_app → appliquer_schema), sous
+    # verrou consultatif : plusieurs workers ne s'interbloquent plus. Une base
+    # injoignable, ou un rôle qui contourne la RLS, ARRÊTE le démarrage.
+    startCommand: >-
+      gunicorn --chdir backend
+      --workers 2 --threads 4 --worker-class gthread
+      --timeout 60 --graceful-timeout 30
+      --error-logfile - --access-logfile -
+      --bind 0.0.0.0:$PORT wsgi:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: SOZO_DB_BACKEND
+        value: postgres
+      # Chaîne du POOLER Supabase en mode SESSION (hôte *.pooler.supabase.com,
+      # port 5432) : la connexion directe n'a qu'une adresse IPv6, que Render
+      # ne joint pas. Saisie par le propriétaire, jamais dans ce dépôt.
+      - key: SOZO_DATABASE_URL
+        sync: false
+      - key: SOZO_PG_SCHEMA
+        value: public
+      # Rôle sans BYPASSRLS (créé dans Supabase). Sans lui : démarrage refusé.
+      - key: SOZO_PG_ROLE
+        value: sozo_app
+      - key: SOZO_HTTPS
+        value: "1"
+      # Même valeur dans le secret SOZO_SECRET_PROXY du Worker Cloudflare.
+      - key: SOZO_SECRET_PROXY
+        generateValue: true
+      # Pas de tâche planifiée sur l'offre gratuite : les tâches tournent dans
+      # le serveur, un seul processus à la fois (verrou PostgreSQL).
+      - key: SOZO_TACHES_INTEGREES
+        value: "1"
+      # capture : aucun e-mail ne part tant que le mot de passe d'application
+      # Gmail n'est pas saisi (SOZO_EMAIL_MODE=smtp + SOZO_SMTP_PASSWORD).
+      - key: SOZO_EMAIL_MODE
+        value: capture
+      - key: SOZO_APP_URL
+        value: https://sozo.mudeyimusimwa.workers.dev

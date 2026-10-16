@@ -1,0 +1,29 @@
+// Sōzō sur Cloudflare Workers — les pages, et le relais de /api vers Render.
+// Voir cloudflare/worker.js pour le pourquoi.
+//
+// Déploiement (Workers & Pages → importer le dépôt GitHub Yversplayer/sozo) :
+//   commande de build   : sh cloudflare/construire.sh
+//   commande de deploy  : npx wrangler deploy
+// SOZO_API_ORIGIN est écrite ICI : `wrangler deploy` efface à chaque
+// déploiement les variables en clair posées à la main (leçon de Klassio). Elle
+// n'a rien de secret. Le seul secret, SOZO_SECRET_PROXY, se règle dans le
+// tableau de bord en « Secret » (il survit aux déploiements) : même valeur que
+// côté Render.
+{
+  "name": "sozo",
+  "main": "cloudflare/worker.js",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    // Les liens pointent vers `app/connexion.html` : on sert tel quel, sans
+    // redirection vers `/app/connexion` (un aller-retour de plus en 2G).
+    "html_handling": "none",
+    "not_found_handling": "none"
+  },
+  "vars": {
+    "SOZO_API_ORIGIN": "https://sozo-api.onrender.com"
+  },
+  "observability": { "enabled": true }
+}

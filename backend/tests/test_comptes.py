@@ -122,6 +122,20 @@ class Connexion(Base):
             codes.append(r.status_code)
         self.assertIn(429, codes)
 
+    def test_ip_du_worker_crue_seulement_avec_le_secret(self):
+        """Derrière le Worker, chaque visiteur garde SA limite ; sans le secret,
+        X-Sozo-Client-IP ne permet pas de repartir de zéro."""
+        import app as module_app
+        from unittest import mock
+        with self.app.test_request_context("/", headers={"X-Sozo-Client-IP": "203.0.113.9", "X-Sozo-Proxy": "bon-secret"},
+                                           environ_base={"REMOTE_ADDR": "198.51.100.7"}):
+            with mock.patch.dict(os.environ, {"SOZO_SECRET_PROXY": "bon-secret"}):
+                self.assertEqual(module_app.ip_client(), "203.0.113.9")
+            with mock.patch.dict(os.environ, {"SOZO_SECRET_PROXY": "autre-secret"}):
+                self.assertEqual(module_app.ip_client(), "198.51.100.7")
+            with mock.patch.dict(os.environ, {"SOZO_SECRET_PROXY": ""}):
+                self.assertEqual(module_app.ip_client(), "198.51.100.7")
+
 
 class Csrf(Base):
     def test_mutation_sans_jeton_refusee_et_auditee(self):
