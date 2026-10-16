@@ -22,6 +22,7 @@ from flask import g, jsonify, request
 
 import acces
 import argent
+import catalogue
 import envois
 import notifications
 import config
@@ -379,6 +380,7 @@ def enregistrer(app):
                                   f"« {b['titre']} » : {motif}" if action == "retirer" else f"« {b['titre']} » est de nouveau visible.",
                                   f"/app/studio.html?id={b['slug']}", f"moderation:{bid}:{action}:{acces.maintenant()}")
             cx.valider()
+            catalogue.invalider_vitrine()
             envois.declencher()
             return jsonify(ok=True)
         finally:
@@ -441,6 +443,7 @@ def enregistrer(app):
                 security.revoquer_toutes(cx, uid)          # un compte désactivé perd TOUTES ses sessions
             _trace("utilisateur." + action, f"user:{uid}", motif, cx)
             cx.valider()
+            catalogue.invalider_vitrine()
             return jsonify(ok=True)
         finally:
             cx.fermer()

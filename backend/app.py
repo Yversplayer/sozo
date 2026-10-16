@@ -11,6 +11,7 @@ Garde-fous du socle (INSPIRATION_SECURITE_BACKEND.md, §1, §5, §6) :
 * Une erreur 500 ne renvoie jamais un chemin, une requête SQL ou une trace.
 """
 import logging
+import gzip
 import os
 import secrets
 from functools import wraps
@@ -92,6 +93,46 @@ def ip_client():
     if secret and fournie and secrets.compare_digest(secret, fournie):
         return request.headers.get("CF-Connecting-IP", request.remote_addr)
     return request.remote_addr
+
+
+# ---------------------------------------------------------------------------
+# Compression — mesurée au test de charge du 16/10/2026 : le catalogue pesait
+# 231 Ko (8,5 Ko compressé) et TOUTES les pages le rechargent. En 2G (~25 Ko/s),
+# c'était ~9 s et 231 Ko de forfait par page.
+# ---------------------------------------------------------------------------
+COMPRESSIBLES = {"text/html", "text/css", "text/javascript", "application/javascript", "application/json",
+                 "image/svg+xml", "text/plain", "application/manifest+json"}
+_GZ, _GZ_MAX = {}, 48 * 1024 * 1024          # fichiers statiques déjà compressés (mémoire bornée)
+
+
+def _compresser(rep):
+    """gzip si le navigateur l'accepte. Pas de risque BREACH ici : aucune
+    réponse ne mêle un secret (jeton, mot de passe) à un texte renvoyé tel
+    que fourni par un tiers — le jeton CSRF vit dans un cookie, jamais dans
+    le corps."""
+    if (rep.status_code != 200 or "gzip" not in request.headers.get("Accept-Encoding", "")
+            or rep.mimetype not in COMPRESSIBLES or rep.headers.get("Content-Encoding") or request.method == "HEAD"):
+        return rep
+    statique = rep.direct_passthrough
+    cle = (request.path, rep.headers.get("ETag"), rep.headers.get("Content-Length")) if statique else None
+    if cle and cle in _GZ:
+        donnees = _GZ[cle]
+    else:
+        rep.direct_passthrough = False
+        brut = rep.get_data()
+        if len(brut) < 1024:
+            return rep
+        donnees = gzip.compress(brut, compresslevel=6)
+        if cle and sum(len(x) for x in _GZ.values()) + len(donnees) < _GZ_MAX:
+            _GZ[cle] = donnees
+    rep.direct_passthrough = False
+    rep.set_data(donnees)
+    rep.headers["Content-Encoding"] = "gzip"
+    rep.headers["Content-Length"] = str(len(donnees))
+    rep.vary.add("Accept-Encoding")
+    if rep.headers.get("ETag", "").startswith('"'):        # même ressource, autre codage : étiquette « faible »
+        rep.headers["ETag"] = "W/" + rep.headers["ETag"]
+    return rep
 
 
 # ---------------------------------------------------------------------------
@@ -220,13 +261,22 @@ def creer_app():
             rep.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         if request.path.startswith("/api/"):
             # Aucune réponse d'API en cache partagé : elles dépendent de la
-            # personne (et, plus tard, de ses droits sur des pages payantes).
+            # personne (et de ses droits sur des pages payantes).
             rep.headers["Cache-Control"] = "no-store"
-        elif rep.mimetype == "text/html":
+        elif rep.mimetype == "text/html" or request.path in ("/app/sw.js",):
             rep.headers["Cache-Control"] = "no-cache"
+        elif request.args.get("v"):
+            # Fichier VERSIONNÉ (app.css?v=22) : son contenu ne changera jamais
+            # sous cette adresse ; une nouvelle version change l'adresse. Le
+            # navigateur le garde un an sans redemander — en 2G, chaque
+            # revalidation coûtait un aller-retour (~0,8 s) par fichier et par page.
+            rep.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif os.path.splitext(request.path)[1].lower() in (".jpg", ".jpeg", ".png", ".webp", ".woff2", ".ico", ".svg") \
+                or request.path.startswith(("/app/bible/", "/app/langue/")):
+            rep.headers["Cache-Control"] = "public, max-age=604800"      # images, polices, Bible, dictionnaire : 7 jours
         else:
-            rep.headers.setdefault("Cache-Control", "public, max-age=3600")
-        return rep
+            rep.headers["Cache-Control"] = "no-cache"                    # non versionné : toujours revérifié
+        return _compresser(rep)
 
     @app.errorhandler(Invalide)
     def invalide(e):

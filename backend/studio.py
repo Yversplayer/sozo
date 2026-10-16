@@ -20,6 +20,7 @@ from flask import g, jsonify, request
 
 import acces
 import argent
+import catalogue
 import config
 import db
 import extraction
@@ -170,6 +171,7 @@ def enregistrer(app):
                              (g.user["id"], slug, titre, cat, desc, couv, style, fmt, mode, acces_, prix["prix_page"], prix["prix_chapitre"], prix["prix_livre"], m, m))
             auditer("livre.creation", ressource=f"book:{bid}", apres=titre, cx=cx)
             cx.valider()
+            catalogue.invalider_vitrine()
             return jsonify(livre=_detail(cx, cx.un("SELECT * FROM books WHERE id = ?", (bid,)))), 201
         finally:
             cx.fermer()
@@ -216,6 +218,7 @@ def enregistrer(app):
                 cx.execute(f"UPDATE books SET {k} = ? WHERE id = ?", (val, b["id"]))
             auditer("livre.modification", ressource=f"book:{b['id']}", apres=",".join(sorted(ch)), cx=cx)
             cx.valider()
+            catalogue.invalider_vitrine()
             return jsonify(livre=_detail(cx, _a_moi(cx, slug)))
         finally:
             cx.fermer()
@@ -245,6 +248,7 @@ def enregistrer(app):
             for t, de, a in propres:
                 cx.execute("INSERT INTO chapters (book_id, titre, page_de, page_a) VALUES (?, ?, ?, ?)", (b["id"], t, de, a))
             cx.valider()
+            catalogue.invalider_vitrine()
             return jsonify(ok=True)
         finally:
             cx.fermer()
@@ -368,6 +372,7 @@ def enregistrer(app):
             cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (m, b["id"]))
             auditer("pages.lot", ressource=f"book:{b['id']}", apres=f"{action}:{len(set(ns))}", cx=cx)
             cx.valider()
+            catalogue.invalider_vitrine()
             if action == "publier":
                 import envois, taches
                 taches.annoncer_parutions(b["id"])      # les lecteurs qui suivent le livre sont prévenus tout de suite

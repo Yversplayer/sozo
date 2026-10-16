@@ -17,3 +17,7 @@ _planche/
 
 # Manuscrits importés : stockage PRIVÉ, jamais sur GitHub ni servi
 backend/stockage/
+
+# Tests de charge : comptes et résultats d'une base jetable
+tools/k6/env.json
+tools/k6/resultats/

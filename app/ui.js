@@ -6,8 +6,13 @@
 window.SOZO = (() => {
   const D = window.SOZO_DATA;
   const root = document.documentElement.dataset.root ?? '../';   // préfixe vers la racine du site
-  // Une image absente (compte sans photo) reçoit une illustration neutre du site
-  const img = (name, small) => `${root}images/${name || 'lib-vieux-livres'}${small ? '-480' : ''}.jpg`;
+  // Une image absente (compte sans photo) reçoit une illustration neutre du site.
+  // Mode LÉGER : le téléphone annonce une connexion 2G/3G ou l'économie de
+  // données → seulement les photos réduites (480 px, 2 à 5 fois plus légères).
+  // Mesuré au test 2G du 16/10/2026 : la première visite coûtait ~900 Ko.
+  const conn = navigator.connection || {};
+  const leger = !!(conn.saveData || /(^|-)2g$|^3g$/.test(conn.effectiveType || ''));
+  const img = (name, small) => `${root}images/${name || 'lib-vieux-livres'}${small || leger ? '-480' : ''}.jpg`;
 
   /* Tout texte venant des données passe par esc() avant d'entrer dans le
      HTML : dans le vrai logiciel, titres et descriptions sont saisis par
@@ -415,7 +420,7 @@ window.SOZO = (() => {
 
   const q = (k) => new URLSearchParams(location.search).get(k);
 
-  return { D, esc, icon, img, money, dateLong, dateShort, dayLong, relDays, parse, now, book, author, booksBy, status, access, readable,
+  return { D, leger, esc, icon, img, money, dateLong, dateShort, dayLong, relDays, parse, now, book, author, booksBy, status, access, readable,
            visiblePages, stats, accessLabel, priceFrom, chapterOf, pagesRange, follows, isFollowed, toggleFollow, notifications, markSeen,
            unread, majCloche, libelleAppareil, sess, cover, bookCard, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced };
 })();

@@ -202,6 +202,13 @@ def appliquer_schema(cx=None):
     cx = cx or connecter(globale=True)
     with _verrou:
         try:
+            if cx.moteur == "postgres":
+                # Plusieurs processus (workers gunicorn) démarrent ensemble et
+                # appliquent tous le schéma : leurs DDL s'interbloquaient
+                # (« deadlock detected », serveur arrêté — constaté le 16/10/2026).
+                # Ce verrou consultatif, tenu jusqu'à la fin de la transaction,
+                # les fait passer l'un après l'autre ; le schéma est idempotent.
+                cx.execute("SELECT pg_advisory_xact_lock(4243500)")
             with open(os.path.join(config.RACINE_BACKEND, "schema.sql"), encoding="utf-8") as f:
                 for ddl in _instructions(f.read()):
                     cx.execute(_traduire(ddl, cx.moteur))

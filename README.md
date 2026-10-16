@@ -86,6 +86,14 @@ Les deux suites doivent être vertes. Chaque garde-fou a été **vu tomber** qua
   - Lancement : `backend/tools/taches.py` toutes les 5 minutes, ou `SOZO_TACHES_INTEGREES=1` (verrou PostgreSQL : un seul processus).
 - **Manuscrits d'origine** : effacés 90 jours après l'import, ou dès la suppression du compte. Le texte reste dans les pages.
 
+## Performance (16/10/2026)
+
+Tests k6 : voir `tools/k6/README.md`. Après corrections :
+- 95 % des requêtes en moins de 0,13 s à 25 utilisateurs simultanés, et de 0,7 s à 50 ;
+- en 2G, tourner une page coûte 3,9 s et 11 Ko, contre 13 s et 232 Ko avant.
+
+Les réponses sont compressées (gzip) et les fichiers versionnés gardés un an par le navigateur. Le catalogue public est en cache 15 s, mais les droits restent calculés à chaque requête. En connexion lente ou en économie de données, seules les photos réduites sont chargées.
+
 ## Sauvegardes
 
 ```bash
