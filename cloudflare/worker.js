@@ -68,7 +68,8 @@ const DUREE_7_JOURS = /\.(jpe?g|png|webp|woff2|ico|svg)$/i;
 
 async function servirFichier(requete, env, url) {
   let demande = requete;
-  if (url.pathname === "/") demande = new Request(new URL("/index.html", url), requete);
+  // Un dossier (« /admin/ ») sert son index.html, comme on l'attend en tapant l'adresse.
+  if (url.pathname.endsWith("/")) demande = new Request(new URL(url.pathname + "index.html", url), requete);
   const reponse = await env.ASSETS.fetch(demande);
   const finale = new Response(reponse.body, reponse);
   for (const [nom, valeur] of Object.entries(ENTETES_SECURITE)) finale.headers.set(nom, valeur);
