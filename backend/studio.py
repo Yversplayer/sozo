@@ -287,18 +287,29 @@ def enregistrer(app):
     def enregistrer_page(slug, n):
         d = v.corps_json(request)
         contenu = v.texte(d, "contenu", requis=False, maxi=60_000, multiligne=True) or ""
+        attendue = v.entier(d, "version_attendue", mini=0, requis=False)
         cx = db.connecter()
         try:
             b = _a_moi(cx, slug)
             p = b and cx.un("SELECT * FROM pages WHERE book_id = ? AND n = ?", (b["id"], n))
             if not p:
                 return jsonify(erreur="Introuvable."), 404
+            cx.execute("UPDATE pages SET id = id WHERE id = ?", (p["id"],))   # verrou : la lecture ci-dessous et l'écriture forment un tout
+            actuel, ver_actuelle = acces.contenu_courant(cx, p["id"])
+            # Deux onglets (ou deux appareils) sur la même page : le second
+            # enregistrement écrasait le premier sans rien dire. L'éditeur annonce
+            # la version qu'il a lue ; si elle a changé entre-temps, on le dit.
+            if attendue is not None and attendue != (ver_actuelle or 0):
+                return jsonify(erreur="Cette page a été modifiée ailleurs depuis que vous l'avez ouverte.", code="conflit",
+                               version=ver_actuelle, contenu=actuel), 409
+            if acces.statut_effectif(p) == "scheduled" and not contenu.strip():
+                # Une page programmée vidée sortirait vide à son heure
+                return jsonify(erreur="Cette page est programmée : elle ne peut pas être vidée. Remettez-la d'abord en brouillon.", code="programmee_vide"), 409
             if acces.statut_effectif(p) == "published" and not argent.plume_actif(cx, g.user["id"])["actif"]:
                 return jsonify(erreur="Cette page est publiée : la corriger demande Plume (une nouvelle version, sans rien retirer aux lecteurs).",
                                code="plume_requis"), 403
-            actuel, _ = acces.contenu_courant(cx, p["id"])
             if actuel == contenu:
-                return jsonify(ok=True, version=None, inchange=True)
+                return jsonify(ok=True, version=ver_actuelle, inchange=True)
             ver = _nouvelle_version(cx, p["id"], contenu)
             if acces.statut_effectif(p) == "published":
                 auditer("page.correction_publiee", ressource=f"book:{b['id']}:page:{n}", apres=f"version {ver}", cx=cx)

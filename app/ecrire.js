@@ -50,6 +50,7 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
       <span class="ed-nav">
         ${n > 1 ? `<a class="btn btn--ghost btn--sm" href="ecrire.html?id=${encodeURIComponent(id)}&p=${n - 1}" aria-label="Page précédente">${S.icon('left')}</a>` : ''}
         ${n < total ? `<a class="btn btn--ghost btn--sm" href="ecrire.html?id=${encodeURIComponent(id)}&p=${n + 1}" aria-label="Page suivante">${S.icon('right')}</a>` : ''}
+        <a class="btn btn--ghost btn--sm" id="apercu" href="lire.html?id=${encodeURIComponent(id)}&p=${n}" target="_blank" rel="noopener">${S.icon('eye')} Aperçu lecteur</a>
         <button class="btn btn--accent btn--sm" type="button" id="saveBtn"${verrou ? ' disabled' : ''}>${S.icon('check')} Enregistrer</button>
       </span>
     </div>
@@ -213,8 +214,9 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
     if (envoi) return envoi;
     const texte = ta.value;
     $('#saveBtn').disabled = true; marque('Enregistrement…');
-    envoi = window.SOZO_API('PUT', URL_PAGE, { contenu: texte }).then((r) => {
+    envoi = window.SOZO_API('PUT', URL_PAGE, { contenu: texte, version_attendue: version || 0 }).then((r) => {
       envoi = null; $('#saveBtn').disabled = false;
+      if (r.status === 409 && r.d.code === 'conflit') { conflit(texte, r.d); return; }
       if (!r.ok) {
         marque(r.status === 0 ? 'Hors ligne · copie gardée sur cet appareil' : 'Non enregistré');
         S.toast(r.d.erreur || 'Le serveur a refusé l’enregistrement.');
@@ -226,6 +228,18 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
       marque(`Enregistré · version ${version}`);
     });
     return envoi;
+  }
+  /* Une autre fenêtre a enregistré cette page entre-temps : on ne choisit
+     pas à la place de l'auteur, et rien n'est perdu (sa copie reste au secours). */
+  function conflit(mien, serveur) {
+    marque('Conflit : page modifiée ailleurs');
+    S.modal({ title: 'Cette page a changé ailleurs', body: `<p>Une autre fenêtre ou un autre appareil a enregistré la <strong>version ${serveur.version}</strong> de cette page pendant que vous écriviez.</p>
+      <div class="recap"><div><span>Début de l’autre version</span><strong>${S.esc((serveur.contenu || '').slice(0, 120)) || '(vide)'}…</strong></div></div>
+      <p class="note">${S.icon('shield')} Quel que soit votre choix, rien n’est effacé : chaque version reste dans l’historique.</p>`,
+      actions: [
+        { label: 'Reprendre l’autre version', onClick: (close) => { close(); ta.value = serveur.contenu || ''; enregistre = ta.value; version = serveur.version; changed(true); marque(`Version ${version} chargée`); } },
+        { label: 'Garder mon texte', primary: true, onClick: (close) => { close(); version = serveur.version; ta.value = mien; enregistrer(); } }
+      ] });
   }
   function changed(now) {
     const words = (ta.value.match(/[\p{L}\d’'-]+/gu) || []).length;
@@ -244,6 +258,8 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
   addEventListener('beforeunload', (e) => { if (!verrou && sale()) { e.preventDefault(); e.returnValue = ''; } });
   const essai = $('#essai');
   if (essai) essai.addEventListener('click', () => { if (ta.value.trim()) return; ta.value = ESSAI; essai.hidden = true; S.toast('Texte d’essai, avec des fautes volontaires. Il n’est enregistré que si vous cliquez sur « Enregistrer ».'); changed(true); });
+  // L'aperçu montre ce que le SERVEUR a : on enregistre d'abord
+  $('#apercu').addEventListener('click', async (e) => { if (!verrou && sale()) { e.preventDefault(); await enregistrer(); if (!sale()) open(e.currentTarget.href, '_blank', 'noopener'); } });
   const rest = $('#restaurer');
   if (rest) {
     rest.addEventListener('click', () => { ta.value = secours; $('#secours').remove(); changed(true); });

@@ -277,3 +277,17 @@ textarea[readonly] { cursor: default; }
 /* étiquette + précision « facultatif » sur une ligne, le champ dessous */
 .at-form .cx-field { grid-template-columns: auto 1fr; align-items: baseline; column-gap: 0; }
 .at-form .cx-field > :is(input, select, textarea, .cx-pw) { grid-column: 1 / -1; }
+
+/* ─── feuilletage : au survol, la couverture s'ouvre sur ses pages ─── */
+.at-book .cv { transform-style: preserve-3d; }
+.at-book .cv::before { content: ''; position: absolute; inset: 2% 3% 2% 4%; border-radius: 2px; background: repeating-linear-gradient(90deg, #FFFDF8 0 2px, #EDE3CC 2px 3px); box-shadow: inset -8px 0 14px -10px rgba(0, 0, 0, .35); transform: translateZ(-2px); }
+.at-book .cv-face { transform-origin: left center; transition: transform .8s var(--ease); }
+.at-book:hover .cv-face, .at-book:focus-visible .cv-face { transform: rotateY(-28deg); }
+.at-book.is-ghost:hover .cv-face { transform: none; }
+/* états de publication lisibles d'un coup d'œil dans le tableau */
+.tbl .badge--locked { background: #A3271B; color: #FFF6F0; }
+/* mode simplifié : économie de données ou appareil modeste */
+.at--simple .at-dust { display: none; }
+.at--simple .at-bg { transform: none; transition: none; }
+.at--simple .at-shelf { transform: rotateX(6deg) rotateY(-10deg); transition: none; }
+@media (prefers-reduced-motion: reduce) { .at-book .cv-face { transition: none; } .at-book:hover .cv-face { transform: none; } }

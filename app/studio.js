@@ -152,7 +152,7 @@ window.SOZO_PRET.then(() => {
       </div>
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th><label class="sr" for="toutSel">Tout sélectionner</label><input type="checkbox" id="toutSel"></th><th>Page</th><th>Début du texte</th><th>Chapitre</th><th>État</th><th>Accès</th><th>Parution</th><th>Source</th><th><span class="sr">Actions</span></th></tr></thead>
       <tbody>${liste.length ? '' : `<tr><td colspan="9" class="ash">Aucune page dans ce filtre. <button class="btn btn--ghost btn--sm" type="button" data-filtre="all">Voir toutes les pages</button></td></tr>`}${liste.map((x) => {
-        const pub = x.statut === 'published', st = ETAT[x.statut];
+        const pub = x.statut === 'published', bloquee = x.statut === 'scheduled' && !x.mots, st = bloquee ? ['Bloquée : page vide', 'locked'] : ETAT[x.statut];
         return `<tr data-n="${x.n}" class="${pub ? 'is-pub' : ''}">
           <td>${pub ? `<span class="lockd" title="Publiée : des lecteurs ont peut-être des droits dessus">${S.icon('lock')}<span class="sr">Page publiée, verrouillée</span></span>` : `<input type="checkbox" data-sel="${x.n}" aria-label="Sélectionner la page ${x.n}">`}</td>
           <td><strong>${x.n}</strong>${x.version > 1 ? ` <span class="mono ash">v${x.version}</span>` : ''}</td>
@@ -469,7 +469,10 @@ window.SOZO_PRET.then(() => {
 
   function lier() {
     const hero = $('.at');
-    if (hero && !S.reduced && matchMedia('(hover: hover)').matches) {
+    // Économie de données ou appareil modeste (≤ 2 cœurs) : décor fixe, sans poussière ni parallaxe
+    const modeste = (navigator.connection && navigator.connection.saveData) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2);
+    if (hero && modeste) hero.classList.add('at--simple');
+    if (hero && !modeste && !S.reduced && matchMedia('(hover: hover)').matches) {
       hero.addEventListener('pointermove', (e) => {
         const r = hero.getBoundingClientRect();
         hero.style.setProperty('--mx', ((e.clientX - r.left) / r.width - 0.5).toFixed(3));

@@ -149,3 +149,28 @@ class Studio(TestBase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(a.get("/api/studio").get_json()["atelier"]["nom"], "L'atelier de Nard")
         self.assertEqual(a.put("/api/studio/atelier", {"ambiance": "nuit", "photo": "../../backend/sozo"}).status_code, 400)
+
+
+class Consolidation(TestBase):
+    """Audit du 16/10/2026 : écrasement silencieux entre deux onglets, page
+    programmée vidée."""
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        os.environ["SOZO_MODE_TEST"] = "1"
+
+    def test_conflit_entre_deux_onglets(self):
+        a = Personne(self.app, "auteur")
+        slug = a.livre()                                         # page 5 : brouillon, version 1
+        v = a.get(f"/api/studio/livres/{slug}/pages/5").get_json()["version"]
+        self.assertEqual(a.put(f"/api/studio/livres/{slug}/pages/5", {"contenu": "Onglet A", "version_attendue": v}).status_code, 200)
+        r = a.put(f"/api/studio/livres/{slug}/pages/5", {"contenu": "Onglet B", "version_attendue": v})
+        self.assertEqual((r.status_code, r.get_json()["code"], r.get_json()["contenu"]), (409, "conflit", "Onglet A"))
+        self.assertEqual(a.get(f"/api/studio/livres/{slug}/pages/5").get_json()["contenu"], "Onglet A")   # rien d'écrasé
+
+    def test_page_programmee_ne_se_vide_pas(self):
+        a = Personne(self.app, "auteur")
+        slug = a.livre()
+        a.post(f"/api/studio/livres/{slug}/pages/lot", {"pages": [5], "action": "programmer", "date": "2099-01-01T10:00Z"})
+        r = a.put(f"/api/studio/livres/{slug}/pages/5", {"contenu": "   "})
+        self.assertEqual((r.status_code, r.get_json()["code"]), (409, "programmee_vide"))
