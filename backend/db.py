@@ -36,9 +36,35 @@ def _propre(ligne):
 class Connexion:
     """Enveloppe minimale commune aux deux moteurs."""
 
-    def __init__(self, brute, moteur):
+    def __init__(self, brute, moteur, contexte=None):
         self.brute = brute
         self.moteur = moteur
+        # PostgreSQL : (rôle, app.user_id, app.global), reposés au début de
+        # CHAQUE transaction — voir _poser_contexte.
+        self.contexte = contexte
+        self._pose = False
+
+    def _poser_contexte(self):
+        """Pose le rôle et l'identité DANS la transaction (SET LOCAL,
+        set_config(…, true)), et de nouveau après chaque validation.
+
+        Pourquoi : derrière un pooler en mode transaction (Supavisor, port
+        6543), chaque transaction peut partir sur une autre connexion serveur.
+        Posés une fois pour la session, le rôle et `app.user_id` restaient sur
+        une connexion pendant que les requêtes tournaient sur une autre, réglée
+        pour quelqu'un d'autre : 12 transactions sur 12 avec une identité
+        fausse, des lecteurs privés de leurs pages achetées, la RLS sans effet
+        (reproduit le 16/10/2026, tests/test_pooler.py). Local à la
+        transaction, le contexte ne peut ni lui survivre ni passer à autrui."""
+        role, uid, glob = self.contexte
+        cur = self.brute.cursor()
+        if role:
+            cur.execute(f"SET LOCAL ROLE {role}")
+        # search_path aussi : un pooler ne transmet pas toujours les options
+        # de démarrage d'un client aux connexions serveur qu'il partage.
+        cur.execute("SELECT set_config('app.user_id', %s, true), set_config('app.global', %s, true), set_config('search_path', %s, true)",
+                    (uid, glob, config.schema_postgres()))
+        self._pose = True
 
     def _sql(self, sql):
         if self.moteur == "postgres":
@@ -47,6 +73,8 @@ class Connexion:
         return sql
 
     def execute(self, sql, params=()):
+        if self.contexte is not None and not self._pose:
+            self._poser_contexte()
         cur = self.brute.cursor()
         cur.execute(self._sql(sql), tuple(params))
         return cur
@@ -66,9 +94,11 @@ class Connexion:
 
     def valider(self):
         self.brute.commit()
+        self._pose = False
 
     def annuler(self):
         self.brute.rollback()
+        self._pose = False
 
     def fermer(self):
         self.brute.close()
@@ -77,7 +107,10 @@ class Connexion:
         """Contexte de la Row Level Security (PostgreSQL, étape 3) : une
         connexion dont l'utilisateur n'est pas posé ne voit aucune ligne privée."""
         if self.moteur == "postgres":
-            self.execute("SELECT set_config('app.user_id', ?, true)", (str(user_id or ""),))
+            role, _, glob = self.contexte
+            self.contexte = (role, str(user_id or ""), glob)
+            if self._pose:
+                self.brute.cursor().execute("SELECT set_config('app.user_id', %s, true)", (self.contexte[1],))
 
 
 def _contexte():
@@ -108,19 +141,18 @@ def connecter(globale=False):
         return Connexion(brute, m)
     import psycopg
     from psycopg.rows import dict_row
-    brute = psycopg.connect(config.url_postgres(), row_factory=dict_row, autocommit=True,
-                            options=f"-c search_path={config.schema_postgres()}")
     role = os.environ.get("SOZO_PG_ROLE", "")
-    if role:
-        if not role.replace("_", "").isalnum():
-            raise RuntimeError("SOZO_PG_ROLE invalide.")
-        # Rôle applicatif SANS BYPASSRLS : la base applique les politiques
-        brute.execute(f"SET ROLE {role}")
+    if role and not role.replace("_", "").isalnum():
+        raise RuntimeError("SOZO_PG_ROLE invalide.")
+    # prepare_threshold=None : pas de requêtes préparées nommées. Une connexion
+    # serveur resservie par un pooler les garde : « prepared statement _pg3_0
+    # already exists », 13 erreurs 500 sur 320 requêtes (16/10/2026).
+    brute = psycopg.connect(config.url_postgres(), row_factory=dict_row, autocommit=False, prepare_threshold=None,
+                            options=f"-c search_path={config.schema_postgres()}")
     uid, glob = _contexte()
-    brute.execute("SELECT set_config('app.user_id', %s, false), set_config('app.global', %s, false)",
-                  (str(uid) if uid else "", "1" if (globale or glob) else ""))
-    brute.autocommit = False
-    return Connexion(brute, m)
+    # Rôle applicatif SANS BYPASSRLS (la base applique les politiques) et
+    # identité : posés dans chaque transaction, jamais dans la session.
+    return Connexion(brute, m, (role, str(uid) if uid else "", "1" if (globale or glob) else ""))
 
 
 # ---------------------------------------------------------------------------
@@ -195,6 +227,22 @@ def _politiques_rls():
     return out
 
 
+def verifier_role(cx):
+    """Refuse de servir une base DISTANTE si la RLS ne peut pas s'appliquer.
+
+    Pourquoi : sans SOZO_PG_ROLE, Sōzō parle avec le compte de connexion —
+    sur Supabase, `postgres`, qui peut contourner la RLS. Rien ne le
+    signalerait : la protection de la base serait coupée en silence. Un
+    déploiement qui échoue vaut mieux qu'un déploiement sans ceinture."""
+    if not config.base_distante():
+        return
+    if not os.environ.get("SOZO_PG_ROLE"):
+        raise RuntimeError("SOZO_PG_ROLE manque : sur une base distante, Sōzō exige son rôle applicatif sans BYPASSRLS.")
+    r = cx.un("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user")
+    if not r or r["rolsuper"] or r["rolbypassrls"]:
+        raise RuntimeError("Le rôle applicatif contourne la RLS (SUPERUSER ou BYPASSRLS) : démarrage refusé.")
+
+
 def appliquer_schema(cx=None):
     """Crée les tables manquantes puis joue les migrations additives.
     Idempotent : on peut l'appeler à chaque démarrage."""
@@ -209,6 +257,7 @@ def appliquer_schema(cx=None):
                 # Ce verrou consultatif, tenu jusqu'à la fin de la transaction,
                 # les fait passer l'un après l'autre ; le schéma est idempotent.
                 cx.execute("SELECT pg_advisory_xact_lock(4243500)")
+                verifier_role(cx)
             with open(os.path.join(config.RACINE_BACKEND, "schema.sql"), encoding="utf-8") as f:
                 for ddl in _instructions(f.read()):
                     cx.execute(_traduire(ddl, cx.moteur))
