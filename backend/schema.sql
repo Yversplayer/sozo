@@ -317,3 +317,28 @@ CREATE TABLE IF NOT EXISTS refunds (
   par TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+
+-- ── Messages sortants (16/10/2026) ─────────────────────────────────────────
+-- File d'envoi : un message est écrit DANS la transaction de l'action qui le
+-- cause (rien ne part pour une action annulée), puis expédié après coup, avec
+-- nouvelles tentatives. Un code de sécurité est effacé du corps une fois
+-- envoyé (sensible = 1) : la base ne garde pas de codes lisibles.
+CREATE TABLE IF NOT EXISTS envois (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  canal TEXT NOT NULL CHECK (canal IN ('email', 'push')),
+  user_id INTEGER REFERENCES users (id),
+  destinataire TEXT NOT NULL,
+  sujet TEXT NOT NULL,
+  texte TEXT NOT NULL,
+  html TEXT,
+  lien TEXT,
+  sensible INTEGER NOT NULL DEFAULT 0,
+  etat TEXT NOT NULL CHECK (etat IN ('capture', 'attente', 'en_cours', 'envoye', 'abandonne')),
+  essais INTEGER NOT NULL DEFAULT 0,
+  prochain_essai TEXT,
+  erreur TEXT,
+  created_at TEXT NOT NULL,
+  envoye_le TEXT
+);
+CREATE INDEX IF NOT EXISTS envois_file ON envois (etat, prochain_essai);
+CREATE INDEX IF NOT EXISTS envois_utilisateur ON envois (user_id, id);

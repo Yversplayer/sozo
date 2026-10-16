@@ -11,6 +11,8 @@ from flask import g, jsonify, request
 
 import config
 import db
+import envois
+import gabarits
 import mailer
 import security
 import validation as v
@@ -63,8 +65,11 @@ def enregistrer(app):
             uid = cx.inserer("INSERT INTO users (email, nom, role, password_hash, created_at) VALUES (?, ?, ?, ?, ?)",
                              (email, nom, role, security.hacher_mot_de_passe(mdp), v.maintenant()))
             jeton_v = security.creer_jeton_usage_unique(cx, uid, "verification", timedelta(days=3))
-            mailer.preparer(cx, email, "Confirmez votre adresse — Sōzō",
-                            f"Bonjour {nom},\n\nConfirmez votre adresse : /app/connexion.html?verifier={jeton_v}\n")
+            html, texte = gabarits.page("Confirmez votre adresse", [f"Bonjour {nom},", "Bienvenue sur Sōzō. Confirmez votre adresse pour recevoir vos codes de sécurité et vos reçus."],
+                                        bouton=("Confirmer mon adresse", gabarits.lien(f"/app/connexion.html?verifier={jeton_v}")),
+                                        note="Ce lien est valable 3 jours et ne sert qu’une fois. Si vous n’avez pas créé de compte, ignorez ce message.",
+                                        raison="Vous recevez ce message parce qu’un compte Sōzō vient d’être créé avec cette adresse.")
+            mailer.preparer(cx, email, "Confirmez votre adresse — Sōzō", texte, html, user_id=uid)
             jeton = security.ouvrir_session(cx, uid, ip_client(), request.headers.get("User-Agent"))
             g.user = {"id": uid}
             auditer("compte.inscription", ressource=f"user:{uid}", apres=role, cx=cx)
@@ -72,7 +77,8 @@ def enregistrer(app):
             user = cx.un("SELECT id, email, nom, role, email_verifie_at FROM users WHERE id = ?", (uid,))
         finally:
             cx.fermer()
-        rep = jsonify(moi=_moi(user), email_verification="capture")
+        envois.declencher()
+        rep = jsonify(moi=_moi(user), email_verification=config.email_mode() != "capture" and "envoi" or "capture")
         security.poser_cookies(rep, jeton, config.https_force())
         return rep, 201
 
@@ -218,6 +224,6 @@ def enregistrer(app):
             return jsonify(erreur="Introuvable."), 404
         cx = db.connecter()
         try:
-            return jsonify(emails=cx.tous("SELECT id, destinataire, sujet, corps, etat, created_at FROM emails ORDER BY id DESC LIMIT 20"))
+            return jsonify(emails=cx.tous("SELECT id, destinataire, sujet, texte AS corps, etat, created_at FROM envois WHERE canal = 'email' ORDER BY id DESC LIMIT 20"))
         finally:
             cx.fermer()

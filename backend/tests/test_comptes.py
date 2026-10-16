@@ -71,7 +71,7 @@ class Inscription(Base):
 
     def test_email_capture_jamais_envoye(self):
         _, email = self.inscrire()
-        m = self.sql("SELECT etat FROM emails WHERE destinataire = ?", (email,))
+        m = self.sql("SELECT etat FROM envois WHERE destinataire = ?", (email,))
         self.assertEqual([x["etat"] for x in m], ["capture"])
 
 

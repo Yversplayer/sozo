@@ -107,3 +107,70 @@ def secret_webhook(prestataire):
     if not prestataire.replace("_", "").isalnum():
         return ""
     return os.environ.get("SOZO_WEBHOOK_SECRET_" + prestataire.upper(), "")
+
+
+# ── Messages sortants (e-mail, notifications d'appareil) ───────────────────
+
+# Adresse de contact du propriétaire (16/10/2026) : réponse aux e-mails,
+# bas de page. Elle est publique par nature (affichée sur le site).
+CONTACT_DEFAUT = "mudeyimusimwa@gmail.com"
+
+
+def email_contact():
+    """[PUBLIC] Adresse où les lecteurs et auteurs répondent."""
+    return os.environ.get("SOZO_EMAIL_CONTACT", CONTACT_DEFAUT).strip()
+
+
+def email_mode():
+    """capture (défaut) : rien ne part, le message est rangé ; smtp : un serveur
+    SMTP (Gmail avec mot de passe d'application suffit pour démarrer) ;
+    brevo : l'API Brevo ; fail : panne simulée, pour les tests de reprise."""
+    m = os.environ.get("SOZO_EMAIL_MODE", "capture").strip().lower()
+    if m not in ("capture", "smtp", "brevo", "fail"):
+        raise RuntimeError("SOZO_EMAIL_MODE doit valoir capture, smtp, brevo ou fail.")
+    return m
+
+
+def email_expediteur():
+    """[PUBLIC] Adresse d'expédition. Avec Gmail SMTP, ce DOIT être le compte
+    Gmail lui-même (Gmail réécrit sinon l'expéditeur) ; avec Brevo, une
+    adresse vérifiée chez Brevo."""
+    return os.environ.get("SOZO_EMAIL_FROM", "").strip() or email_contact()
+
+
+def smtp():
+    """[SECRET pour le mot de passe] Réglages SMTP. TLS obligatoire, sauf vers
+    un serveur local (tests) : un mot de passe ne voyage jamais en clair."""
+    hote = os.environ.get("SOZO_SMTP_HOST", "smtp.gmail.com").strip()
+    tls = os.environ.get("SOZO_SMTP_TLS", "starttls").strip().lower()
+    if tls not in ("starttls", "ssl", "aucun"):
+        raise RuntimeError("SOZO_SMTP_TLS doit valoir starttls, ssl ou aucun.")
+    if tls == "aucun" and hote not in ("localhost", "127.0.0.1"):
+        raise RuntimeError("SMTP sans chiffrement refusé hors d'un serveur local.")
+    return {"hote": hote, "port": int(os.environ.get("SOZO_SMTP_PORT", "465" if tls == "ssl" else "587")), "tls": tls,
+            "utilisateur": os.environ.get("SOZO_SMTP_USER", "").strip() or email_expediteur(),
+            "mot_de_passe": os.environ.get("SOZO_SMTP_PASSWORD", "")}
+
+
+def brevo_cle():
+    """[SECRET] Clé API Brevo."""
+    return os.environ.get("SOZO_BREVO_API_KEY", "")
+
+
+def url_site():
+    """[PUBLIC] Adresse publique du site, pour les liens des messages. Sans
+    elle, un lien reçu sur un téléphone pointerait vers localhost."""
+    return os.environ.get("SOZO_APP_URL", "http://localhost:4385").rstrip("/")
+
+
+def vapid():
+    """[SECRET pour la clé privée] Clés VAPID des notifications d'appareil
+    (Web Push). Absentes : aucune notification d'appareil ne part, et
+    l'interface le dit au lieu de faire semblant."""
+    return {"prive": os.environ.get("SOZO_VAPID_PRIVE", "").strip(), "public": os.environ.get("SOZO_VAPID_PUBLIC", "").strip(),
+            "contact": "mailto:" + email_contact()}
+
+
+def push_actif():
+    v = vapid()
+    return bool(v["prive"] and v["public"])
