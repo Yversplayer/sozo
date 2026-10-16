@@ -8,7 +8,7 @@
   })();
   /* Déjà connecté ? C'est le serveur qui le dit (cookie HttpOnly). */
   fetch('/api/moi', { credentials: 'same-origin', cache: 'no-store' }).then((r) => r.ok ? r.json() : null)
-    .then((d) => { if (d && !S.q('reinitialiser') && !S.q('verifier')) { SozoAuth.garder(d.moi); location.replace(suite); } }).catch(() => {});
+    .then((d) => { if (d && !S.q('verifier')) { SozoAuth.garder(d.moi); location.replace(suite); } }).catch(() => {});
   const api = (methode, url, corps) => fetch(url, {
     method: methode, credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': SozoAuth.csrf() },
@@ -61,7 +61,7 @@
           <button class="btn btn--accent cx-submit" type="submit">Créer mon compte ${S.icon('right')}</button>
         </form>
 
-        <p class="warn cx-demo">${S.icon('lock')}<span><strong>Serveur de développement.</strong> Les comptes sont réels sur ce serveur (mot de passe chiffré, session sécurisée). Les e-mails de vérification et de réinitialisation sont rédigés mais <strong>pas encore envoyés</strong> : aucun fournisseur n’est branché.</span></p>
+        <p class="warn cx-demo" id="cxCapture" hidden>${S.icon('lock')}<span><strong>Envoi d’e-mails inactif sur ce serveur.</strong> Les comptes sont réels (mot de passe chiffré, session sécurisée), mais les e-mails de vérification et les codes sont préparés <strong>sans être envoyés</strong>.</span></p>
         <div class="cx-notice" id="notice" role="status" hidden></div>
       </div>
     </main>
@@ -87,20 +87,63 @@
     if (v.length >= 8) sc++; if (v.length >= 12) sc++; if (/[A-Z]/.test(v) && /[a-z]/.test(v)) sc++; if (/\d/.test(v)) sc++; if (/[^\w\s]/.test(v)) sc++;
     const m = $('.cx-meter i'); m.style.width = (sc / 5 * 100) + '%'; m.dataset.level = sc < 2 ? 'faible' : sc < 4 ? 'moyen' : 'fort';
   });
+  /* Mot de passe oublié : un CODE à 6 chiffres, reçu par e-mail, valable
+     15 minutes. Le compte à rebours n'est qu'une indication : c'est le
+     serveur qui décide si le code vaut encore. */
+  async function demanderCode(email) {
+    const r = await api('POST', '/api/comptes/reinitialisation', { email });
+    return r;
+  }
   $('#forgot').addEventListener('click', (e) => {
     e.preventDefault();
-    const m = S.modal({ title: 'Mot de passe oublié', body: `<p>Indiquez l’adresse de votre compte : un lien pour choisir un nouveau mot de passe sera préparé.</p>
+    S.modal({ title: 'Mot de passe oublié', body: `<p>Indiquez l’adresse de votre compte : nous y enverrons un <strong>code à 6 chiffres</strong>, valable 15 minutes.</p>
       <label class="cx-field"><span>Adresse e-mail</span><input type="email" id="fgMail" autocomplete="email" value="${S.esc($('#fIn').email.value)}"></label><p class="cx-err" id="fgErr" role="alert"></p>`,
-      actions: [{ label: 'Annuler' }, { label: 'Préparer le lien', primary: true, onClick: async (close) => {
+      actions: [{ label: 'Annuler' }, { label: 'Recevoir un code', primary: true, onClick: async (close) => {
         const email = document.getElementById('fgMail').value.trim();
         if (!EMAIL.test(email)) { document.getElementById('fgErr').textContent = 'Cette adresse e-mail ne semble pas valide.'; return; }
-        const r = await api('POST', '/api/comptes/reinitialisation', { email });
+        const r = await demanderCode(email);
         if (!r.ok) { document.getElementById('fgErr').textContent = r.d.erreur || 'La demande a échoué.'; return; }
-        close();
-        notice('Si un compte existe pour cette adresse, le lien de réinitialisation est prêt. <strong>L’envoi d’e-mails n’est pas encore branché</strong> : il n’arrivera donc pas dans votre boîte.');
+        close(); saisirCode(email, r.d);
       } }] });
-    return m;
   });
+  function saisirCode(email, d) {
+    let fin = Date.now() + (d.minutes || 15) * 60000, renvoiDes = Date.now() + 60000, tic;
+    const m = S.modal({ title: 'Saisissez votre code', body: `
+      <p>Si un compte existe pour <strong>${S.esc(email)}</strong>, un code vient d’y être envoyé.${d.email === 'capture' ? ' <span class="cx-capture">L’envoi d’e-mails n’est pas encore activé sur ce serveur : le message est préparé mais ne part pas.</span>' : ''}</p>
+      <label class="cx-field"><span>Code à 6 chiffres</span><input id="rzCode" class="cx-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" aria-describedby="rzTemps"></label>
+      <p class="cx-temps" id="rzTemps" aria-live="polite"></p>
+      <label class="cx-field"><span>Nouveau mot de passe <small>8 caractères au moins</small></span><input type="password" id="rzPw" autocomplete="new-password" minlength="8"></label>
+      <p class="cx-err" id="rzErr" role="alert"></p>
+      <button type="button" class="cx-renvoi" id="rzRenvoi" disabled>Renvoyer un code</button>`,
+      actions: [{ label: 'Annuler', onClick: (close) => { clearInterval(tic); close(); } }, { label: 'Changer le mot de passe', primary: true, onClick: async (close) => {
+        const code = document.getElementById('rzCode').value.replace(/\s/g, ''), nouveau = document.getElementById('rzPw').value, err = document.getElementById('rzErr');
+        if (!/^\d{6}$/.test(code)) { err.textContent = 'Le code compte 6 chiffres.'; document.getElementById('rzCode').focus(); return; }
+        if (nouveau.length < 8) { err.textContent = 'Le nouveau mot de passe doit faire au moins 8 caractères.'; document.getElementById('rzPw').focus(); return; }
+        const r = await api('POST', '/api/comptes/reinitialisation/confirmer', { email, code, nouveau });
+        if (!r.ok) { err.textContent = r.d.erreur || 'Échec.'; return; }
+        clearInterval(tic); close();
+        notice('Mot de passe changé. Toutes vos anciennes sessions sont fermées : connectez-vous avec le nouveau.');
+        $('#fIn').email.value = email; $('#fIn').pw.focus();
+      } }] });
+    const temps = document.getElementById('rzTemps'), renvoi = document.getElementById('rzRenvoi');
+    const maj = () => {
+      const reste = Math.max(0, Math.round((fin - Date.now()) / 1000));
+      temps.textContent = reste ? `Code valable encore ${Math.floor(reste / 60)} min ${String(reste % 60).padStart(2, '0')} s.` : 'Ce code a expiré : demandez-en un nouveau.';
+      temps.classList.toggle('is-fini', !reste);
+      renvoi.disabled = Date.now() < renvoiDes;
+      if (!document.body.contains(temps)) clearInterval(tic);
+    };
+    renvoi.addEventListener('click', async () => {
+      renvoi.disabled = true;
+      const r = await demanderCode(email);
+      if (!r.ok) { document.getElementById('rzErr').textContent = r.d.erreur || 'La demande a échoué.'; return; }
+      fin = Date.now() + (r.d.minutes || 15) * 60000; renvoiDes = Date.now() + 60000;
+      S.toast('Nouveau code demandé : l’ancien ne vaut plus.'); maj();
+    });
+    maj(); tic = setInterval(maj, 1000);
+    setTimeout(() => document.getElementById('rzCode') && document.getElementById('rzCode').focus(), 80);
+    return m;
+  }
   function notice(html) { const n = $('#notice'); n.innerHTML = html; n.hidden = false; }
 
   const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -135,19 +178,11 @@
   });
 
   /* liens reçus par e-mail : vérification et réinitialisation */
-  const jetonV = S.q('verifier'), jetonR = S.q('reinitialiser');
+  const jetonV = S.q('verifier');
   if (jetonV) {
     api('POST', '/api/comptes/verification', { jeton: jetonV }).then((r) => notice(r.ok ? 'Adresse e-mail confirmée. Merci !' : S.esc(r.d.erreur || 'Lien invalide.')));
   }
-  if (jetonR) {
-    S.modal({ title: 'Nouveau mot de passe', body: `<label class="cx-field"><span>Nouveau mot de passe <small>8 caractères au moins</small></span><input type="password" id="rzPw" autocomplete="new-password" minlength="8"></label><p class="cx-err" id="rzErr" role="alert"></p>`,
-      actions: [{ label: 'Annuler' }, { label: 'Enregistrer', primary: true, onClick: async (close) => {
-        const nouveau = document.getElementById('rzPw').value;
-        if (nouveau.length < 8) { document.getElementById('rzErr').textContent = 'Au moins 8 caractères.'; return; }
-        const r = await api('POST', '/api/comptes/reinitialisation/confirmer', { jeton: jetonR, nouveau });
-        if (!r.ok) { document.getElementById('rzErr').textContent = r.d.erreur || 'Échec.'; return; }
-        close(); notice('Mot de passe changé. Toutes vos anciennes sessions sont fermées : connectez-vous avec le nouveau.');
-      } }] });
-  }
+  // Le bandeau ne s'affiche que si le serveur dit lui-même que rien ne part
+  fetch('/api/etat', { credentials: 'same-origin' }).then((r) => r.json()).then((d) => { const n = document.getElementById('cxCapture'); if (n) n.hidden = d.email !== 'capture'; }).catch(() => {});
   show(mode0);
 })();

@@ -70,9 +70,14 @@ window.SOZO_PRET.then(() => {
             <h2>Mot de passe</h2>
             <label class="cx-field">Mot de passe actuel<input type="password" name="ancien" autocomplete="current-password" required></label>
             <label class="cx-field">Nouveau mot de passe <small>8 caractères au moins</small><input type="password" name="nouveau" autocomplete="new-password" minlength="8" required></label>
+            <div class="cp-code">
+              <button class="btn btn--ghost btn--sm" type="button" id="demCode">${S.icon('send')} Recevoir un code par e-mail</button>
+              <p class="cx-temps" id="tCode" aria-live="polite"></p>
+            </div>
+            <label class="cx-field">Code reçu <small>6 chiffres, valable 15 minutes</small><input name="code" class="cx-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label>
             <p class="cx-err" id="eMdp" role="alert"></p>
             <button class="btn" type="submit">Changer le mot de passe</button>
-            <p class="note">${S.icon('lock')} Vos autres sessions (autres appareils) seront fermées.</p>
+            <p class="note">${S.icon('lock')} Le code prouve que c’est bien vous, même si quelqu’un a accès à cet appareil. Vos autres sessions seront fermées.</p>
           </form>
           <form class="panel at-form cp-danger" id="fSuppr" novalidate>
             <h2>Supprimer mon compte</h2>
@@ -110,15 +115,34 @@ window.SOZO_PRET.then(() => {
     });
 
     const fm = $('#fMdp');
+    let finCode = 0, ticCode;
+    $('#demCode').addEventListener('click', async (e) => {
+      const b = e.currentTarget; b.disabled = true;
+      const r = await API('POST', '/api/moi/mot-de-passe/code');
+      if (!r.ok) { b.disabled = false; $('#eMdp').textContent = r.d.erreur || 'Envoi du code impossible.'; return; }
+      finCode = Date.now() + (r.d.minutes || 15) * 60000;
+      const t = $('#tCode');
+      const maj = () => {
+        if (!document.body.contains(t)) return clearInterval(ticCode);
+        const reste = Math.max(0, Math.round((finCode - Date.now()) / 1000));
+        t.textContent = (reste ? `Code envoyé à ${r.d.envoye_a}. Valable encore ${Math.floor(reste / 60)} min ${String(reste % 60).padStart(2, '0')} s.` : 'Le code a expiré : demandez-en un nouveau.')
+          + (r.d.email === 'capture' ? ' (L’envoi d’e-mails n’est pas encore activé sur ce serveur.)' : '');
+        t.classList.toggle('is-fini', !reste);
+        if (reste < (r.d.minutes || 15) * 60 - 60) b.disabled = false;   // renvoi possible après une minute
+      };
+      clearInterval(ticCode); maj(); ticCode = setInterval(maj, 1000);
+      fm.elements.code.focus();
+    });
     fm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const err = $('#eMdp'); err.textContent = '';
       if (fm.elements.nouveau.value.length < 8) { err.textContent = 'Le nouveau mot de passe doit faire 8 caractères au moins.'; fm.elements.nouveau.focus(); return; }
       occupe(fm, true);
-      const r = await API('POST', '/api/moi/mot-de-passe', { ancien: fm.elements.ancien.value, nouveau: fm.elements.nouveau.value });
+      if (!/^\d{6}$/.test(fm.elements.code.value.trim())) { err.textContent = 'Saisissez le code à 6 chiffres reçu par e-mail.'; fm.elements.code.focus(); return; }
+      const r = await API('POST', '/api/moi/mot-de-passe', { ancien: fm.elements.ancien.value, nouveau: fm.elements.nouveau.value, code: fm.elements.code.value.trim() });
       occupe(fm, false);
       if (!r.ok) { err.textContent = r.d.erreur || 'Changement refusé.'; return; }
-      fm.reset(); S.toast('Mot de passe changé. Vos autres sessions sont fermées.');
+      fm.reset(); clearInterval(ticCode); $('#tCode').textContent = ''; S.toast('Mot de passe changé. Vos autres sessions sont fermées.');
     });
 
     const fs = $('#fSuppr');

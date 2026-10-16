@@ -295,3 +295,5 @@ textarea[readonly] { cursor: default; }
 .at-ordre .icon-btn { width: 28px; height: 28px; font-size: 14px; }
 .at-rappel { margin: 18px 0 0; position: relative; z-index: 3; }
 .at-rappel .btn { margin-left: 8px; }
+.cp-code { display: grid; gap: 6px; justify-items: start; }
+.at-form .cx-field .cx-code { height: 56px; }

@@ -129,26 +129,81 @@ def enregistrer(app):
     def moi():
         return jsonify(moi=_moi(g.user))
 
+    def _masquer(email):
+        nom, _, dom = email.partition("@")
+        return (nom[:2] + "•" * max(1, len(nom) - 2)) + "@" + dom
+
+    def _envoyer_code(cx, u, objet):
+        code = security.creer_code(cx, u["id"], objet)
+        minutes = int(security.DUREE_CODE.total_seconds() // 60)
+        titre = "Votre code Sōzō" if objet == "reinitialisation" else "Code pour changer votre mot de passe"
+        html, texte = gabarits.page(titre, [f"Bonjour {u['nom']},",
+                                            "Voici votre code pour choisir un nouveau mot de passe :" if objet == "reinitialisation"
+                                            else "Voici votre code pour confirmer le changement de votre mot de passe :"],
+                                    code=code,
+                                    note=f"Il est valable {minutes} minutes et ne sert qu’une fois. Personne chez Sōzō ne vous le demandera jamais. "
+                                         "Si vous n’êtes pas à l’origine de cette demande, ignorez ce message : votre mot de passe ne change pas.",
+                                    raison="Vous recevez ce message parce qu’un code a été demandé pour votre compte Sōzō.")
+        mailer.preparer(cx, u["email"], f"{code} — {titre}", texte, html, user_id=u["id"], sensible=True)
+        return minutes
+
+    def _alerte_mot_de_passe(cx, u):
+        html, texte = gabarits.page("Votre mot de passe a changé", [f"Bonjour {u['nom']},",
+                                    "Le mot de passe de votre compte Sōzō vient d’être modifié. Vos autres sessions ont été fermées."],
+                                    note="Si ce n’est pas vous, répondez immédiatement à ce message : nous bloquerons le compte.",
+                                    raison="Message de sécurité, envoyé à chaque changement de mot de passe.")
+        mailer.preparer(cx, u["email"], "Votre mot de passe Sōzō a changé", texte, html, user_id=u["id"])
+
+    @app.post("/api/moi/mot-de-passe/code")
+    @connectee
+    def code_mot_de_passe():
+        """Changer de mot de passe exige, en plus de l'actuel, un code reçu par
+        e-mail : une session volée (téléphone prêté, poste partagé) ne suffit
+        plus à prendre le compte."""
+        cx = db.connecter()
+        try:
+            if security.depasse(cx, "codemdp:compte", str(g.user["id"])):
+                cx.valider()
+                return _limite()
+            u = cx.un("SELECT id, nom, email FROM users WHERE id = ?", (g.user["id"],))
+            minutes = _envoyer_code(cx, u, "changement")
+            auditer("compte.code_mot_de_passe", ressource=f"user:{u['id']}", cx=cx)
+            cx.valider()
+        finally:
+            cx.fermer()
+        envois.declencher()
+        return jsonify(ok=True, envoye_a=_masquer(u["email"]), minutes=minutes, email=config.email_mode() != "capture" and "envoi" or "capture"), 202
+
     @app.post("/api/moi/mot-de-passe")
     @connectee
     def changer_mot_de_passe():
         d = v.corps_json(request)
         ancien = v.texte(d, "ancien", maxi=MDP_MAX)
         nouveau = v.texte(d, "nouveau", mini=MDP_MIN, maxi=MDP_MAX)
+        code = v.texte(d, "code", maxi=6)
         cx = db.connecter()
         try:
-            u = cx.un("SELECT password_hash FROM users WHERE id = ?", (g.user["id"],))
+            if security.depasse(cx, "mdp:compte", str(g.user["id"])):
+                cx.valider()
+                return _limite()
+            u = cx.un("SELECT id, nom, email, password_hash FROM users WHERE id = ?", (g.user["id"],))
             if not security.verifier_mot_de_passe(ancien, u["password_hash"]):
                 auditer("compte.mot_de_passe", ressource=f"user:{g.user['id']}", resultat="refus", cx=cx)
                 cx.valider()
                 return jsonify(erreur="Mot de passe actuel incorrect.", champ="ancien"), 403
+            if not security.verifier_code(cx, u["id"], "changement", code):
+                auditer("compte.mot_de_passe", ressource=f"user:{g.user['id']}", apres="code", resultat="refus", cx=cx)
+                cx.valider()             # l'essai est compté même s'il échoue
+                return jsonify(erreur="Code incorrect ou expiré. Après 5 essais, demandez un nouveau code.", champ="code"), 403
             cx.execute("UPDATE users SET password_hash = ? WHERE id = ?", (security.hacher_mot_de_passe(nouveau), g.user["id"]))
             # Toutes les AUTRES sessions tombent : un voleur de session est mis dehors
             security.revoquer_toutes(cx, g.user["id"], sauf=g.user["session_id"])
+            _alerte_mot_de_passe(cx, u)
             auditer("compte.mot_de_passe", ressource=f"user:{g.user['id']}", cx=cx)
             cx.valider()
         finally:
             cx.fermer()
+        envois.declencher()
         return jsonify(ok=True)
 
     @app.post("/api/comptes/reinitialisation")
@@ -160,38 +215,44 @@ def enregistrer(app):
             return _limite()
         cx = db.connecter()
         try:
-            u = cx.un("SELECT id, nom FROM users WHERE email = ? AND actif = 1", (email,))
+            u = cx.un("SELECT id, nom, email FROM users WHERE email = ? AND actif = 1", (email,))
             if u:
-                jeton = security.creer_jeton_usage_unique(cx, u["id"], "reinitialisation", timedelta(hours=1))
-                mailer.preparer(cx, email, "Réinitialiser votre mot de passe — Sōzō",
-                                f"Bonjour {u['nom']},\n\nChoisissez un nouveau mot de passe : /app/connexion.html?reinitialiser={jeton}\n"
-                                "Ce lien expire dans une heure et ne sert qu'une fois.\n")
+                _envoyer_code(cx, u, "reinitialisation")
             auditer("compte.reinitialisation.demande", ressource=email, cx=cx)
             cx.valider()
         finally:
             cx.fermer()
+        envois.declencher()
         # Même réponse que le compte existe ou non : pas de liste d'adresses à deviner.
-        return jsonify(ok=True, email="capture"), 202
+        return jsonify(ok=True, minutes=int(security.DUREE_CODE.total_seconds() // 60),
+                       email=config.email_mode() != "capture" and "envoi" or "capture"), 202
 
     @app.post("/api/comptes/reinitialisation/confirmer")
     @ouverte
     def confirmer_reinitialisation():
         d = v.corps_json(request)
-        jeton = v.texte(d, "jeton", maxi=100)
+        email = v.email(d)
+        code = v.texte(d, "code", maxi=6)
         nouveau = v.texte(d, "nouveau", mini=MDP_MIN, maxi=MDP_MAX)
+        if _trop([("code:ip", ip_client()), ("code:compte", email)]):
+            return _limite()
         cx = db.connecter()
         try:
-            uid = security.consommer_jeton(cx, jeton, "reinitialisation")
-            if not uid:
-                auditer("compte.reinitialisation", resultat="refus", cx=cx)
+            u = cx.un("SELECT id, nom, email FROM users WHERE email = ? AND actif = 1", (email,))
+            # Compte inconnu, code faux, expiré ou épuisé : UNE seule réponse.
+            # Sinon, demander un code puis en essayer un faux dirait si l'adresse a un compte.
+            if not u or not security.verifier_code(cx, u["id"], "reinitialisation", code):
+                auditer("compte.reinitialisation", ressource=email, resultat="refus", cx=cx)
                 cx.valider()
-                return jsonify(erreur="Ce lien n'est plus valable. Demandez-en un nouveau."), 400
-            cx.execute("UPDATE users SET password_hash = ? WHERE id = ?", (security.hacher_mot_de_passe(nouveau), uid))
-            security.revoquer_toutes(cx, uid)
-            auditer("compte.reinitialisation", ressource=f"user:{uid}", cx=cx)
+                return jsonify(erreur="Code incorrect ou expiré. Après 5 essais, demandez un nouveau code.", champ="code"), 400
+            cx.execute("UPDATE users SET password_hash = ? WHERE id = ?", (security.hacher_mot_de_passe(nouveau), u["id"]))
+            security.revoquer_toutes(cx, u["id"])
+            _alerte_mot_de_passe(cx, u)
+            auditer("compte.reinitialisation", ressource=f"user:{u['id']}", cx=cx)
             cx.valider()
         finally:
             cx.fermer()
+        envois.declencher()
         return jsonify(ok=True)
 
     @app.post("/api/comptes/verification")
@@ -213,6 +274,14 @@ def enregistrer(app):
         finally:
             cx.fermer()
         return jsonify(ok=True)
+
+    @app.get("/api/etat")
+    @ouverte
+    def etat_public():
+        """Ce que l'interface doit DIRE honnêtement : les e-mails partent-ils,
+        les notifications d'appareil sont-elles possibles. Aucun secret."""
+        return jsonify(email="capture" if config.email_mode() == "capture" else "envoi", push=config.push_actif(),
+                       contact=config.email_contact())
 
     @app.get("/api/dev/boite")
     @ouverte

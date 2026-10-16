@@ -38,7 +38,7 @@ def page(titre, paragraphes, *, code=None, bouton=None, note=None, raison=None):
              f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">'
              f'<table role="presentation" width="100%" style="max-width:560px;background:#FFFDF8;border:1px solid #E7DCC4;border-radius:10px" cellpadding="0" cellspacing="0">'
              f'<tr><td style="background:{BORDEAUX};border-radius:10px 10px 0 0;padding:20px 28px;color:{CREME};font-size:26px;letter-spacing:.5px">Sōzō'
-             f'<span style="color:{OR}"> ✒</span></td></tr>'
+             f'<div style="width:42px;height:2px;margin-top:8px;background:{OR}"></div></td></tr>'
              f'<tr><td style="padding:28px 28px 8px"><h1 style="margin:0 0 18px;font-size:24px;font-weight:500;color:{ENCRE}">{_e(titre)}</h1>{corps}</td></tr>'
              f'<tr><td style="padding:18px 28px 24px;border-top:1px solid #EFE6D2;font-family:Arial,sans-serif;font-size:12.5px;line-height:1.6;color:#6E5A57">{pied}</td></tr>'
              f'</table></td></tr></table></body></html>')

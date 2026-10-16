@@ -150,6 +150,48 @@ def consommer_jeton(cx, jeton, nature):
     return ligne["user_id"] if ligne else None
 
 
+# ── Codes à 6 chiffres, à durée limitée ───────────────────────────────────
+
+DUREE_CODE = timedelta(minutes=15)
+ESSAIS_CODE = 5
+
+
+def _empreinte_code(user_id, objet, code):
+    return empreinte(f"code:{objet}:{user_id}:{code}")
+
+
+def creer_code(cx, user_id, objet):
+    """Un code neuf ; l'ancien, s'il en restait un, cesse de valoir."""
+    m = maintenant()
+    cx.execute("UPDATE codes SET used_at = ? WHERE user_id = ? AND objet = ? AND used_at IS NULL", (_utc(m), user_id, objet))
+    code = f"{secrets.randbelow(10 ** 6):06d}"
+    cx.execute("INSERT INTO codes (user_id, objet, empreinte, expires_at, created_at) VALUES (?, ?, ?, ?, ?)",
+               (user_id, objet, _empreinte_code(user_id, objet, code), _utc(m + DUREE_CODE), _utc(m)))
+    return code
+
+
+def verifier_code(cx, user_id, objet, code):
+    """Vrai si le code est le bon, encore valable, et consommé PAR CET APPEL.
+
+    Chaque essai est compté AVANT la comparaison, par une mise à jour atomique
+    bornée à ESSAIS_CODE : un million de combinaisons ne se parcourent pas en
+    5 essais. Le succès consomme le code (used_at) en une seule mise à jour :
+    deux requêtes simultanées avec le bon code, une seule réussit."""
+    if not code or not str(code).isdigit() or len(str(code)) != 6:
+        return False
+    m = _utc(maintenant())
+    c = cx.un("SELECT id FROM codes WHERE user_id = ? AND objet = ? AND used_at IS NULL AND expires_at > ? ORDER BY id DESC LIMIT 1",
+              (user_id, objet, m))
+    if not c:
+        return False
+    if cx.execute("UPDATE codes SET essais = essais + 1 WHERE id = ? AND essais < ?", (c["id"], ESSAIS_CODE)).rowcount != 1:
+        return False
+    bon = cx.un("SELECT empreinte FROM codes WHERE id = ?", (c["id"],))["empreinte"]
+    if not secrets.compare_digest(bon, _empreinte_code(user_id, objet, str(code))):
+        return False
+    return cx.execute("UPDATE codes SET used_at = ? WHERE id = ? AND used_at IS NULL", (m, c["id"])).rowcount == 1
+
+
 # ── Limitation de débit ────────────────────────────────────────────────────
 
 LIMITES = {
@@ -160,6 +202,10 @@ LIMITES = {
     "reinit:ip": (6, 60),
     "reinit:compte": (3, 60),
     "verification:ip": (20, 60),
+    "code:ip": (30, 15),               # saisies de code (mot de passe oublié)
+    "code:compte": (10, 15),
+    "codemdp:compte": (5, 60),         # demandes de code pour changer de mot de passe
+    "mdp:compte": (10, 15),            # essais du mot de passe actuel
     "lecture:compte": (300, 10),       # pages servies : au-delà, c'est une aspiration
     "paiement:compte": (30, 60),
     "import:compte": (20, 60),

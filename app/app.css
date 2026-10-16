@@ -858,3 +858,15 @@ html[data-theme="dark"] .cx-err { color: #FF8A7A; }
 /* ═══════════ ACHAT — champs de la fenêtre de paiement ═══════════ */
 .md .cx-field select { height: 46px; width: 100%; border: 1px solid var(--line); border-radius: var(--r); padding: 0 12px; background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; font-weight: 400; }
 .md .cx-field input { height: 46px; }
+
+/* ═══════════ CODES À 6 CHIFFRES ═══════════ */
+.cx-code { font: 600 26px/1 ui-monospace, Menlo, Consolas, monospace !important; letter-spacing: .45em; text-align: center; height: 56px !important; }
+.cx-field .cx-code, .md .cx-code { width: 100%; border: 1px solid var(--line); border-radius: var(--r); background: var(--paper); color: var(--ink); }
+.cx-temps { font-size: 13.5px; color: var(--ash); margin-top: -4px; }
+.cx-temps.is-fini { color: #C2261A; }
+html[data-theme="dark"] .cx-temps.is-fini { color: #FF8A7A; }
+.cx-renvoi { justify-self: start; border: 0; background: none; padding: 0; color: var(--ver-text); text-decoration: underline; cursor: pointer; font: inherit; font-size: 14px; }
+.cx-renvoi[disabled] { color: var(--ash); text-decoration: none; cursor: default; }
+.cx-capture { display: block; margin-top: 6px; font-size: 13.5px; color: var(--ash); }
+.md .cx-field input[type="password"] { height: 46px; width: 100%; border: 1px solid var(--line); border-radius: var(--r); padding: 0 12px; background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; }
+.warn[hidden] { display: none; }

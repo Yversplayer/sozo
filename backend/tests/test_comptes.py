@@ -12,6 +12,16 @@ MDP = "Lumiere-2026!"
 class Base(TestBase):
     n = 0
 
+    def dernier_code(self, email):
+        """Le code tel que la personne le lit dans son e-mail (mode capture)."""
+        e = self.sql("SELECT sujet FROM envois WHERE destinataire = ? ORDER BY id DESC LIMIT 1", (email,))
+        return e[0]["sujet"][:6]
+
+    def code_mdp(self, c, email):
+        r = c.post("/api/moi/mot-de-passe/code", json={}, headers=self.csrf(c))
+        self.assertEqual(r.status_code, 202, r.get_json())
+        return self.dernier_code(email)
+
     def inscrire(self, client=None, email=None, role="lecteur"):
         Base.n += 1
         email = email or f"lecteur{Base.n}@exemple.cd"
@@ -19,6 +29,9 @@ class Base(TestBase):
         r = c.post("/api/comptes", json={"nom": "Nard", "email": email, "mot_de_passe": MDP, "role": role, "cgu": True},
                    environ_base={"REMOTE_ADDR": f"10.0.{Base.n // 200}.{Base.n % 200}"})
         return r, email
+
+    def email_de(self, c):
+        return c.get("/api/moi").get_json()["moi"]["email"]
 
     def csrf(self, c):
         ck = c.get_cookie(security.COOKIE_CSRF)
@@ -119,7 +132,7 @@ class Csrf(Base):
         r = c.post("/api/moi/mot-de-passe", json={"ancien": MDP, "nouveau": "Nouveau-2026!"}, headers={security.EN_TETE_CSRF: "faux"})
         self.assertEqual(r.status_code, 403)
         self.assertTrue(self.sql("SELECT id FROM audit_log WHERE action = 'csrf.refus'"))
-        r = c.post("/api/moi/mot-de-passe", json={"ancien": MDP, "nouveau": "Nouveau-2026!"}, headers=self.csrf(c))
+        r = c.post("/api/moi/mot-de-passe", json={"ancien": MDP, "nouveau": "Nouveau-2026!", "code": self.code_mdp(c, self.email_de(c))}, headers=self.csrf(c))
         self.assertEqual(r.status_code, 200)
 
     def test_corps_non_json_refuse(self):
@@ -145,7 +158,8 @@ class Sessions(Base):
         c2 = self.app.test_client()
         c2.post("/api/sessions", json={"email": email, "mot_de_passe": MDP})
         self.assertEqual(c2.get("/api/moi").status_code, 200)
-        c1.post("/api/moi/mot-de-passe", json={"ancien": MDP, "nouveau": "Nouveau-2026!"}, headers=self.csrf(c1))
+        r = c1.post("/api/moi/mot-de-passe", json={"ancien": MDP, "nouveau": "Nouveau-2026!", "code": self.code_mdp(c1, email)}, headers=self.csrf(c1))
+        self.assertEqual(r.status_code, 200)
         self.assertEqual(c2.get("/api/moi").status_code, 401)  # l'autre appareil est déconnecté
         self.assertEqual(c1.get("/api/moi").status_code, 200)  # celui qui change reste connecté
 
@@ -163,47 +177,89 @@ class Sessions(Base):
 
 
 class Reinitialisation(Base):
-    def _jeton(self, email):
-        cx = db.connecter()
-        try:
-            u = cx.un("SELECT id FROM users WHERE email = ?", (email,))
-            j = security.creer_jeton_usage_unique(cx, u["id"], "reinitialisation", __import__("datetime").timedelta(hours=1))
-            cx.valider()
-            return j
-        finally:
-            cx.fermer()
+    """Mot de passe oublié : un code à 6 chiffres, 15 minutes, 5 essais, une fois."""
+    def demander(self, email, ip="10.9.0.1"):
+        return self.app.test_client().post("/api/comptes/reinitialisation", json={"email": email}, environ_base={"REMOTE_ADDR": ip})
+
+    def confirmer(self, email, code, nouveau="Encore-2026!", ip="10.9.1.1"):
+        return self.app.test_client().post("/api/comptes/reinitialisation/confirmer", json={"email": email, "code": code, "nouveau": nouveau},
+                                           environ_base={"REMOTE_ADDR": ip})
 
     def test_meme_reponse_compte_existant_ou_non(self):
         _, email = self.inscrire()
-        r1 = self.client.post("/api/comptes/reinitialisation", json={"email": email}, environ_base={"REMOTE_ADDR": "10.9.0.1"})
-        r2 = self.client.post("/api/comptes/reinitialisation", json={"email": "absent@exemple.cd"}, environ_base={"REMOTE_ADDR": "10.9.0.2"})
+        r1 = self.demander(email, "10.9.0.1")
+        r2 = self.demander("absent@exemple.cd", "10.9.0.2")
         self.assertEqual((r1.status_code, r1.get_json()), (r2.status_code, r2.get_json()))
+        # …et à la saisie : compte inconnu ou code faux, même message
+        f1 = self.confirmer(email, "000000" if self.dernier_code(email) != "000000" else "111111")
+        f2 = self.confirmer("absent@exemple.cd", "123456")
+        self.assertEqual((f1.status_code, f1.get_json()), (f2.status_code, f2.get_json()))
 
-    def test_jeton_a_usage_unique_et_stocke_en_empreinte(self):
+    def test_code_a_usage_unique_et_stocke_en_empreinte(self):
         _, email = self.inscrire()
-        j = self._jeton(email)
-        self.assertEqual(self.sql("SELECT id FROM jetons WHERE token_hash = ?", (j,)), [])
-        r1 = self.client.post("/api/comptes/reinitialisation/confirmer", json={"jeton": j, "nouveau": "Encore-2026!"})
-        r2 = self.client.post("/api/comptes/reinitialisation/confirmer", json={"jeton": j, "nouveau": "Autre-2026!!"})
-        self.assertEqual((r1.status_code, r2.status_code), (200, 400))
+        self.demander(email)
+        code = self.dernier_code(email)
+        self.assertTrue(code.isdigit() and len(code) == 6)
+        self.assertEqual(self.sql("SELECT id FROM codes WHERE empreinte = ?", (code,)), [])
+        self.assertEqual(self.confirmer(email, code).status_code, 200)
+        self.assertEqual(self.confirmer(email, code, "Autre-2026!!").status_code, 400)
         ok = self.app.test_client().post("/api/sessions", json={"email": email, "mot_de_passe": "Encore-2026!"})
         self.assertEqual(ok.status_code, 200)
+        self.assertTrue(self.sql("SELECT id FROM envois WHERE destinataire = ? AND sujet LIKE '%a changé%'", (email,)))   # alerte de sécurité
+
+    def test_code_expire(self):
+        _, email = self.inscrire()
+        self.demander(email)
+        code = self.dernier_code(email)
+        cx = db.connecter(globale=True)
+        try:
+            cx.execute("UPDATE codes SET expires_at = '2000-01-01T00:00:00Z'"); cx.valider()
+        finally:
+            cx.fermer()
+        self.assertEqual(self.confirmer(email, code).status_code, 400)
+
+    def test_cinq_essais_puis_plus_rien_meme_le_bon(self):
+        _, email = self.inscrire()
+        self.demander(email)
+        code = self.dernier_code(email)
+        faux = "000000" if code != "000000" else "111111"
+        for i in range(5):
+            self.assertEqual(self.confirmer(email, faux, ip=f"10.9.2.{i}").status_code, 400)
+        self.assertEqual(self.confirmer(email, code, ip="10.9.2.9").status_code, 400)   # le bon code ne sert plus
+
+    def test_nouveau_code_remplace_l_ancien(self):
+        _, email = self.inscrire()
+        self.demander(email); ancien = self.dernier_code(email)
+        self.demander(email, "10.9.0.5"); nouveau = self.dernier_code(email)
+        if ancien != nouveau:
+            self.assertEqual(self.confirmer(email, ancien).status_code, 400)
+        self.assertEqual(self.confirmer(email, nouveau, ip="10.9.1.2").status_code, 200)
 
     def test_consommation_atomique_en_parallele(self):
-        """Klassio : une invitation consommée deux fois en parallèle. Ici, dix
-        requêtes simultanées sur le même jeton : une seule réussit."""
+        """Dix requêtes simultanées avec le BON code : une seule réussit."""
         _, email = self.inscrire()
-        j = self._jeton(email)
-        codes, depart = [], threading.Barrier(10)
+        self.demander(email)
+        code = self.dernier_code(email)
+        codes, depart = [], threading.Barrier(5)
 
-        def essai():
+        def essai(i):
             depart.wait()
-            r = self.app.test_client().post("/api/comptes/reinitialisation/confirmer", json={"jeton": j, "nouveau": "Parallele-2026!"})
-            codes.append(r.status_code)
-        fils = [threading.Thread(target=essai) for _ in range(10)]
+            codes.append(self.confirmer(email, code, "Parallele-2026!", ip=f"10.9.3.{i}").status_code)
+        fils = [threading.Thread(target=essai, args=(i,)) for i in range(5)]
         [f.start() for f in fils]
         [f.join() for f in fils]
         self.assertEqual(codes.count(200), 1, codes)
+
+    def test_changer_de_mot_de_passe_exige_le_code(self):
+        c = self.app.test_client()
+        _, email = self.inscrire(c)
+        r = c.post("/api/moi/mot-de-passe", json={"ancien": MDP, "nouveau": "Nouveau-2026!", "code": "123456"}, headers=self.csrf(c))
+        self.assertEqual((r.status_code, r.get_json()["champ"]), (403, "code"))          # session seule : insuffisant
+        code = self.code_mdp(c, email)
+        r = c.post("/api/moi/mot-de-passe", json={"ancien": "faux-faux-faux", "nouveau": "Nouveau-2026!", "code": code}, headers=self.csrf(c))
+        self.assertEqual((r.status_code, r.get_json()["champ"]), (403, "ancien"))        # code seul : insuffisant
+        r = c.post("/api/moi/mot-de-passe", json={"ancien": MDP, "nouveau": "Nouveau-2026!", "code": code}, headers=self.csrf(c))
+        self.assertEqual(r.status_code, 200)
 
     def test_boite_de_test_absente_hors_mode_test(self):
         os.environ.pop("SOZO_MODE_TEST", None)

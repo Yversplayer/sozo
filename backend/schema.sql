@@ -342,3 +342,19 @@ CREATE TABLE IF NOT EXISTS envois (
 );
 CREATE INDEX IF NOT EXISTS envois_file ON envois (etat, prochain_essai);
 CREATE INDEX IF NOT EXISTS envois_utilisateur ON envois (user_id, id);
+
+-- ── Codes à durée limitée (16/10/2026) ────────────────────────────────────
+-- Mot de passe oublié ou changé : un code à 6 chiffres, envoyé par e-mail,
+-- valable 15 minutes, 5 essais au plus, à usage unique. Seule son empreinte
+-- est stockée. Un nouveau code remplace l'ancien.
+CREATE TABLE IF NOT EXISTS codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  objet TEXT NOT NULL CHECK (objet IN ('reinitialisation', 'changement')),
+  empreinte TEXT NOT NULL,
+  essais INTEGER NOT NULL DEFAULT 0,
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS codes_actifs ON codes (user_id, objet, used_at);
