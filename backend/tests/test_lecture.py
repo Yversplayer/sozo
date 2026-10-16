@@ -118,6 +118,7 @@ class Balayage(TestBase):
         "nouvelle_page": [("POST", "/api/studio/livres/{slug}/pages", {404})],
         "studio_page": [("GET", "/api/studio/livres/{slug}/pages/1", {404})],
         "enregistrer_page": [("PUT", "/api/studio/livres/{slug}/pages/1", {404}, {"contenu": "écrasé"})],
+        "studio_ordre": [("POST", "/api/studio/livres/{slug}/pages/ordre", {404}, {"ordre": [1]})],
         "studio_lot": [("POST", "/api/studio/livres/{slug}/pages/lot", {404}, {"pages": [1], "action": "publier"})],
         "importer": [("POST", "/api/studio/livres/{slug}/import", {404, 400})],
         "admin_confirmer": [("POST", "/api/admin/paiements/{pid}/confirmer", {401})],

@@ -87,4 +87,4 @@ Les droits, le registre et les tests ne changent pas. Le simulateur (`POST /api/
 - Aucun agrégateur réel ; Plume n'est pas un abonnement récurrent (30 jours payés une fois).
 - E-mails non envoyés (mode capture).
 - Aucune sauvegarde restaurée ni procédure de reprise testée.
-- Pas de réorganisation des pages : les droits d'achat sont attachés aux numéros de page, déplacer une page publiée les fausserait.
+- Réorganisation limitée aux brouillons de fin de livre : les droits d'achat sont attachés aux numéros de page, déplacer une page sortie les fausserait.

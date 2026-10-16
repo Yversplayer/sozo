@@ -28,7 +28,7 @@
 - Tarifs proposés, **non confirmés par le propriétaire** : commission de 15 % (10 % avec Plume), Plume à 4,99 $ pour 30 jours, reversement minimum de 1 $.
 
 ## 3. Ce qui fonctionne (testé)
-**Tests** : 100 sur SQLite et 100 sur PostgreSQL (RLS active), tous verts. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
+**Tests** : 102 sur SQLite et 102 sur PostgreSQL (RLS active), tous verts. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
 ```bash
 cd /Users/macbookpro/sozo && backend_venv/bin/python -m unittest discover -s backend/tests -t backend
 cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py
@@ -48,7 +48,7 @@ cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py
 - **Éditeur** (`app/ecrire.js`) :
   - enregistrement sur le serveur avec versions et copie de secours locale ;
   - détection des conflits entre onglets (`version_attendue`, réponse 409) ;
-  - aperçu lecteur ; page publiée en lecture seule sans Plume ;
+  - aperçu lecteur ; page publiée en lecture seule sans Plume ; rappel dans l'atelier quand Plume finit dans moins de 5 jours ;
   - correcteur dans un Web Worker (`app/langue/`).
 - **Argent** (`backend/argent.py`) :
   - le lecteur paie par Mobile Money, déclare sa référence, et un administrateur confirme ;
@@ -67,7 +67,7 @@ cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py
 - **Aucun agrégateur Mobile Money réel.** Plume n'est pas un abonnement récurrent.
 - **Les e-mails ne partent pas** (mode capture).
 - **Jamais déployé.** Aucune sauvegarde n'a été restaurée.
-- Pas de réorganisation des pages : les droits d'achat sont liés aux numéros de page.
+- Réorganisation des pages limitée aux brouillons placés APRÈS la dernière page sortie (`/pages/ordre`) : les droits d'achat sont liés aux numéros, une page sortie ne bouge jamais.
 - **Pour le bas de page et la mise en ligne, il manque les informations du propriétaire** : e-mail de contact, éditeur légal (nom, adresse, RCCM), numéros Mobile Money par opérateur, nom de domaine, réseaux sociaux, textes légaux (CGU, confidentialité), e-mail de l'administrateur.
 
 ## 5. Environnement local

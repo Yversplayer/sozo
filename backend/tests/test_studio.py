@@ -174,3 +174,26 @@ class Consolidation(TestBase):
         a.post(f"/api/studio/livres/{slug}/pages/lot", {"pages": [5], "action": "programmer", "date": "2099-01-01T10:00Z"})
         r = a.put(f"/api/studio/livres/{slug}/pages/5", {"contenu": "   "})
         self.assertEqual((r.status_code, r.get_json()["code"]), (409, "programmee_vide"))
+
+
+class Ordre(TestBase):
+    """Réordonner sans jamais toucher aux numéros qui portent des droits."""
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        os.environ["SOZO_MODE_TEST"] = "1"
+
+    def test_queue_de_brouillons_reordonnee(self):
+        a = Personne(self.app, "auteur")
+        slug = a.livre()                                         # 1-4 publiées, 5-6 brouillons
+        a.put(f"/api/studio/livres/{slug}/pages/5", {"contenu": "Cinq"}); a.put(f"/api/studio/livres/{slug}/pages/6", {"contenu": "Six"})
+        self.assertEqual(a.post(f"/api/studio/livres/{slug}/pages/ordre", {"ordre": [6, 5]}).status_code, 200)
+        self.assertEqual(a.get(f"/api/studio/livres/{slug}/pages/5").get_json()["contenu"], "Six")
+
+    def test_page_sortie_jamais_deplacee(self):
+        a = Personne(self.app, "auteur")
+        slug = a.livre()
+        r = a.post(f"/api/studio/livres/{slug}/pages/ordre", {"ordre": [4, 5, 6]})
+        self.assertEqual((r.status_code, r.get_json()["code"]), (409, "hors_queue"))
+        r = a.post(f"/api/studio/livres/{slug}/pages/ordre", {"ordre": [6]})            # incomplet
+        self.assertEqual(r.status_code, 409)

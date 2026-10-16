@@ -99,7 +99,8 @@ window.SOZO_PRET.then(() => {
       ${carte('Livres', at.livres.length, 'library', at.livres.some((b) => b.statut === 'retire') ? 'Dont au moins un retiré par la modération' : 'Sur votre étagère')}
       ${carte('Pages sorties', pages, 'book', 'Publiées ou programmées')}
       ${carte('Plume', at.plume.actif ? 'Active' : 'Non', 'feather', at.plume.actif ? `Jusqu’au ${S.dateLong(at.plume.fin)}` : `${S.money(at.plume.prix)} pour 30 jours`)}
-    </div></div>`}`;
+    </div></div>`}
+    ${!lecteur && at.plume.actif && (new Date(at.plume.fin) - Date.now()) < 5 * 864e5 ? `<div class="wrap"><p class="warn at-rappel">${S.icon('feather')}<span><strong>Plume se termine le ${S.esc(S.dateLong(at.plume.fin))}.</strong> Ensuite, vos pages publiées redeviennent verrouillées et la commission repasse au taux normal ; vos versions et vos ventes restent acquises. <button class="btn btn--sm" type="button" data-prolonger>Prolonger de 30 jours</button></span></p></div>` : ''}`;
   }
   const carte = (l, v, ic, sous, accent) => `<div class="at-card${accent ? ' at-card--or' : ''}" data-tilt><span class="at-card-ic">${S.icon(ic)}</span><strong>${S.esc(String(v))}</strong><span class="at-card-l">${S.esc(l)}</span><small>${S.esc(sous)}</small><i class="at-glare" aria-hidden="true"></i></div>`;
 
@@ -141,6 +142,9 @@ window.SOZO_PRET.then(() => {
     const liste = p.filter((x) => filtre === 'all' || x.statut === filtre);
     const chap = (n) => { const ch = livre.chapitres.find((x) => n >= x.page_de && n <= x.page_a); return ch ? ch.titre : '—'; };
     const prixPage = livre.prix.page != null ? usd(livre.prix.page) : 'au chapitre ou au livre';
+    // Seule la queue de brouillons (après la dernière page sortie) se réordonne : les droits suivent les numéros
+    const derniereSortie = Math.max(0, ...p.filter((x) => x.statut !== 'draft').map((x) => x.n));
+    const queue = p.filter((x) => x.n > derniereSortie).map((x) => x.n);
     return `<div class="tbl-tools" role="group" aria-label="Filtrer les pages">${[['all', `Toutes (${p.length})`], ['published', `Publiées (${c('published')})`], ['scheduled', `Programmées (${c('scheduled')})`], ['draft', `Brouillons (${c('draft')})`]].map(([k, l]) => `<button class="chip" type="button" data-filtre="${k}" aria-pressed="${filtre === k}">${l}</button>`).join('')}</div>
       <div class="bulk" id="bulk" role="group" aria-label="Actions sur la sélection">
         <strong id="selCount"></strong>
@@ -155,7 +159,7 @@ window.SOZO_PRET.then(() => {
         const pub = x.statut === 'published', bloquee = x.statut === 'scheduled' && !x.mots, st = bloquee ? ['Bloquée : page vide', 'locked'] : ETAT[x.statut];
         return `<tr data-n="${x.n}" class="${pub ? 'is-pub' : ''}">
           <td>${pub ? `<span class="lockd" title="Publiée : des lecteurs ont peut-être des droits dessus">${S.icon('lock')}<span class="sr">Page publiée, verrouillée</span></span>` : `<input type="checkbox" data-sel="${x.n}" aria-label="Sélectionner la page ${x.n}">`}</td>
-          <td><strong>${x.n}</strong>${x.version > 1 ? ` <span class="mono ash">v${x.version}</span>` : ''}</td>
+          <td><strong>${x.n}</strong>${x.version > 1 ? ` <span class="mono ash">v${x.version}</span>` : ''}${queue.length > 1 && queue.includes(x.n) ? `<span class="at-ordre">${x.n > queue[0] ? `<button type="button" class="icon-btn" data-monter="${x.n}" aria-label="Monter la page ${x.n}">↑</button>` : ''}${x.n < queue[queue.length - 1] ? `<button type="button" class="icon-btn" data-descendre="${x.n}" aria-label="Descendre la page ${x.n}">↓</button>` : ''}</span>` : ''}</td>
           <td class="at-extrait">${x.extrait ? S.esc(x.extrait.slice(0, 70)) + (x.extrait.length > 70 ? '…' : '') : '<span class="ash">Page vide</span>'}<small>${x.mots} mot${x.mots > 1 ? 's' : ''}</small></td>
           <td class="ash">${S.esc(chap(x.n))}</td>
           <td><span class="badge badge--${st[1]}">${st[0]}</span></td>
@@ -490,6 +494,7 @@ window.SOZO_PRET.then(() => {
     });
     $$('#nouveau, [data-nouveau]').forEach((b) => b.addEventListener('click', nouveauLivre));
     const perso = $('#perso'); if (perso) perso.addEventListener('click', personnaliser);
+    $$('[data-prolonger]').forEach((b) => b.addEventListener('click', () => S.buy.plume(at.plume.prix)));
     $$('[data-livre]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); filtre = 'all'; ouvrirLivre(a.dataset.livre); }));
     if (!livre) return;
 
@@ -517,6 +522,17 @@ window.SOZO_PRET.then(() => {
       const tout = $('#toutSel');
       if (tout) tout.addEventListener('change', () => { $$('[data-sel]').forEach((c) => { c.checked = tout.checked; }); syncSel(); });
       $$('[data-lot]').forEach((b) => b.addEventListener('click', () => { const s = choisies(); if (s.length) lot(b.dataset.lot, s, b); }));
+      $$('[data-monter], [data-descendre]').forEach((b) => b.addEventListener('click', async () => {
+        const derniere = Math.max(0, ...livre.pages.filter((x) => x.statut !== 'draft').map((x) => x.n));
+        const q = livre.pages.filter((x) => x.n > derniere).map((x) => x.n);
+        const n = +(b.dataset.monter || b.dataset.descendre), i = q.indexOf(n), j = b.dataset.monter ? i - 1 : i + 1;
+        [q[i], q[j]] = [q[j], q[i]];
+        b.disabled = true;
+        const r = await API('POST', `/api/studio/livres/${enc(livre.id)}/pages/ordre`, { ordre: q });
+        if (!r.ok) { b.disabled = false; erreur(r); return; }
+        S.toast('Ordre des brouillons enregistré.');
+        await relireLivre();
+      }));
       $$('[data-publier]').forEach((b) => b.addEventListener('click', () => {
         const n = +b.dataset.publier;
         S.modal({ title: `Publier la page ${n} maintenant ?`, body: `<p>Une fois publiée, son accès, son prix et sa date ne pourront plus changer : des lecteurs pourront la lire ou l’acheter. Son texte ne se corrigera qu’avec Plume, en nouvelle version.</p>`,

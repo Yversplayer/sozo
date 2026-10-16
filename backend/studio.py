@@ -369,6 +369,43 @@ def enregistrer(app):
         finally:
             cx.fermer()
 
+    @app.post("/api/studio/livres/<slug>/pages/ordre")
+    @connectee
+    def studio_ordre(slug):
+        """Réordonner les brouillons de FIN de livre (après la dernière page
+        sortie). Les droits d'achat sont attachés aux numéros : déplacer une
+        page sortie, ou un brouillon glissé entre deux pages vendues au
+        chapitre, changerait ce qu'un lecteur a payé. On ne permute donc que
+        la queue de brouillons, où aucun droit ne peut viser un texte précis."""
+        d = v.corps_json(request)
+        ordre = d.get("ordre")
+        if not isinstance(ordre, list) or not ordre or len(ordre) > 2000 or not all(isinstance(x, int) and not isinstance(x, bool) for x in ordre):
+            raise v.Invalide("« ordre » doit être une liste de numéros.", "ordre")
+        cx = db.connecter()
+        try:
+            b = _a_moi(cx, slug)
+            if not b:
+                return jsonify(erreur="Introuvable."), 404
+            pages = cx.tous("SELECT id, n, statut, publie_le FROM pages WHERE book_id = ? ORDER BY n", (b["id"],))
+            sorties = [p["n"] for p in pages if acces.statut_effectif(p) != "draft"]
+            queue = [p for p in pages if p["n"] > (max(sorties) if sorties else 0)]
+            if sorted(ordre) != [p["n"] for p in queue]:
+                return jsonify(erreur="Seuls les brouillons placés après la dernière page sortie se réordonnent, et tous doivent figurer dans l'ordre.",
+                               code="hors_queue"), 409
+            par_n = {p["n"]: p["id"] for p in queue}
+            numeros = [p["n"] for p in queue]
+            # deux temps : UNIQUE(book_id, n) interdit un échange direct
+            for n in numeros:
+                cx.execute("UPDATE pages SET n = ? WHERE id = ?", (-n, par_n[n]))
+            for nouveau, ancien in zip(numeros, ordre):
+                cx.execute("UPDATE pages SET n = ? WHERE id = ?", (nouveau, par_n[ancien]))
+            cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (acces.maintenant(), b["id"]))
+            auditer("pages.ordre", ressource=f"book:{b['id']}", apres=",".join(map(str, ordre))[:200], cx=cx)
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
     @app.post("/api/studio/livres/<slug>/import")
     @connectee
     def importer(slug):

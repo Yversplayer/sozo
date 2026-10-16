@@ -291,3 +291,7 @@ textarea[readonly] { cursor: default; }
 .at--simple .at-bg { transform: none; transition: none; }
 .at--simple .at-shelf { transform: rotateX(6deg) rotateY(-10deg); transition: none; }
 @media (prefers-reduced-motion: reduce) { .at-book .cv-face { transition: none; } .at-book:hover .cv-face { transform: none; } }
+.at-ordre { display: inline-flex; margin-left: 6px; vertical-align: middle; }
+.at-ordre .icon-btn { width: 28px; height: 28px; font-size: 14px; }
+.at-rappel { margin: 18px 0 0; position: relative; z-index: 3; }
+.at-rappel .btn { margin-left: 8px; }
