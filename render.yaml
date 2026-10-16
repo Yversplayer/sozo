@@ -5,6 +5,9 @@
 # visiteur au serveur se paie une fois par page ; celle du serveur à la base,
 # une fois par REQUÊTE SQL (mesure de Klassio, 18/09/2026).
 #
+# Version de Python : variable PYTHON_VERSION (pas de runtime.txt : Cloudflare
+# le détectait et installait Python pour rien à chaque build des pages).
+#
 # PALIER GRATUIT : s'endort après 15 min sans trafic, ~50 s de réveil. Les
 # pages (Cloudflare) restent instantanées ; seule l'API attend.
 services:
