@@ -2,6 +2,20 @@
 
 À lire en entier avant de toucher au code. Puis lire `README.md` (lancement, tests, garanties, architecture).
 
+## 0. En ligne depuis le 16/10/2026
+
+| | |
+|---|---|
+| Site (pages + relais /api) | https://sozo.mudeyimusimwa.workers.dev — Worker Cloudflare `sozo`, build `sh cloudflare/construire.sh`, redéployé à chaque push |
+| Serveur (API) | https://sozo-api.onrender.com — Render `sozo-api` (srv-db9a7kvbtjjs73av7mi0), Francfort, offre GRATUITE (0,1 CPU, veille après 15 min). Dépôt public : **Manual Deploy après chaque push backend** |
+| Base | Supabase, organisation « Sozo » (gratuite), projet `sozo` (dcbbvcvnpdllxjyefzln), Francfort, Data API coupé, pooler MODE SESSION (5432) |
+| Rôle | `sozo_app` NOLOGIN NOBYPASSRLS, accordé à `postgres` (qui, lui, a BYPASSRLS — vérifié). Le serveur refuse de démarrer sans lui |
+| Secrets | `SOZO_DATABASE_URL` (Render, saisi par le propriétaire) ; `SOZO_SECRET_PROXY` (généré par Render, recopié en Secret dans le Worker) |
+
+Vérifié en ligne le 16/10 : 26/26 contrôles de bout en bout (lecture protégée, brouillon, isolation des achats, CSRF, corps non-JSON, session inventée, administration, limite anti-abus) ; IP réelle du visiteur reçue par le serveur (secret partagé effectif). Comptes d'essai supprimés, livre d'essai retiré.
+
+Pas encore actif en ligne : e-mails (mode capture → pas de code « mot de passe oublié »), notifications d'appareil (clés VAPID), sauvegardes chiffrées hors site, compte d'administration (à créer avec `backend/tools/admin.py`, adresse de la base en variable d'environnement, par le propriétaire).
+
 ## 1. Le projet
 - **Sōzō** : plateforme de lecture et de publication page par page, pour un ami du propriétaire (l'auteur Nawezi N., « Nard »). Les livres sont gratuits, payants ou mixtes, avec parutions programmées, Bible intégrée (LSG 1910), correcteur du français, atelier d'auteur, paiement Mobile Money et administration.
 - **Propriétaire** : il vit à Kinshasa et parle français. Il juge le résultat et veut un logiciel complet et solide. Il dit « go go go » pour avancer.
