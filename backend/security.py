@@ -99,7 +99,7 @@ def lire_session(cx, jeton):
     if not jeton or len(jeton) > 100:
         return None
     return cx.un(
-        """SELECT u.id, u.email, u.nom, u.role, u.email_verifie_at, s.id AS session_id
+        """SELECT u.id, u.email, u.nom, u.role, u.email_verifie_at, u.theme, s.id AS session_id
              FROM sessions s JOIN users u ON u.id = s.user_id
             WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND u.actif = 1""",
         (empreinte(jeton), _utc(maintenant())))

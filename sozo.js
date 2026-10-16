@@ -113,14 +113,6 @@
     leaves.map(([f, b], i) => `<div class="bk-leaf" style="--li:${i}"><div class="bk-face bk-face--front">${f}</div><div class="bk-face bk-face--back">${b}</div></div>`).join('');
   $('#bkFlat').innerHTML = [face.p1, face.p3, face.p4, face.p5, face.p6].map((f) => `<div class="bk-flat-pg">${f}</div>`).join('');
 
-  /* ─── 4. thème ─── */
-  const tb = $('#themeToggle');
-  const sync = () => {
-    const dark = window.SozoTheme && SozoTheme.get() === 'dark';
-    tb.setAttribute('aria-pressed', String(dark));
-    tb.setAttribute('aria-label', dark ? 'Passer en thème clair' : 'Passer en thème sombre');
-    tb.innerHTML = S.icon(dark ? 'sun' : 'moon');
-  };
-  tb.addEventListener('click', () => { SozoTheme.toggle(); sync(); });
-  sync();
+  /* ─── 4. thème : nocturne par défaut ; le choix se fait dans Mon compte
+     (demande du propriétaire, 17/10/2026), plus de bouton sur la vitrine ─── */
 })();

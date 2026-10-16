@@ -17,7 +17,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 5
+VERSION_SCHEMA = 6
 _verrou = threading.Lock()
 
 
@@ -310,6 +310,8 @@ def _migrer(cx):
     # v5 (16/10/2026) : notifications, conservation des manuscrits
     _ajouter_colonne(cx, "users", "preferences", "TEXT")
     _ajouter_colonne(cx, "imports", "efface_le", "TEXT")
+    # v6 (17/10/2026) : thème de la personne (NULL = nocturne, le défaut du propriétaire)
+    _ajouter_colonne(cx, "users", "theme", "TEXT")
     if "annoncee_le" not in _colonnes(cx, "pages"):
         _ajouter_colonne(cx, "pages", "annoncee_le", "TEXT")
         # Les pages DÉJÀ sorties sont réputées annoncées : sans cela, la première

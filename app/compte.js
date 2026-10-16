@@ -59,6 +59,17 @@ window.SOZO_PRET.then(() => {
           </section>` : `<section class="panel"><h2>Écrire sur Sōzō</h2><p class="ash">Publiez vos textes page par page, gratuitement ou contre paiement. Vous restez lecteur.</p><a class="btn btn--accent" href="studio.html" style="margin-top:14px">${S.icon('feather')} Ouvrir mon atelier</a></section>`}
         </div>
         <div class="cp-col">
+          <section class="panel" id="apparence" aria-labelledby="hTheme">
+            <h2 id="hTheme">Apparence</h2>
+            <div class="cp-theme" role="radiogroup" aria-labelledby="hTheme">
+              ${[['nocturne', 'Nocturne', 'par défaut'], ['clair', 'Clair', 'fond crème']].map(([v, l, s]) => `<label class="cp-theme-opt">
+                <input type="radio" name="theme" value="${v}"${(u.theme === 'clair' ? 'clair' : 'nocturne') === v ? ' checked' : ''}>
+                <span class="cp-theme-sw cp-theme-sw--${v}" aria-hidden="true"><i></i><i></i></span>
+                <span><strong>${l}</strong><small>${s}</small></span></label>`).join('')}
+            </div>
+            <p class="cx-err" id="eTheme" role="alert"></p>
+            <p class="note">${S.icon('eye')} Ce choix vous suit sur tous vos appareils, que vous lisiez ou que vous écriviez.</p>
+          </section>
           <form class="panel at-form" id="fProfil" novalidate>
             <h2>Mon profil</h2>
             <label class="cx-field">Nom affiché<input name="nom" maxlength="60" required value="${S.esc(u.nom)}" autocomplete="name"></label>
@@ -100,6 +111,22 @@ window.SOZO_PRET.then(() => {
       S.buy.reprendre(a, charger);
     }));
     const pl = $('#plume'); if (pl) pl.addEventListener('click', () => S.buy.plume(c.plume.prix, c.plume));
+
+    main.querySelectorAll('input[name=theme]').forEach((r) => r.addEventListener('change', async () => {
+      const avant = SozoTheme.get() === 'dark' ? 'nocturne' : 'clair';
+      SozoTheme.set(r.value);                        // tout de suite : on voit l'effet en choisissant
+      $('#eTheme').textContent = '';
+      const q = await API('PATCH', '/api/compte', { theme: r.value });
+      if (!q.ok) {                                   // refusé : on revient au thème d'avant, sans faux succès
+        SozoTheme.set(avant);
+        main.querySelector(`input[name=theme][value=${avant}]`).checked = true;
+        $('#eTheme').textContent = q.d.erreur || 'Le thème n’a pas pu être enregistré.';
+        return;
+      }
+      c.compte.theme = r.value;
+      SozoAuth.garder(null);
+      S.toast(r.value === 'clair' ? 'Thème clair enregistré.' : 'Thème nocturne enregistré.');
+    }));
 
     const fp = $('#fProfil');
     fp.addEventListener('submit', async (e) => {

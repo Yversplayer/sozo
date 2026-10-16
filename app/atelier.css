@@ -314,3 +314,16 @@ html[data-theme="dark"] .cp-ok { color: #7FD3A0; }
 .cp-prefs td { padding: 9px 4px; border-bottom: 1px solid var(--line); }
 .cp-prefs input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--ver); }
 .cp-prefs .btn { justify-self: start; }
+
+/* ── Mon compte : apparence (nocturne par défaut, clair au choix — 17/10/2026) ── */
+.cp-theme { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+.cp-theme-opt { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: var(--r); cursor: pointer; position: relative; }
+.cp-theme-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.cp-theme-opt:has(input:checked) { border-color: var(--gold-line); box-shadow: 0 0 0 1px var(--gold-line); }
+.cp-theme-opt:has(input:focus-visible) { outline: 2px solid var(--gold-line); outline-offset: 2px; }
+.cp-theme-opt strong { display: block; }
+.cp-theme-opt small { color: var(--ash); }
+.cp-theme-sw { display: grid; grid-template-rows: 1fr 1fr; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 1px solid var(--line); }
+.cp-theme-sw--nocturne i:first-child { background: #3A0B13; } .cp-theme-sw--nocturne i:last-child { background: #D4AF37; }
+.cp-theme-sw--clair i:first-child { background: #FFFDF8; } .cp-theme-sw--clair i:last-child { background: #6B0F1A; }
+@media (max-width: 420px) { .cp-theme { grid-template-columns: 1fr; } }

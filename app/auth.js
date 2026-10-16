@@ -47,6 +47,8 @@
       if (!d) return;
       var avant = !!moi;
       garder(d.moi);
+      // Le thème choisi dans Mon compte suit la personne d'un appareil à l'autre
+      if (window.SozoTheme && d.moi && d.moi.theme) SozoTheme.set(d.moi.theme);
       if (!avant) location.reload();          // première visite de l'onglet : on affiche avec le profil
     })
     .catch(function () { if (!moi) versConnexion(); });

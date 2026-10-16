@@ -283,7 +283,7 @@ def enregistrer(app):
     def compte_lire():
         cx = db.connecter()
         try:
-            u = cx.un("SELECT id, email, nom, role, bio, ville, email_verifie_at, created_at FROM users WHERE id = ?", (g.user["id"],))
+            u = cx.un("SELECT id, email, nom, role, bio, ville, email_verifie_at, theme, created_at FROM users WHERE id = ?", (g.user["id"],))
             achats = cx.tous(
                 """SELECT p.id, p.objet, p.montant, p.devise, p.etat, p.created_at, p.confirme_le, p.page_de, p.page_a,
                           p.operateur, p.reference, p.motif_refus, b.titre, b.slug, r.numero AS recu,
@@ -306,6 +306,8 @@ def enregistrer(app):
             champs["bio"] = v.texte(d, "bio", requis=False, maxi=600, multiligne=True)
         if "ville" in d:
             champs["ville"] = v.texte(d, "ville", requis=False, maxi=60)
+        if "theme" in d:
+            champs["theme"] = v.choix(d, "theme", {"nocturne", "clair"})
         if not champs:
             raise v.Invalide("Rien à modifier.")
         cx = db.connecter()

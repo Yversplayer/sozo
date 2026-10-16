@@ -25,7 +25,9 @@ ERREUR_CONNEXION = "E-mail ou mot de passe incorrect."
 
 def _moi(user):
     return {"id": user["id"], "nom": user["nom"], "email": user["email"], "role": user["role"],
-            "email_verifie": bool(user["email_verifie_at"])}
+            "email_verifie": bool(user["email_verifie_at"]),
+            # Thème choisi dans Mon compte : il suit la personne d'un appareil à l'autre
+            "theme": "clair" if user.get("theme") == "clair" else "nocturne"}
 
 
 def _trop(action_cles):
@@ -94,7 +96,7 @@ def enregistrer(app):
             return _limite()
         cx = db.connecter()
         try:
-            u = cx.un("SELECT id, email, nom, role, email_verifie_at, password_hash, actif FROM users WHERE email = ?", (email,))
+            u = cx.un("SELECT id, email, nom, role, email_verifie_at, theme, password_hash, actif FROM users WHERE email = ?", (email,))
             # Même message, même durée, que le compte existe ou non
             ok = security.verifier_mot_de_passe(mdp, u["password_hash"]) if u else security.verifier_leurre(mdp)
             if not ok or not u["actif"]:

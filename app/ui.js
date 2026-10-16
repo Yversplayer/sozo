@@ -344,7 +344,6 @@ window.SOZO = (() => {
         <div class="top-tools">
           <a class="icon-btn" href="decouvrir.html#catalogue" aria-label="Rechercher un livre">${icon('search')}</a>
           <a class="icon-btn" href="suivis.html#notifications" aria-label="Notifications${n ? ` : ${n} nouvelle${n > 1 ? 's' : ''}` : ''}">${icon('bell')}${n ? `<span class="dot dot--abs">${n}</span>` : ''}</a>
-          <button class="icon-btn" type="button" id="themeBtn" aria-pressed="false">${icon('moon')}</button>
           <div class="acct">
             <button class="avatar" type="button" id="acctBtn" aria-haspopup="true" aria-expanded="false" aria-controls="acctMenu" aria-label="Mon compte">${esc(initials())}</button>
             <div class="acct-menu" id="acctMenu" hidden>
@@ -364,15 +363,6 @@ window.SOZO = (() => {
     tabs.className = 'tabs'; tabs.setAttribute('aria-label', 'Navigation');
     tabs.innerHTML = links.map(([k, h, l, ic]) => `<a href="${h}" class="${active === k ? 'is-active' : ''}"${active === k ? ' aria-current="page"' : ''}>${icon(ic)}<span>${l.replace(' auteur', '')}</span></a>`).join('');
     document.body.appendChild(tabs);
-    const tb = head.querySelector('#themeBtn');
-    const sync = () => {
-      const dark = window.SozoTheme && SozoTheme.get() === 'dark';
-      tb.innerHTML = icon(dark ? 'sun' : 'moon');
-      tb.setAttribute('aria-pressed', String(dark));
-      tb.setAttribute('aria-label', dark ? 'Passer en thème clair' : 'Passer en thème sombre');
-    };
-    tb.addEventListener('click', () => { SozoTheme.toggle(); sync(); });
-    sync();
     const ab = head.querySelector('#acctBtn'), am = head.querySelector('#acctMenu');
     const closeMenu = () => { am.hidden = true; ab.setAttribute('aria-expanded', 'false'); };
     ab.addEventListener('click', (e) => { e.stopPropagation(); am.hidden = !am.hidden; ab.setAttribute('aria-expanded', String(!am.hidden)); });

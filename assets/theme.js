@@ -1,18 +1,21 @@
-/* Thème : clair par défaut (choix du propriétaire), sombre si le lecteur l'a
-   demandé. Lu dans <head> avant le premier rendu, pour éviter un éclair clair.
+/* Thème : NOCTURNE par défaut (décision du propriétaire, 17/10/2026) ; clair
+   si la personne l'a choisi dans Mon compte. Le choix vit sur le serveur (il
+   suit la personne d'un appareil à l'autre) et en copie locale, lue ici dans
+   <head> avant le premier rendu pour éviter un éclair de la mauvaise couleur.
    Le stockage peut être bloqué (navigation privée) : tout est sous try. */
 (function () {
-  var t = 'light';
-  try { t = localStorage.getItem('sozo-theme') || 'light'; } catch (e) {}
-  if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  var t = 'nocturne';
+  try { t = localStorage.getItem('sozo-theme') === 'clair' ? 'clair' : 'nocturne'; } catch (e) {}
+  if (t === 'nocturne') document.documentElement.setAttribute('data-theme', 'dark');
   window.SozoTheme = {
     get: function () { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; },
+    /* v : 'nocturne' | 'clair' */
     set: function (v) {
-      if (v === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-      else document.documentElement.removeAttribute('data-theme');
-      try { localStorage.setItem('sozo-theme', v); } catch (e) {}
-      document.dispatchEvent(new CustomEvent('sozo:theme', { detail: v }));
-    },
-    toggle: function () { this.set(this.get() === 'dark' ? 'light' : 'dark'); }
+      var clair = v === 'clair';
+      if (clair) document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.setAttribute('data-theme', 'dark');
+      try { localStorage.setItem('sozo-theme', clair ? 'clair' : 'nocturne'); } catch (e) {}
+      document.dispatchEvent(new CustomEvent('sozo:theme', { detail: clair ? 'light' : 'dark' }));
+    }
   };
 })();
