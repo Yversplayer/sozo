@@ -376,7 +376,7 @@ def enregistrer(app):
                 cx.valider()
                 return jsonify(erreur="Trop d'imports. Réessayez dans une heure."), 429
             try:
-                nature, textes = extraction.extraire(octets)
+                nature, textes = extraction.extraire_borne(octets)
             except extraction.Refus as e:
                 auditer("livre.import", ressource=f"book:{b['id']}", apres=str(e)[:100], resultat="refus", cx=cx)
                 cx.valider()

@@ -111,9 +111,14 @@ def _calculer(cx, user, d):
 
 # ── La confirmation : un seul chemin, atomique ─────────────────────────────
 
-def confirmer(cx, payment_id, par):
+def confirmer(cx, payment_id, par, frais=0):
     """Passe le paiement en CONFIRMED SI ET SEULEMENT SI il était ouvert, puis
-    écrit droits, reçu et registre. Rend False si déjà traité (rejeu)."""
+    écrit droits, reçu et registre. Rend False si déjà traité (rejeu).
+
+    `frais` : ce que le prestataire a retenu (centimes). Décision du 16/10/2026 :
+    les frais sont pris sur la part de Sōzō, jamais sur celle de l'auteur. Ils
+    ont leur propre ligne — sans elle, le registre ne se rapprochait pas du
+    relevé de l'opérateur et la commission paraissait plus haute qu'elle n'est."""
     m = _now()
     cur = cx.execute(
         "UPDATE payments SET etat = 'CONFIRMED', confirme_le = ?, confirme_par = ?, updated_at = ? WHERE id = ? AND etat IN ('CREATED', 'PENDING', 'UNKNOWN')",
@@ -126,7 +131,7 @@ def confirmer(cx, payment_id, par):
         debut = actuel["fin"] if actuel["actif"] else m
         fin = (datetime.strptime(debut, "%Y-%m-%dT%H:%M:%SZ") + timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
         cx.execute("INSERT INTO subscriptions (user_id, debut, fin, payment_id) VALUES (?, ?, ?, ?)", (p["user_id"], debut, fin, payment_id))
-        cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, 'plateforme', NULL, ?, ?)", (payment_id, p["montant"], m))
+        cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, 'plateforme', NULL, ?, ?)", (payment_id, p["montant"] - frais, m))
     else:
         cx.execute("INSERT INTO entitlements (user_id, book_id, page_de, page_a, payment_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                    (p["user_id"], p["book_id"], p["page_de"], p["page_a"], payment_id, m))
@@ -134,11 +139,26 @@ def confirmer(cx, payment_id, par):
         pct = config.commission_pct(plume=plume_actif(cx, auteur, m)["actif"])
         commission = (p["montant"] * pct + 50) // 100           # arrondi au centime, en entiers
         cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, 'auteur', ?, ?, ?)", (payment_id, auteur, p["montant"] - commission, m))
-        cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, 'plateforme', NULL, ?, ?)", (payment_id, commission, m))
+        cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, 'plateforme', NULL, ?, ?)", (payment_id, commission - frais, m))
+    if frais:
+        cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, 'frais', NULL, ?, ?)", (payment_id, frais, m))
     annee = m[:4]
     cx.execute("INSERT INTO receipts (payment_id, user_id, numero, created_at) VALUES (?, ?, ?, ?)",
                (payment_id, p["user_id"], f"SZ-{annee}-{payment_id:06d}", m))
     return True
+
+
+DELAI_ACHAT = timedelta(hours=48)
+
+
+def expirer(cx):
+    """Un achat CRÉÉ et jamais déclaré expire après 48 h (décision du 16/10/2026).
+    Avant, il restait ouvert indéfiniment : une référence déclarée des semaines
+    plus tard restait confirmable, au prix d'alors. Seul CREATED expire : un
+    achat DÉCLARÉ (PENDING) attend la vérification, l'argent est peut-être parti."""
+    limite = (datetime.utcnow() - DELAI_ACHAT).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return cx.execute("UPDATE payments SET etat = 'EXPIRED', updated_at = ? WHERE etat = 'CREATED' AND created_at < ?",
+                      (_now(), limite)).rowcount
 
 
 def refuser(cx, payment_id, par, motif):
@@ -226,9 +246,13 @@ def enregistrer(app):
             return jsonify(erreur="Les paiements ne sont pas encore ouverts sur Sōzō."), 409
         cx = db.connecter()
         try:
+            expirer(cx)
             p = _mien(cx, pid)
             if not p:
                 return jsonify(erreur="Introuvable."), 404
+            if p["etat"] == "EXPIRED":
+                cx.valider()
+                return jsonify(erreur="Cet achat a expiré (48 h sans paiement). Recommencez l'achat : le prix sera celui d'aujourd'hui.", code="expire"), 409
             # Une même transaction Mobile Money ne paie qu'un achat — y compris celui
             # d'un AUTRE compte : seule lecture globale de ce module, réduite à un oui/non.
             cg = db.connecter(globale=True)
@@ -288,6 +312,12 @@ def enregistrer(app):
         event_id = v.texte(d, "event_id", maxi=100)
         pid = v.entier(d, "payment_id", mini=1)
         statut = v.choix(d, "statut", {"success", "failed", "pending", "unknown"})
+        # Le MONTANT et la DEVISE réellement encaissés sont exigés : une
+        # notification signée mais rattachée au mauvais achat (ou partielle) ne
+        # doit jamais ouvrir un livre plus cher que ce qui a été payé.
+        montant = v.entier(d, "montant", mini=0, maxi=100_000_000) if statut == "success" else None
+        devise = v.texte(d, "devise", maxi=3) if statut == "success" else None
+        frais = v.entier(d, "frais", mini=0, maxi=100_000_000, requis=False) or 0 if statut == "success" else 0
         # Connexion GLOBALE : le prestataire agit pour le compte de l'acheteur,
         # authentifié par la signature HMAC vérifiée ci-dessus.
         cx = db.connecter(globale=True)
@@ -296,8 +326,22 @@ def enregistrer(app):
             if cur.rowcount != 1:
                 cx.valider()
                 return jsonify(ok=True, deja_traite=True)
+            p = cx.un("SELECT montant, devise, etat FROM payments WHERE id = ?", (pid,))
+            if statut == "success" and p and (montant != p["montant"] or devise.upper() != p["devise"] or frais > montant):
+                # Encaissement non conforme : rien n'est ouvert, l'achat part en revue
+                cx.execute("UPDATE payments SET etat = 'UNKNOWN', motif_refus = ?, updated_at = ? WHERE id = ? AND etat IN ('CREATED', 'PENDING', 'EXPIRED')",
+                           (f"Encaissement non conforme : {montant} {devise} reçu(s), {p['montant']} {p['devise']} attendu(s)", _now(), pid))
+                auditer("webhook.montant_divergent", ressource=f"payment:{pid}", apres=f"{event_id}:{montant}{devise}", resultat="refus", cx=cx)
+                cx.valider()
+                return jsonify(ok=True, applique=False, revue=True)
+            if statut == "success" and p and p["etat"] == "EXPIRED":
+                # Argent reçu après l'expiration : on ne le perd pas, un humain tranche
+                cx.execute("UPDATE payments SET etat = 'UNKNOWN', motif_refus = 'Payé après expiration', updated_at = ? WHERE id = ? AND etat = 'EXPIRED'", (_now(), pid))
+                auditer("webhook.apres_expiration", ressource=f"payment:{pid}", apres=event_id, resultat="refus", cx=cx)
+                cx.valider()
+                return jsonify(ok=True, applique=False, revue=True)
             if statut == "success":
-                fait = confirmer(cx, pid, f"prestataire:{prestataire}")
+                fait = confirmer(cx, pid, f"prestataire:{prestataire}", frais=frais)
             elif statut == "failed":
                 fait = refuser(cx, pid, f"prestataire:{prestataire}", "Refusé par le prestataire")
             elif statut == "unknown":

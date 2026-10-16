@@ -145,9 +145,11 @@ class Webhook(TestBase):
     def test_rejeu_ne_confirme_qu_une_fois_et_echec_ne_defait_rien(self):
         lec = Personne(self.app)
         pid = lec.post("/api/paiements", {"objet": "page", "livre": self.slug, "n": 3, "idempotency_key": "test-cle-wh-rejeu"}).get_json()["paiement"]["id"]
-        r1 = self.envoyer({"event_id": "evt-1", "payment_id": pid, "statut": "success"})
-        r2 = self.envoyer({"event_id": "evt-1", "payment_id": pid, "statut": "success"})
-        r3 = self.envoyer({"event_id": "evt-2", "payment_id": pid, "statut": "success"})
+        m = sql("SELECT montant FROM payments WHERE id = ?", (pid,))[0]["montant"]
+        ok = {"payment_id": pid, "statut": "success", "montant": m, "devise": "USD"}   # le montant encaissé est exigé depuis le 16/10
+        r1 = self.envoyer({"event_id": "evt-1", **ok})
+        r2 = self.envoyer({"event_id": "evt-1", **ok})
+        r3 = self.envoyer({"event_id": "evt-2", **ok})
         self.assertTrue(r1.get_json()["applique"])
         self.assertTrue(r2.get_json()["deja_traite"])
         self.assertFalse(r3.get_json()["applique"])

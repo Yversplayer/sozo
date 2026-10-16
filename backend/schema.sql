@@ -290,3 +290,14 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   expires_at TEXT NOT NULL,
   revoked_at TEXT
 );
+
+-- ── Index du 16/10/2026 (audit) : les requêtes réellement fréquentes ───────
+-- Additifs : IF NOT EXISTS, aucune donnée touchée.
+CREATE INDEX IF NOT EXISTS follows_livre ON follows (book_id);                  -- nombre de lecteurs qui suivent
+CREATE INDEX IF NOT EXISTS payments_utilisateur ON payments (user_id, id);      -- Mon compte
+CREATE INDEX IF NOT EXISTS payments_reference ON payments (operateur, reference); -- une référence = un achat
+CREATE INDEX IF NOT EXISTS ledger_paiement ON ledger (payment_id);              -- rapprochement
+CREATE INDEX IF NOT EXISTS payouts_auteur ON payouts (author_id, etat);         -- solde de l'auteur
+CREATE INDEX IF NOT EXISTS signalements_etat ON signalements (etat, id);        -- file de modération
+CREATE INDEX IF NOT EXISTS imports_livre ON imports (book_id);
+CREATE INDEX IF NOT EXISTS subscriptions_utilisateur ON subscriptions (user_id, fin);

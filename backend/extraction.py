@@ -185,3 +185,48 @@ def extraire(octets):
     if len(pages) > MAX_PAGES:
         raise Refus(f"Plus de {MAX_PAGES} pages.")
     return n, pages
+
+
+# ── Exécution bornée ───────────────────────────────────────────────────────
+# Un PDF de 25 Mo malformé (références circulaires, flux géants) pouvait
+# occuper un processus du serveur plusieurs minutes : quelques envois et le
+# site ne répondait plus. L'extraction tourne donc dans un processus À PART,
+# tué au-delà du délai, avec un plafond de mémoire là où le système le permet.
+DELAI_EXTRACTION = 30          # secondes
+MEMOIRE_MAX = 1024 * 1024 * 1024
+
+
+def _enfant(cible, octets, file):
+    try:
+        import resource
+        resource.setrlimit(resource.RLIMIT_AS, (MEMOIRE_MAX, MEMOIRE_MAX))
+    except (ImportError, ValueError, OSError):
+        pass                    # macOS refuse RLIMIT_AS : le délai reste la garde
+    try:
+        file.put(("ok", cible(octets)))
+    except Refus as e:
+        file.put(("refus", str(e)))
+    except MemoryError:
+        file.put(("refus", "Fichier trop lourd à analyser."))
+    except Exception:
+        file.put(("refus", "Fichier illisible."))
+
+
+def extraire_borne(octets, delai=None, cible=None):
+    """extraire(), mais dans un processus séparé, tué s'il dépasse le délai."""
+    import multiprocessing as mp
+    import queue
+    ctx = mp.get_context("spawn")
+    file = ctx.Queue()
+    p = ctx.Process(target=_enfant, args=(cible or extraire, octets, file), daemon=True)
+    p.start()
+    try:
+        etat, val = file.get(timeout=delai or DELAI_EXTRACTION)
+    except queue.Empty:
+        p.kill()
+        p.join(5)
+        raise Refus("L'analyse de ce fichier a pris trop de temps. Enregistrez-le de nouveau (PDF, EPUB ou DOCX standard) puis réessayez.")
+    p.join(5)
+    if etat == "refus":
+        raise Refus(val)
+    return val

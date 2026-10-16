@@ -18,13 +18,19 @@ def _dollars(c):
     return None if c is None else c / 100
 
 
-def serialiser_livre(cx, b, user, plages=None, a=None):
+def serialiser_livre(cx, b, user, plages=None, a=None, toutes_pages=None, chapitres=None):
     """Le livre tel que le voit CETTE personne : les brouillons d'autrui
-    n'apparaissent pas, l'état de chaque page est calculé par acces."""
+    n'apparaissent pas, l'état de chaque page est calculé par acces.
+    `toutes_pages` / `chapitres` : déjà lus en lot par le catalogue (sinon,
+    deux requêtes PAR livre : 2 000 livres = 4 000 allers-retours)."""
     if plages is None:
         plages = acces.droits(cx, user["id"] if user else None, b["id"])
+    if toutes_pages is None:
+        toutes_pages = cx.tous("SELECT * FROM pages WHERE book_id = ? ORDER BY n", (b["id"],))
+    if chapitres is None:
+        chapitres = cx.tous("SELECT titre, page_de, page_a FROM chapters WHERE book_id = ? ORDER BY page_de", (b["id"],))
     pages = []
-    for p in cx.tous("SELECT * FROM pages WHERE book_id = ? ORDER BY n", (b["id"],)):
+    for p in toutes_pages:
         e = acces.etat_page(b, p, user, plages, a)
         if e is None:
             continue
@@ -37,7 +43,7 @@ def serialiser_livre(cx, b, user, plages=None, a=None):
         "desc": b["description"], "demo": bool(b["demo"]), "owner": bool(user and b["owner_id"] == user["id"]),
         "price": None if b["acces"] == "free" else {"page": _dollars(b["prix_page"]), "chapter": _dollars(b["prix_chapitre"]), "all": _dollars(b["prix_livre"])},
         "chapters": [{"t": c["titre"], "from": c["page_de"], "to": c["page_a"]}
-                     for c in cx.tous("SELECT titre, page_de, page_a FROM chapters WHERE book_id = ? ORDER BY page_de", (b["id"],))],
+                     for c in chapitres],
         "pages": pages,
     }
 
@@ -72,12 +78,22 @@ def enregistrer(app):
             plages = {}
             for r in cx.tous("SELECT book_id, page_de, page_a FROM entitlements WHERE user_id = ?", (uid,)):
                 plages.setdefault(r["book_id"], []).append((r["page_de"], r["page_a"]))
-            books = [serialiser_livre(cx, b, g.user, plages.get(b["id"], []), a) for b in livres]
+            ids = [b["id"] for b in livres]
+            pages_par, chap_par = {}, {}
+            if ids:
+                marques = ",".join("?" * len(ids))       # uniquement des « ? » : les ids restent des paramètres
+                for p in cx.tous(f"SELECT * FROM pages WHERE book_id IN ({marques}) ORDER BY book_id, n", ids):
+                    pages_par.setdefault(p["book_id"], []).append(p)
+                for c in cx.tous(f"SELECT book_id, titre, page_de, page_a FROM chapters WHERE book_id IN ({marques}) ORDER BY book_id, page_de", ids):
+                    chap_par.setdefault(c["book_id"], []).append(c)
+            books = [serialiser_livre(cx, b, g.user, plages.get(b["id"], []), a, pages_par.get(b["id"], []), chap_par.get(b["id"], []))
+                     for b in livres]
             auteurs = {}
-            for oid in sorted({b["owner_id"] for b in livres}):
-                u = cx.un("SELECT * FROM users WHERE id = ? AND actif = 1", (oid,))
-                if u:
-                    auteurs[_auteur_cle(oid)] = serialiser_auteur(cx, u)
+            proprietaires = sorted({b["owner_id"] for b in livres})
+            if proprietaires:
+                for u in cx.tous(f"SELECT * FROM users WHERE actif = 1 AND id IN ({','.join('?' * len(proprietaires))})", proprietaires):
+                    auteurs[_auteur_cle(u["id"])] = serialiser_auteur(cx, u)
+            g.dernieres_pages = {k: (v[-1]["n"] if v else 0) for k, v in pages_par.items()}
             return jsonify(authors=auteurs, books=books, reader=_etat_lecteur(cx, uid, livres))
         finally:
             cx.fermer()
@@ -91,7 +107,7 @@ def enregistrer(app):
             if r["book_id"] not in par_id:
                 continue
             slug = par_id[r["book_id"]]
-            nmax = cx.un("SELECT MAX(n) AS m FROM pages WHERE book_id = ?", (r["book_id"],))["m"] or 0
+            nmax = g.dernieres_pages.get(r["book_id"], 0)
             fin = r["page_a"] or nmax
             p = purchases.setdefault(slug, {"pages": [], "date": r["created_at"][:10]})
             p["pages"] = sorted(set(p["pages"]) | set(range(r["page_de"], fin + 1)))

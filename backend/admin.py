@@ -176,10 +176,12 @@ def enregistrer(app):
     @admin_requis
     def admin_paiements():
         etat = request.args.get("etat", "PENDING")
-        if etat not in ("PENDING", "UNKNOWN", "CONFIRMED", "FAILED", "CREATED", "CANCELLED", "TOUS"):
+        if etat not in ("PENDING", "UNKNOWN", "CONFIRMED", "FAILED", "CREATED", "CANCELLED", "EXPIRED", "TOUS"):
             raise v.Invalide("État inconnu.", "etat")
         cx = db.connecter()
         try:
+            if argent.expirer(cx):
+                cx.valider()
             filtre = "" if etat == "TOUS" else "WHERE p.etat = ?"
             return jsonify(paiements=cx.tous(f"""SELECT p.id, p.objet, p.montant, p.etat, p.operateur, p.reference, p.created_at, p.updated_at,
                                                         p.page_de, p.page_a, p.motif_refus, u.nom AS lecteur, u.email, b.titre
