@@ -219,3 +219,21 @@ class Consolidation(TestBase):
         finally:
             os.environ["SOZO_MODE_TEST"] = "1"
         self.assertEqual(sql("SELECT etat FROM payments WHERE id = ?", (pid,))[0]["etat"], "CREATED")
+
+    def test_une_vente_remboursee_ne_compte_plus(self):
+        """Défaut constaté le 16/10/2026 : « Ventes confirmées : 2 » pour une
+        seule vente remboursée (la requête comptait les LIGNES du registre, et
+        un remboursement en ajoute une, correctrice)."""
+        auteur = Personne(self.app, "auteur")
+        slug = auteur.livre(prix=(25, 75, 300))
+        ancien, self.slug = self.slug, slug
+        lec, pid = self.achat_confirme("ventes-a")
+        self.achat_confirme("ventes-b")
+        v = {x["slug"]: x for x in auteur.get("/api/studio/ventes").get_json()["livres"]}[slug]
+        self.assertEqual((v["ventes"], v["net"]), (2, 510))
+        c = self.connecter("finance@sozo.test", self.secret)
+        self.reauth(c)
+        self.assertEqual(c.post(f"/api/admin/paiements/{pid}/rembourser", json={"motif": "Litige"}, headers=self.csrf(c)).status_code, 200)
+        v = {x["slug"]: x for x in auteur.get("/api/studio/ventes").get_json()["livres"]}[slug]
+        self.assertEqual((v["ventes"], v["net"], v["remboursees"]), (1, 255, 1))
+        self.slug = ancien

@@ -9,6 +9,7 @@ suppression. Le schéma est appliqué AVANT que le serveur n'accepte une
 requête : un déploiement échoue plutôt que d'exposer une API sans son schéma.
 """
 import os
+from decimal import Decimal
 from datetime import datetime, timezone
 import re
 import sqlite3
@@ -18,6 +19,18 @@ import config
 
 VERSION_SCHEMA = 5
 _verrou = threading.Lock()
+
+
+def _propre(ligne):
+    """PostgreSQL rend SUM() d'entiers en `Decimal` ; SQLite, en entier. Flask
+    sérialisait le premier en TEXTE (« 510 » au lieu de 510) : soldes et
+    revenus changeaient de type selon le moteur (constaté le 16/10/2026). Les
+    montants sont des centimes entiers : un Decimal entier redevient un int."""
+    d = dict(ligne)
+    for k, val in d.items():
+        if isinstance(val, Decimal):
+            d[k] = int(val) if val == val.to_integral_value() else float(val)
+    return d
 
 
 class Connexion:
@@ -40,10 +53,10 @@ class Connexion:
 
     def un(self, sql, params=()):
         ligne = self.execute(sql, params).fetchone()
-        return dict(ligne) if ligne is not None else None
+        return _propre(ligne) if ligne is not None else None
 
     def tous(self, sql, params=()):
-        return [dict(l) for l in self.execute(sql, params).fetchall()]
+        return [_propre(l) for l in self.execute(sql, params).fetchall()]
 
     def inserer(self, sql, params=()):
         """INSERT qui rend l'identifiant créé, sur les deux moteurs."""

@@ -99,7 +99,7 @@ window.SOZO_PRET.then(() => {
       const a = c.achats.find((x) => x.id === +b.dataset.reprendre);
       S.buy.reprendre(a, charger);
     }));
-    const pl = $('#plume'); if (pl) pl.addEventListener('click', () => S.buy.plume(c.plume.prix));
+    const pl = $('#plume'); if (pl) pl.addEventListener('click', () => S.buy.plume(c.plume.prix, c.plume));
 
     const fp = $('#fProfil');
     fp.addEventListener('submit', async (e) => {

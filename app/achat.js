@@ -55,9 +55,56 @@
     ] });
   }
 
-  function plume(prix) {
-    S.modal({ title: 'Passer à Plume', body: `<p>Plume : corriger vos pages publiées (avec historique), statistiques, mise en page, commission réduite. <strong>${S.money(prix)} pour 30 jours.</strong></p>`,
-      actions: [{ label: 'Annuler' }, { label: `Payer ${S.money(prix)}`, primary: true, onClick: (close) => { close(); payer({ objet: 'plume' }, cle()); } }] });
+  /* ─── Le forfait Plume : carte de membre dorée, comparaison, paiement réel ─── */
+  const PLUME_SVG = `<svg class="pl-plume" viewBox="-40 -330 1130 420" aria-hidden="true"><g transform="rotate(-24 525 -80)">
+    <path class="pl-vane" d="M220,-8 C300,-60 400,-110 520,-150 L548,-128 C600,-170 690,-196 790,-200 L806,-176 C870,-196 960,-190 1050,-150 C990,-110 920,-70 850,-45 L838,-28 C760,-5 640,22 520,30 C420,36 320,28 220,-8 Z"/>
+    <path class="pl-hi" d="M220,-8 C320,28 420,36 520,30 C640,22 760,-5 838,-28 L850,-45 C920,-70 990,-110 1050,-150 C900,-110 700,-70 520,-40 C380,-20 280,-10 220,-8 Z"/>
+    <path class="pl-rachis" d="M0,12 C250,-4 600,-62 1046,-148"/></g></svg>`;
+  function carte({ titulaire, validite, etat } = {}) {
+    return `<div class="pl-scene"><div class="pl-carte" data-pl-tilt>
+      <span class="pl-grain"></span><span class="pl-reflet"></span>
+      <span class="pl-marque">Sōzō</span><span class="pl-puce"></span>${PLUME_SVG}
+      <span class="pl-nom">PLUME</span><span class="pl-titulaire">${S.esc(titulaire || 'Votre nom')}</span>
+      <span class="pl-validite">${S.esc(validite || '30 jours')}</span>
+      ${'<i class="pl-eclat"></i>'.repeat(5)}
+    </div>${etat ? `<span class="pl-etat">${S.esc(etat)}</span>` : ''}</div>`;
+  }
+  /* La carte suit doucement le pointeur (souris seulement, jamais en mouvement réduit) */
+  function animerCarte(scope) {
+    if (S.reduced || !matchMedia('(hover: hover)').matches) return;
+    scope.querySelectorAll('[data-pl-tilt]').forEach((c) => {
+      const zone = c.parentElement;
+      zone.addEventListener('pointermove', (e) => {
+        const r = zone.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+        c.style.setProperty('--ry', `${((x - 0.5) * 30).toFixed(1)}deg`); c.style.setProperty('--rx', `${((0.5 - y) * 18).toFixed(1)}deg`);
+        c.style.setProperty('--gx', `${Math.round(x * 100)}%`);
+      });
+      zone.addEventListener('pointerleave', () => { ['--rx', '--ry', '--gx'].forEach((k) => c.style.removeProperty(k)); });
+    });
+  }
+  function plume(prix, etat) {
+    const nom = (S.sess() && S.sess().name) || '';
+    const actif = etat && etat.actif;
+    const m = S.modal({ title: actif ? 'Prolonger Plume' : 'Passer à Plume', body: `
+      <div class="pl">
+        ${carte({ titulaire: nom, validite: actif ? `jusqu’au ${S.dateShort(etat.fin)}` : `${S.money(prix)} · 30 jours`, etat: actif ? 'Membre Plume' : '' })}
+        <div>
+          <p class="pl-lead">Plume, c’est l’atelier sans limite : vos pages restent vivantes après leur publication, et vous gardez davantage sur chaque vente.</p>
+          <div class="pl-offres" style="margin-top:14px">
+            <div class="pl-offre"><h3>Gratuit</h3><p class="pl-prix">0 $</p><ul>
+              <li>Écrire, importer, publier</li><li>Vendre à la page, au chapitre, au livre</li><li>Commission de Sōzō : 15 %</li>
+              <li class="is-non">Corriger une page publiée</li><li class="is-non">Historique des versions</li></ul></div>
+            <div class="pl-offre is-or"><span class="pl-medaille">${actif ? 'Votre forfait' : 'Recommandé'}</span><h3>Plume</h3>
+              <p class="pl-prix">${S.money(prix)} <small>/ 30 jours</small></p><ul>
+              <li>Tout le gratuit</li><li>Corriger une page déjà publiée</li><li>Historique de chaque version</li>
+              <li>Commission réduite à 10 %</li><li>Les lecteurs gardent leurs droits</li></ul></div>
+          </div>
+          <p class="pl-note">${S.icon('shield')} Sans reconduction automatique : vous payez 30 jours, rien n’est prélevé ensuite. ${actif ? 'Les jours achetés s’ajoutent à votre échéance actuelle.' : ''}</p>
+        </div>
+      </div>`,
+      actions: [{ label: 'Plus tard' }, { label: `${actif ? 'Prolonger' : 'Passer à Plume'} — ${S.money(prix)}`, primary: true, onClick: (close) => { close(); payer({ objet: 'plume' }, cle()); } }] });
+    m.el.querySelector('.md').classList.add('md--plume');
+    animerCarte(m.el);
   }
 
   async function payer(criteres, idempotency_key) {
@@ -116,5 +163,5 @@
       actions: [{ label: 'Mon compte', onClick: () => { location.href = 'compte.html'; } }, { label: 'Fermer', primary: true, onClick: (close) => { close(); if (p.etat === 'CONFIRMED') location.reload(); } }] });
   }
 
-  S.buy = { options, recap, plume, payer, reprendre };
+  S.buy = { options, recap, plume, payer, reprendre, carte, animerCarte };
 })();

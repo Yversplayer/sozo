@@ -358,7 +358,7 @@ window.SOZO_PRET.then(() => {
           <div class="is-or"><span>Disponible</span><strong>${usd(d.solde)}</strong></div>
         </div>
         <h3 class="at-h3">Par livre</h3>
-        ${d.livres.length ? `<div class="tbl-wrap"><table class="tbl at-tbl-min"><thead><tr><th>Livre</th><th>Ventes confirmées</th><th>Net pour vous</th></tr></thead><tbody>${d.livres.map((b) => `<tr><td>${S.esc(b.titre)}</td><td>${b.ventes}</td><td>${usd(b.net)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="ash">Aucun livre.</p>'}
+        ${d.livres.length ? `<div class="tbl-wrap"><table class="tbl at-tbl-min"><thead><tr><th>Livre</th><th>Ventes confirmées</th><th>Net pour vous</th></tr></thead><tbody>${d.livres.map((b) => `<tr><td>${S.esc(b.titre)}</td><td>${b.ventes}${b.remboursees ? ` <small class="ash">· ${b.remboursees} remboursée${b.remboursees > 1 ? 's' : ''}</small>` : ''}</td><td>${usd(b.net)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="ash">Aucun livre.</p>'}
         <p class="note">${S.icon('tag')} Sur une vente à ${S.money(ex / 100)}, vous recevez ${S.money((ex - Math.round(ex * com / 100)) / 100)} : la commission de Sōzō est de ${com} %${d.plume.actif ? ' (Plume)' : `, ${d.commission_plume} % avec Plume`}. Une vente ne compte qu’une fois le paiement confirmé par Sōzō.</p>
       </div>
       <div class="at-rev-side">
@@ -373,10 +373,11 @@ window.SOZO_PRET.then(() => {
           <p class="note">${S.icon('clock')} Sōzō vérifie puis envoie le montant ; la demande reste « en attente » jusque-là.</p>`}
         </form>
         <div class="panel at-plume${d.plume.actif ? ' is-on' : ''}">
-          <p class="mono">Plume · ${S.money(d.plume.prix)} pour 30 jours</p>
-          ${d.plume.actif ? `<p><strong>Active jusqu’au ${S.esc(S.dateLong(d.plume.fin))}.</strong></p>` : ''}
-          <ul><li>Corriger une page déjà publiée, en nouvelle version, sans rien retirer aux lecteurs</li><li>Historique des versions de chaque page</li><li>Commission réduite à ${d.commission_plume} %</li></ul>
-          <button class="btn btn--accent" type="button" id="plumeBtn">${d.plume.actif ? 'Prolonger de 30 jours' : 'Passer à Plume'}</button>
+          <div class="pl-mini">${S.buy.carte({ titulaire: at.nom, validite: '' })}
+            <div><p class="mono">Plume · ${S.money(d.plume.prix)} pour 30 jours</p>
+              <p>${d.plume.actif ? `<strong>Active jusqu’au ${S.esc(S.dateLong(d.plume.fin))}.</strong>` : `Corrigez vos pages publiées, gardez l’historique, et ne laissez que ${d.commission_plume} % de commission.`}</p>
+              <button class="btn btn--accent" type="button" id="plumeBtn" style="margin-top:12px">${d.plume.actif ? 'Prolonger de 30 jours' : 'Découvrir Plume'}</button></div>
+          </div>
         </div>
       </div>
     </div>
@@ -384,7 +385,7 @@ window.SOZO_PRET.then(() => {
       ${d.reversements.map((r) => `<tr><td>${S.esc(S.dateLong(r.created_at))}</td><td>${usd(r.montant)}</td><td>${S.esc(r.operateur)}</td><td><span class="badge badge--${{ DEMANDE: 'soon', PAYE: 'owned', REFUSE: 'draft' }[r.etat] || 'draft'}">${{ DEMANDE: 'En attente', PAYE: 'Envoyé', REFUSE: 'Refusé' }[r.etat] || S.esc(r.etat)}</span>${r.motif ? `<small class="ash"> ${S.esc(r.motif)}</small>` : ''}</td><td class="mono">${S.esc(r.reference || '—')}</td></tr>`).join('')}
     </tbody></table></div>` : ''}`;
     S.inkAll(el);
-    $('#plumeBtn').addEventListener('click', () => S.buy.plume(d.plume.prix));
+    $('#plumeBtn').addEventListener('click', () => S.buy.plume(d.plume.prix, d.plume));
     const f = $('#formRev');
     if (f.elements.montant) f.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -494,7 +495,7 @@ window.SOZO_PRET.then(() => {
     });
     $$('#nouveau, [data-nouveau]').forEach((b) => b.addEventListener('click', nouveauLivre));
     const perso = $('#perso'); if (perso) perso.addEventListener('click', personnaliser);
-    $$('[data-prolonger]').forEach((b) => b.addEventListener('click', () => S.buy.plume(at.plume.prix)));
+    $$('[data-prolonger]').forEach((b) => b.addEventListener('click', () => S.buy.plume(at.plume.prix, at.plume)));
     $$('[data-livre]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); filtre = 'all'; ouvrirLivre(a.dataset.livre); }));
     if (!livre) return;
 
@@ -542,7 +543,7 @@ window.SOZO_PRET.then(() => {
         if (at.plume.actif) return;
         e.preventDefault();
         S.modal({ title: `Corriger la page ${a.dataset.corriger}`, body: `<p>Cette page est publiée : son accès, son prix et sa date ne changent plus, parce que des lecteurs ont peut-être déjà des droits dessus.</p><p>Avec <strong>Plume</strong>, vous pouvez en corriger le <em>texte</em> : Sōzō crée une nouvelle version et garde l’ancienne dans l’historique.</p>`,
-          actions: [{ label: 'Fermer' }, { label: `Passer à Plume — ${S.money(at.plume.prix)}`, primary: true, onClick: (close) => { close(); S.buy.plume(at.plume.prix); } }] });
+          actions: [{ label: 'Fermer' }, { label: `Passer à Plume — ${S.money(at.plume.prix)}`, primary: true, onClick: (close) => { close(); S.buy.plume(at.plume.prix, at.plume); } }] });
       }));
       syncSel();
     }

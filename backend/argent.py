@@ -462,10 +462,21 @@ def enregistrer(app):
         try:
             uid = g.user["id"]
             gagne, verse, solde = solde_auteur(cx, uid)
-            parlivre = cx.tous("""SELECT b.slug, b.titre, COUNT(l.id) AS ventes, COALESCE(SUM(l.montant), 0) AS net
-                                    FROM books b LEFT JOIN payments p ON p.book_id = b.id AND p.etat = 'CONFIRMED'
-                                    LEFT JOIN ledger l ON l.payment_id = p.id AND l.beneficiaire = 'auteur'
-                                   WHERE b.owner_id = ? GROUP BY b.id, b.slug, b.titre ORDER BY b.id""", (uid,))
+            # Par PAIEMENT, puis par livre : un remboursement ajoute une ligne
+            # correctrice au registre ; compter les lignes doublait les ventes.
+            # Une vente compte si la part nette de l'auteur reste positive.
+            # (Sous RLS, l'auteur ne voit pas la table des remboursements, propre
+            # au lecteur : on s'appuie sur SON registre, qu'il voit.)
+            parlivre = cx.tous("""SELECT b.slug, b.titre,
+                                         COALESCE(SUM(CASE WHEN x.net > 0 THEN 1 ELSE 0 END), 0) AS ventes,
+                                         COALESCE(SUM(CASE WHEN x.net <= 0 THEN 1 ELSE 0 END), 0) AS remboursees,
+                                         COALESCE(SUM(x.net), 0) AS net
+                                    FROM books b
+                                    LEFT JOIN (SELECT p.book_id, l.payment_id, SUM(l.montant) AS net
+                                                 FROM ledger l JOIN payments p ON p.id = l.payment_id
+                                                WHERE l.beneficiaire = 'auteur' AND l.author_id = ?
+                                                GROUP BY p.book_id, l.payment_id) x ON x.book_id = b.id
+                                   WHERE b.owner_id = ? GROUP BY b.id, b.slug, b.titre ORDER BY b.id""", (uid, uid))
             reversements = cx.tous("SELECT id, montant, operateur, etat, reference, motif, created_at, traite_le FROM payouts WHERE author_id = ? ORDER BY id DESC", (uid,))
             return jsonify(gagne=gagne, verse=verse, solde=solde, livres=parlivre, reversements=reversements,
                            commission=config.commission_pct(), commission_plume=config.commission_pct(plume=True),
