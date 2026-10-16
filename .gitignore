@@ -14,3 +14,6 @@ __pycache__/
 .DS_Store
 .coverage
 _planche/
+
+# Manuscrits importés : stockage PRIVÉ, jamais sur GitHub ni servi
+backend/stockage/

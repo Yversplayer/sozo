@@ -80,3 +80,213 @@ CREATE TABLE IF NOT EXISTS emails (
   etat TEXT NOT NULL CHECK (etat IN ('capture', 'envoye', 'echec')),
   created_at TEXT NOT NULL
 );
+
+-- ── Étape 3 : livres, pages, lecture ───────────────────────────────────────
+-- Montants en CENTIMES entiers. owner_id vient toujours de la session.
+CREATE TABLE IF NOT EXISTS books (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  owner_id INTEGER NOT NULL REFERENCES users (id),
+  slug TEXT NOT NULL UNIQUE,
+  titre TEXT NOT NULL,
+  categorie TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  couverture TEXT NOT NULL DEFAULT 'couv-pages',
+  style TEXT NOT NULL DEFAULT 'a' CHECK (style IN ('a', 'b', 'c', 'd')),
+  format TEXT NOT NULL DEFAULT 'texte' CHECK (format IN ('texte', 'vers', 'planche')),
+  mode TEXT NOT NULL DEFAULT 'progressive' CHECK (mode IN ('integral', 'progressive')),
+  acces TEXT NOT NULL DEFAULT 'free' CHECK (acces IN ('free', 'paid', 'mixed')),
+  prix_page INTEGER CHECK (prix_page IS NULL OR prix_page >= 0),
+  prix_chapitre INTEGER CHECK (prix_chapitre IS NULL OR prix_chapitre >= 0),
+  prix_livre INTEGER CHECK (prix_livre IS NULL OR prix_livre >= 0),
+  statut TEXT NOT NULL DEFAULT 'actif' CHECK (statut IN ('actif', 'retire')),
+  retrait_motif TEXT,
+  fichier_source TEXT,
+  demo INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS books_owner ON books (owner_id);
+
+CREATE TABLE IF NOT EXISTS chapters (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_id INTEGER NOT NULL REFERENCES books (id),
+  titre TEXT NOT NULL,
+  page_de INTEGER NOT NULL,
+  page_a INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS chapters_book ON chapters (book_id);
+
+-- Une page : son état de publication. Son TEXTE vit dans page_versions.
+CREATE TABLE IF NOT EXISTS pages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_id INTEGER NOT NULL REFERENCES books (id),
+  n INTEGER NOT NULL,
+  acces TEXT NOT NULL CHECK (acces IN ('free', 'paid')),
+  statut TEXT NOT NULL CHECK (statut IN ('draft', 'scheduled', 'published')),
+  publie_le TEXT,
+  source TEXT NOT NULL DEFAULT 'editor' CHECK (source IN ('editor', 'pdf', 'epub', 'docx')),
+  created_at TEXT NOT NULL,
+  UNIQUE (book_id, n)
+);
+
+-- L'historique ne s'écrase pas : chaque correction crée une version ;
+-- l'ancienne passe is_current = 0, datée, et reste.
+CREATE TABLE IF NOT EXISTS page_versions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  page_id INTEGER NOT NULL REFERENCES pages (id),
+  version INTEGER NOT NULL,
+  contenu TEXT NOT NULL,
+  is_current INTEGER NOT NULL DEFAULT 1,
+  auteur_id INTEGER NOT NULL REFERENCES users (id),
+  created_at TEXT NOT NULL,
+  remplacee_le TEXT,
+  UNIQUE (page_id, version)
+);
+CREATE INDEX IF NOT EXISTS page_versions_courante ON page_versions (page_id, is_current);
+
+CREATE TABLE IF NOT EXISTS imports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  book_id INTEGER NOT NULL REFERENCES books (id),
+  nom_fichier TEXT NOT NULL,
+  nature TEXT NOT NULL CHECK (nature IN ('pdf', 'epub', 'docx')),
+  taille INTEGER NOT NULL,
+  empreinte TEXT NOT NULL,
+  pages_creees INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS follows (
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  book_id INTEGER NOT NULL REFERENCES books (id),
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (user_id, book_id)
+);
+
+CREATE TABLE IF NOT EXISTS progress (
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  book_id INTEGER NOT NULL REFERENCES books (id),
+  page_n INTEGER NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (user_id, book_id)
+);
+
+CREATE TABLE IF NOT EXISTS signalements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  book_id INTEGER NOT NULL REFERENCES books (id),
+  motif TEXT NOT NULL,
+  etat TEXT NOT NULL DEFAULT 'ouvert' CHECK (etat IN ('ouvert', 'traite', 'rejete')),
+  created_at TEXT NOT NULL
+);
+
+-- ── Étape 5 : argent ──────────────────────────────────────────────────────
+-- États explicites ; UNKNOWN ≠ FAILED. Clé d'idempotence unique PAR
+-- ACHETEUR (Klassio : une contrainte globale permettait de bloquer autrui).
+CREATE TABLE IF NOT EXISTS payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  objet TEXT NOT NULL CHECK (objet IN ('page', 'chapitre', 'livre', 'plume')),
+  book_id INTEGER REFERENCES books (id),
+  page_de INTEGER,
+  page_a INTEGER,
+  montant INTEGER NOT NULL CHECK (montant > 0),
+  devise TEXT NOT NULL DEFAULT 'USD',
+  etat TEXT NOT NULL CHECK (etat IN ('CREATED', 'PENDING', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED', 'UNKNOWN')),
+  idempotency_key TEXT NOT NULL,
+  prestataire TEXT,
+  operateur TEXT,
+  reference TEXT,
+  motif_refus TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  confirme_le TEXT,
+  confirme_par TEXT,
+  UNIQUE (user_id, idempotency_key)
+);
+CREATE INDEX IF NOT EXISTS payments_etat ON payments (etat, created_at);
+
+-- Droits de lecture : écrits UNIQUEMENT à la confirmation, jamais retirés.
+-- page_a NULL = jusqu'à la dernière page, présente et à venir (livre entier).
+CREATE TABLE IF NOT EXISTS entitlements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  book_id INTEGER NOT NULL REFERENCES books (id),
+  page_de INTEGER NOT NULL,
+  page_a INTEGER,
+  payment_id INTEGER NOT NULL UNIQUE REFERENCES payments (id),
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS entitlements_user ON entitlements (user_id, book_id);
+
+-- Un reçu n'existe qu'après confirmation réelle ; numéro unique.
+CREATE TABLE IF NOT EXISTS receipts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  payment_id INTEGER NOT NULL UNIQUE REFERENCES payments (id),
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  numero TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL
+);
+
+-- Registre : chaque vente découpée ; la somme des lignes = le montant payé.
+CREATE TABLE IF NOT EXISTS ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  payment_id INTEGER NOT NULL REFERENCES payments (id),
+  beneficiaire TEXT NOT NULL CHECK (beneficiaire IN ('auteur', 'plateforme', 'frais')),
+  author_id INTEGER REFERENCES users (id),
+  montant INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ledger_auteur ON ledger (author_id);
+
+CREATE TABLE IF NOT EXISTS payouts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  author_id INTEGER NOT NULL REFERENCES users (id),
+  montant INTEGER NOT NULL CHECK (montant > 0),
+  operateur TEXT NOT NULL,
+  numero TEXT NOT NULL,
+  etat TEXT NOT NULL CHECK (etat IN ('DEMANDE', 'PAYE', 'REFUSE')),
+  reference TEXT,
+  motif TEXT,
+  created_at TEXT NOT NULL,
+  traite_le TEXT,
+  traite_par TEXT
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  debut TEXT NOT NULL,
+  fin TEXT NOT NULL,
+  payment_id INTEGER NOT NULL UNIQUE REFERENCES payments (id)
+);
+
+-- Un événement de prestataire n'est traité qu'une fois : un webhook rejoué
+-- ne confirme jamais deux fois (bug réel chez Klassio).
+CREATE TABLE IF NOT EXISTS webhook_events (
+  prestataire TEXT NOT NULL,
+  event_id TEXT NOT NULL,
+  recu_le TEXT NOT NULL,
+  PRIMARY KEY (prestataire, event_id)
+);
+
+-- ── Étape 6 : administration de la plateforme (comptes SÉPARÉS) ────────────
+CREATE TABLE IF NOT EXISTS admin_users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL UNIQUE,
+  nom TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  totp_secret TEXT NOT NULL,
+  totp_dernier_pas INTEGER NOT NULL DEFAULT 0,
+  actif INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  admin_id INTEGER NOT NULL REFERENCES admin_users (id),
+  token_hash TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  revoked_at TEXT
+);

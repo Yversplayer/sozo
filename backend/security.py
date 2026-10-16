@@ -160,6 +160,11 @@ LIMITES = {
     "reinit:ip": (6, 60),
     "reinit:compte": (3, 60),
     "verification:ip": (20, 60),
+    "lecture:compte": (300, 10),       # pages servies : au-delà, c'est une aspiration
+    "paiement:compte": (30, 60),
+    "import:compte": (20, 60),
+    "admin:ip": (10, 15),
+    "admin:compte": (5, 15),
 }
 
 

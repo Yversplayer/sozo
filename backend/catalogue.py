@@ -1,0 +1,278 @@
+"""Routes du lecteur : catalogue, contenu des pages, suivis, progression,
+signalements, compte. Toute décision d'accès passe par `acces`."""
+from flask import g, jsonify, request
+
+import acces
+import argent
+import db
+import security
+import validation as v
+from app import auditer, connectee
+
+
+def _auteur_cle(uid):
+    return f"u{uid}"
+
+
+def _dollars(c):
+    return None if c is None else c / 100
+
+
+def serialiser_livre(cx, b, user, plages=None, a=None):
+    """Le livre tel que le voit CETTE personne : les brouillons d'autrui
+    n'apparaissent pas, l'état de chaque page est calculé par acces."""
+    if plages is None:
+        plages = acces.droits(cx, user["id"] if user else None, b["id"])
+    pages = []
+    for p in cx.tous("SELECT * FROM pages WHERE book_id = ? ORDER BY n", (b["id"],)):
+        e = acces.etat_page(b, p, user, plages, a)
+        if e is None:
+            continue
+        pages.append({"n": p["n"], "access": p["acces"], "status": acces.statut_effectif(p, a),
+                      "date": p["publie_le"], "source": p["source"], "etat": e})
+    return {
+        "id": b["slug"], "title": b["titre"], "author": _auteur_cle(b["owner_id"]), "cat": b["categorie"],
+        "cover": {"img": b["couverture"], "style": b["style"]}, "mode": b["mode"], "access": b["acces"],
+        "format": "planche" if b["format"] == "planche" else None, "verse": b["format"] == "vers",
+        "desc": b["description"], "demo": bool(b["demo"]), "owner": bool(user and b["owner_id"] == user["id"]),
+        "price": None if b["acces"] == "free" else {"page": _dollars(b["prix_page"]), "chapter": _dollars(b["prix_chapitre"]), "all": _dollars(b["prix_livre"])},
+        "chapters": [{"t": c["titre"], "from": c["page_de"], "to": c["page_a"]}
+                     for c in cx.tous("SELECT titre, page_de, page_a FROM chapters WHERE book_id = ? ORDER BY page_de", (b["id"],))],
+        "pages": pages,
+    }
+
+
+def serialiser_auteur(cx, u):
+    # Nombre public de lecteurs : un agrégat SANS identité, lu en connexion
+    # globale (sous RLS, une personne ne voit que ses propres suivis).
+    cg = db.connecter(globale=True)
+    try:
+        suiveurs = cg.un("SELECT COUNT(DISTINCT f.user_id) AS n FROM follows f JOIN books b ON b.id = f.book_id WHERE b.owner_id = ?", (u["id"],))["n"]
+    finally:
+        cg.fermer()
+    return {"name": u["nom"], "photo": u["photo"], "city": u["ville"] or "", "since": (u["created_at"] or "")[:4],
+            "bio": u["bio"] or "", "followers": suiveurs, "demo": bool(u["demo"])}
+
+
+def enregistrer(app):
+
+    @app.get("/api/catalogue")
+    @connectee
+    def lecteur_catalogue():
+        """Tout ce que la personne peut voir, en UN appel : depuis Kinshasa,
+        chaque aller-retour vers le serveur coûte ; on le paie une fois."""
+        cx = db.connecter()
+        try:
+            a = acces.maintenant()
+            uid = g.user["id"]
+            livres = cx.tous(
+                """SELECT * FROM books b WHERE b.owner_id = ?
+                   OR (b.statut = 'actif' AND EXISTS (SELECT 1 FROM pages p WHERE p.book_id = b.id AND p.statut <> 'draft'))
+                   ORDER BY b.id""", (uid,))
+            plages = {}
+            for r in cx.tous("SELECT book_id, page_de, page_a FROM entitlements WHERE user_id = ?", (uid,)):
+                plages.setdefault(r["book_id"], []).append((r["page_de"], r["page_a"]))
+            books = [serialiser_livre(cx, b, g.user, plages.get(b["id"], []), a) for b in livres]
+            auteurs = {}
+            for oid in sorted({b["owner_id"] for b in livres}):
+                u = cx.un("SELECT * FROM users WHERE id = ? AND actif = 1", (oid,))
+                if u:
+                    auteurs[_auteur_cle(oid)] = serialiser_auteur(cx, u)
+            return jsonify(authors=auteurs, books=books, reader=_etat_lecteur(cx, uid, livres))
+        finally:
+            cx.fermer()
+
+    def _etat_lecteur(cx, uid, livres):
+        par_id = {b["id"]: b["slug"] for b in livres}
+        follows = [par_id[r["book_id"]] for r in cx.tous("SELECT book_id FROM follows WHERE user_id = ?", (uid,)) if r["book_id"] in par_id]
+        progress = {par_id[r["book_id"]]: r["page_n"] for r in cx.tous("SELECT book_id, page_n FROM progress WHERE user_id = ?", (uid,)) if r["book_id"] in par_id}
+        purchases = {}
+        for r in cx.tous("""SELECT e.book_id, e.page_de, e.page_a, e.created_at FROM entitlements e WHERE e.user_id = ? ORDER BY e.created_at""", (uid,)):
+            if r["book_id"] not in par_id:
+                continue
+            slug = par_id[r["book_id"]]
+            nmax = cx.un("SELECT MAX(n) AS m FROM pages WHERE book_id = ?", (r["book_id"],))["m"] or 0
+            fin = r["page_a"] or nmax
+            p = purchases.setdefault(slug, {"pages": [], "date": r["created_at"][:10]})
+            p["pages"] = sorted(set(p["pages"]) | set(range(r["page_de"], fin + 1)))
+        return {"follows": follows, "progress": progress, "purchases": purchases}
+
+    @app.get("/api/livres/<livre>/pages/<int:n>")
+    @connectee
+    def lecteur_page(livre, n):
+        cx = db.connecter()
+        try:
+            b = cx.un("SELECT id FROM books WHERE slug = ?", (livre,))
+            b, p, e = acces.page_et_etat(cx, g.user, b["id"] if b else None, n)
+            if e is None:
+                return jsonify(erreur="Introuvable."), 404
+            ch = cx.un("SELECT titre FROM chapters WHERE book_id = ? AND page_de <= ? AND page_a >= ?", (b["id"], n, n))
+            base = {"n": n, "etat": e, "chapitre": ch["titre"] if ch else None}
+            if e == "soon":
+                return jsonify({**base, "date": p["publie_le"]}), 403
+            if e == "locked":
+                return jsonify({**base, "options": argent.options(cx, g.user, b, n)}), 402
+            # Lecture : limitée par compte (aspiration automatique d'un livre)
+            if e != "auteur" and security.depasse(cx, "lecture:compte", str(g.user["id"])):
+                cx.valider()
+                return jsonify(erreur="Vous lisez très vite ! Patientez quelques minutes."), 429
+            contenu, version = acces.contenu_courant(cx, p["id"])
+            rep = dict(base, version=version)
+            if e == "owned":
+                rep["contenu"] = acces.marquer(contenu, g.user["id"])
+                rep["filigrane"] = f"Exemplaire de {g.user['nom']}"
+            else:
+                rep["contenu"] = contenu
+            cx.valider()
+            return jsonify(rep)
+        finally:
+            cx.fermer()
+
+    @app.put("/api/moi/progression")
+    @connectee
+    def lecteur_progression():
+        d = v.corps_json(request)
+        livre = v.texte(d, "livre", maxi=80)
+        n = v.entier(d, "n", mini=1, maxi=100000)
+        cx = db.connecter()
+        try:
+            b = cx.un("SELECT id FROM books WHERE slug = ?", (livre,))
+            _, _, e = acces.page_et_etat(cx, g.user, b["id"] if b else None, n)
+            if e not in acces.LISIBLES:
+                return jsonify(erreur="Introuvable."), 404
+            m = acces.maintenant()
+            cx.execute("""INSERT INTO progress (user_id, book_id, page_n, updated_at) VALUES (?, ?, ?, ?)
+                          ON CONFLICT (user_id, book_id) DO UPDATE SET page_n = excluded.page_n, updated_at = excluded.updated_at""",
+                       (g.user["id"], b["id"], n, m))
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    @app.post("/api/suivis/<livre>")
+    @connectee
+    def lecteur_suivre(livre):
+        cx = db.connecter()
+        try:
+            b = cx.un("SELECT id FROM books WHERE slug = ?", (livre,))
+            b = acces.livre(cx, g.user, b["id"] if b else None)
+            if not b:
+                return jsonify(erreur="Introuvable."), 404
+            cx.execute("""INSERT INTO follows (user_id, book_id, created_at) VALUES (?, ?, ?)
+                          ON CONFLICT (user_id, book_id) DO NOTHING""", (g.user["id"], b["id"], acces.maintenant()))
+            cx.valider()
+            return jsonify(suivi=True)
+        finally:
+            cx.fermer()
+
+    @app.delete("/api/suivis/<livre>")
+    @connectee
+    def ne_plus_suivre(livre):
+        cx = db.connecter()
+        try:
+            b = cx.un("SELECT id FROM books WHERE slug = ?", (livre,))
+            if not b or not acces.livre(cx, g.user, b["id"]):
+                return jsonify(erreur="Introuvable."), 404
+            cx.execute("DELETE FROM follows WHERE user_id = ? AND book_id = ?", (g.user["id"], b["id"]))
+            cx.valider()
+            return jsonify(suivi=False)
+        finally:
+            cx.fermer()
+
+    @app.post("/api/signalements")
+    @connectee
+    def lecteur_signaler():
+        d = v.corps_json(request)
+        livre = v.texte(d, "livre", maxi=80)
+        motif = v.texte(d, "motif", mini=5, maxi=1000, multiligne=True)
+        cx = db.connecter()
+        try:
+            b = cx.un("SELECT id FROM books WHERE slug = ?", (livre,))
+            if not b or not acces.livre(cx, g.user, b["id"]):
+                return jsonify(erreur="Introuvable."), 404
+            sid = cx.inserer("INSERT INTO signalements (user_id, book_id, motif, created_at) VALUES (?, ?, ?, ?)",
+                             (g.user["id"], b["id"], motif, acces.maintenant()))
+            auditer("signalement", ressource=f"book:{b['id']}", apres=f"signalement:{sid}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True), 201
+        finally:
+            cx.fermer()
+
+    # ── Mon compte ─────────────────────────────────────────────────────────
+    @app.get("/api/compte")
+    @connectee
+    def compte_lire():
+        cx = db.connecter()
+        try:
+            u = cx.un("SELECT id, email, nom, role, bio, ville, email_verifie_at, created_at FROM users WHERE id = ?", (g.user["id"],))
+            achats = cx.tous(
+                """SELECT p.id, p.objet, p.montant, p.devise, p.etat, p.created_at, p.confirme_le, p.page_de, p.page_a,
+                          p.operateur, p.reference, p.motif_refus, b.titre, b.slug, r.numero AS recu
+                     FROM payments p LEFT JOIN books b ON b.id = p.book_id LEFT JOIN receipts r ON r.payment_id = p.id
+                    WHERE p.user_id = ? ORDER BY p.id DESC LIMIT 100""", (g.user["id"],))
+            return jsonify(compte=u, achats=achats, plume=argent.plume_actif(cx, g.user["id"]))
+        finally:
+            cx.fermer()
+
+    @app.patch("/api/compte")
+    @connectee
+    def modifier_compte():
+        d = v.corps_json(request)
+        champs = {}
+        if "nom" in d:
+            champs["nom"] = v.texte(d, "nom", mini=2, maxi=60)
+        if "bio" in d:
+            champs["bio"] = v.texte(d, "bio", requis=False, maxi=600, multiligne=True)
+        if "ville" in d:
+            champs["ville"] = v.texte(d, "ville", requis=False, maxi=60)
+        if not champs:
+            raise v.Invalide("Rien à modifier.")
+        cx = db.connecter()
+        try:
+            for k, val in champs.items():   # noms de colonnes : liste fermée ci-dessus, jamais le client
+                cx.execute(f"UPDATE users SET {k} = ? WHERE id = ?", (val, g.user["id"]))
+            auditer("compte.modification", ressource=f"user:{g.user['id']}", apres=",".join(sorted(champs)), cx=cx)
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    @app.post("/api/compte/devenir-auteur")
+    @connectee
+    def devenir_auteur():
+        cx = db.connecter()
+        try:
+            cx.execute("UPDATE users SET role = 'auteur' WHERE id = ?", (g.user["id"],))
+            auditer("compte.devenir_auteur", ressource=f"user:{g.user['id']}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    @app.delete("/api/compte")
+    @connectee
+    def supprimer_compte():
+        """Suppression demandée par la personne (exigence des stores, RGPD) :
+        les données personnelles sont effacées, les sessions fermées. Les
+        paiements restent (obligation comptable), rattachés à un compte anonyme."""
+        d = v.corps_json(request) if request.data else {}
+        mdp = v.texte(d, "mot_de_passe", maxi=200)
+        cx = db.connecter()
+        try:
+            u = cx.un("SELECT password_hash FROM users WHERE id = ?", (g.user["id"],))
+            if not security.verifier_mot_de_passe(mdp, u["password_hash"]):
+                return jsonify(erreur="Mot de passe incorrect.", champ="mot_de_passe"), 403
+            uid = g.user["id"]
+            cx.execute("""UPDATE users SET email = ?, nom = 'Compte supprimé', bio = NULL, ville = NULL, photo = NULL,
+                          atelier = NULL, actif = 0, password_hash = ? WHERE id = ?""",
+                       (f"supprime-{uid}@sozo.invalid", security.hacher_mot_de_passe(security.nouveau_jeton()), uid))
+            cx.execute("DELETE FROM follows WHERE user_id = ?", (uid,))
+            cx.execute("DELETE FROM progress WHERE user_id = ?", (uid,))
+            security.revoquer_toutes(cx, uid)
+            auditer("compte.suppression", ressource=f"user:{uid}", cx=cx)
+            cx.valider()
+        finally:
+            cx.fermer()
+        rep = jsonify(ok=True)
+        security.effacer_cookies(rep)
+        return rep

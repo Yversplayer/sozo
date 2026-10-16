@@ -23,7 +23,11 @@ def main():
     dossier = tempfile.mkdtemp(prefix="sozo-pg-")
     srv = pgserver.get_server(dossier, cleanup_mode="stop")
     try:
-        env = dict(os.environ, SOZO_DB_BACKEND="postgres", SOZO_DATABASE_URL=srv.get_uri(), SOZO_PG_SCHEMA="sozo_test")
+        # Rôle applicatif NON superutilisateur, SANS BYPASSRLS : comme en
+        # production, la Row Level Security s'applique pour de vrai.
+        srv.psql("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sozo_app') THEN CREATE ROLE sozo_app NOLOGIN NOSUPERUSER NOBYPASSRLS; END IF; END $$;")
+        srv.psql("GRANT sozo_app TO postgres;")
+        env = dict(os.environ, SOZO_DB_BACKEND="postgres", SOZO_DATABASE_URL=srv.get_uri(), SOZO_PG_SCHEMA="sozo_test", SOZO_PG_ROLE="sozo_app")
         cible = sys.argv[1:] or ["discover", "-s", "tests", "-t", "."]
         print("PostgreSQL local :", srv.psql("SELECT version();").strip().splitlines()[2].strip()[:40], flush=True)
         r = subprocess.run([sys.executable, "-W", "ignore", "-m", "unittest", *cible], cwd=RACINE_BACKEND, env=env)

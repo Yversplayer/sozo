@@ -15,7 +15,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 2
+VERSION_SCHEMA = 3
 _verrou = threading.Lock()
 
 
@@ -66,7 +66,25 @@ class Connexion:
             self.execute("SELECT set_config('app.user_id', ?, true)", (str(user_id or ""),))
 
 
-def connecter():
+def _contexte():
+    """(user_id, globale) d'après la requête en cours : l'administration agit
+    en connexion GLOBALE, une personne connectée sur ses seules lignes."""
+    try:
+        from flask import g, has_request_context
+        if not has_request_context():
+            return None, False
+        if getattr(g, "admin", None):
+            return None, True
+        u = getattr(g, "user", None)
+        return (u["id"] if u else None), False
+    except Exception:
+        return None, False
+
+
+def connecter(globale=False):
+    """Ouvre une connexion. Sous PostgreSQL, la Row Level Security filtre les
+    tables privées sur `app.user_id` ; `globale=True` (administration,
+    webhooks, agrégats publics) est rare, explicite, et se voit dans le code."""
     m = config.moteur()
     if m == "sqlite":
         brute = sqlite3.connect(config.chemin_sqlite(), timeout=10)
@@ -76,8 +94,18 @@ def connecter():
         return Connexion(brute, m)
     import psycopg
     from psycopg.rows import dict_row
-    brute = psycopg.connect(config.url_postgres(), row_factory=dict_row, autocommit=False,
+    brute = psycopg.connect(config.url_postgres(), row_factory=dict_row, autocommit=True,
                             options=f"-c search_path={config.schema_postgres()}")
+    role = os.environ.get("SOZO_PG_ROLE", "")
+    if role:
+        if not role.replace("_", "").isalnum():
+            raise RuntimeError("SOZO_PG_ROLE invalide.")
+        # Rôle applicatif SANS BYPASSRLS : la base applique les politiques
+        brute.execute(f"SET ROLE {role}")
+    uid, glob = _contexte()
+    brute.execute("SELECT set_config('app.user_id', %s, false), set_config('app.global', %s, false)",
+                  (str(uid) if uid else "", "1" if (globale or glob) else ""))
+    brute.autocommit = False
     return Connexion(brute, m)
 
 
@@ -116,11 +144,45 @@ _AUDIT_IMMUABLE = {
 }
 
 
+# ── Row Level Security (PostgreSQL) ───────────────────────────────────────
+# Défense en profondeur : même si une requête oubliait son filtre, la base ne
+# rend que les lignes de la personne posée dans `app.user_id`. FORCE : la
+# règle s'applique aussi au propriétaire des tables. Une connexion sans
+# contexte ne voit RIEN. Tables d'authentification (users, sessions, jetons)
+# hors RLS : il faut les lire AVANT de savoir qui parle.
+_MOI = "NULLIF(current_setting('app.user_id', true), '')::bigint"
+_GLOBALE = "current_setting('app.global', true) = '1'"
+_MES_LIVRES = f"(SELECT id FROM books WHERE owner_id = {_MOI})"
+RLS = {
+    "follows": f"user_id = {_MOI} OR book_id IN {_MES_LIVRES}",
+    "progress": f"user_id = {_MOI}",
+    "payments": f"user_id = {_MOI} OR book_id IN {_MES_LIVRES}",
+    "entitlements": f"user_id = {_MOI}",
+    "receipts": f"user_id = {_MOI}",
+    "subscriptions": f"user_id = {_MOI}",
+    "ledger": f"author_id = {_MOI}",
+    "payouts": f"author_id = {_MOI}",
+    "imports": f"user_id = {_MOI}",
+    "signalements": f"user_id = {_MOI}",
+}
+
+
+def _politiques_rls():
+    out = []
+    for table, regle in RLS.items():
+        expr = f"({regle}) OR {_GLOBALE}"
+        out += [f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY",
+                f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY",
+                f"DROP POLICY IF EXISTS sozo_{table} ON {table}",
+                f"CREATE POLICY sozo_{table} ON {table} USING ({expr}) WITH CHECK ({expr})"]
+    return out
+
+
 def appliquer_schema(cx=None):
     """Crée les tables manquantes puis joue les migrations additives.
     Idempotent : on peut l'appeler à chaque démarrage."""
     propre = cx is None
-    cx = cx or connecter()
+    cx = cx or connecter(globale=True)
     with _verrou:
         try:
             with open(os.path.join(config.RACINE_BACKEND, "schema.sql"), encoding="utf-8") as f:
@@ -128,6 +190,9 @@ def appliquer_schema(cx=None):
                     cx.execute(_traduire(ddl, cx.moteur))
             for ddl in _AUDIT_IMMUABLE[cx.moteur]:
                 cx.execute(ddl)
+            if cx.moteur == "postgres":
+                for ddl in _politiques_rls():
+                    cx.execute(ddl)
             _migrer(cx)
             cx.execute("DELETE FROM schema_meta")
             cx.execute("INSERT INTO schema_meta (version) VALUES (?)", (VERSION_SCHEMA,))
@@ -155,6 +220,10 @@ def _ajouter_colonne(cx, table, colonne, definition):
 
 
 def _migrer(cx):
-    """Les migrations à venir s'ajoutent ici, à la suite, sans jamais en
-    retirer une. Exemple : _ajouter_colonne(cx, "users", "langue", "TEXT")."""
-    return None
+    """Migrations ADDITIVES, à la suite, sans jamais en retirer une."""
+    # v3 : profil public et atelier personnalisé de l'auteur
+    _ajouter_colonne(cx, "users", "bio", "TEXT")
+    _ajouter_colonne(cx, "users", "ville", "TEXT")
+    _ajouter_colonne(cx, "users", "photo", "TEXT")
+    _ajouter_colonne(cx, "users", "atelier", "TEXT")
+    _ajouter_colonne(cx, "users", "demo", "INTEGER NOT NULL DEFAULT 0")

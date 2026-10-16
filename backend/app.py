@@ -98,7 +98,9 @@ def ip_client():
 # Fichiers du site — liste blanche
 # ---------------------------------------------------------------------------
 FICHIERS_RACINE = {"index.html", "favicon.svg", "styles.css", "sozo.css", "sozo.js", "app.js", "content.js"}
-DOSSIERS_PUBLICS = {"app", "assets", "images", "illustrations"}
+DOSSIERS_PUBLICS = {"app", "assets", "images", "illustrations", "admin"}
+# Les SEULES routes qui reçoivent un fichier (multipart) au lieu de JSON — toujours avec le jeton CSRF
+ENVOIS_DE_FICHIER = {"importer"}
 EXTENSIONS = {".html", ".css", ".js", ".json", ".txt", ".svg", ".jpg", ".jpeg", ".png", ".webp", ".woff2", ".ico"}
 
 CSP = "; ".join([
@@ -158,8 +160,13 @@ def creer_app():
         return send_from_directory(config.RACINE_SITE, chemin)
 
     # ── Garde-fous transverses ─────────────────────────────────────────────
+    import admin
+    import argent
+    import catalogue
     import comptes
-    comptes.enregistrer(app)
+    import studio
+    for module in (comptes, catalogue, argent, studio, admin):
+        module.enregistrer(app)
 
     @app.before_request
     def session_et_csrf():
@@ -176,9 +183,11 @@ def creer_app():
         if request.path.startswith("/api/") and request.method in ("POST", "PUT", "PATCH", "DELETE"):
             # Corps JSON obligatoire : un formulaire HTML d'un autre site ne peut
             # pas fabriquer cette requête (défense CSRF en plus du jeton).
-            if request.method != "DELETE" and not request.is_json:
+            fichier = request.mimetype == "multipart/form-data" and request.endpoint in ENVOIS_DE_FICHIER
+            if request.method != "DELETE" and not request.is_json and not fichier:
                 return jsonify(erreur="Le corps doit être du JSON."), 415
-            if g.user:   # une session valide agit : elle doit prouver qu'elle vient de nos pages
+            # L'administration a ses propres cookies et son propre jeton (admin.py)
+            if g.user and not request.path.startswith("/api/admin/"):   # une session valide agit : elle doit prouver qu'elle vient de nos pages
                 fourni = request.headers.get(security.EN_TETE_CSRF, "")
                 if not fourni or not secrets.compare_digest(fourni, security.jeton_csrf(jeton)):
                     auditer("csrf.refus", ressource=f"{request.method} {request.path}", resultat="refus")
