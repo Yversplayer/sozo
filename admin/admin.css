@@ -32,3 +32,4 @@ html[data-theme="dark"] .ad-refus td { color: #FF8A7A; }
 .ad-dlg textarea, .ad-dlg input:not([type="checkbox"]) { width: 100%; border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; font-weight: 400; }
 .ad-dlg-a { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 @media (max-width: 760px) { .ad-who { display: none; } .ad-top { flex-wrap: wrap; } .ad-top .btn { margin-left: auto; } }
+.ad-test { font-size: 10.5px; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: #2E5E8C; color: #fff; }

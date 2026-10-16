@@ -28,6 +28,7 @@ import acces
 import config
 import db
 import security
+import prestataires
 import validation as v
 from app import auditer, connectee, ouverte
 
@@ -42,7 +43,7 @@ def _now():
 # ── Plume ──────────────────────────────────────────────────────────────────
 
 def plume_actif(cx, user_id, a=None):
-    r = cx.un("SELECT MAX(fin) AS fin FROM subscriptions WHERE user_id = ?", (user_id,))
+    r = cx.un("SELECT MAX(fin) AS fin FROM subscriptions WHERE user_id = ? AND revoque_le IS NULL", (user_id,))
     fin = r["fin"] if r else None
     return {"actif": bool(fin and fin > (a or _now())), "fin": fin, "prix": config.plume_prix_centimes() / 100}
 
@@ -148,6 +149,35 @@ def confirmer(cx, payment_id, par, frais=0):
     return True
 
 
+def rembourser(cx, payment_id, par, motif, reference=None):
+    """Remboursement INTÉGRAL d'un paiement confirmé (décision du 16/10/2026 :
+    le droit de lecture est retiré). Rien n'est effacé ni réécrit :
+    * une ligne dans refunds (UNIQUE : jamais deux fois) ;
+    * le droit ou l'abonnement marqués révoqués ;
+    * des lignes de registre NÉGATIVES qui annulent la part de l'auteur et de
+      Sōzō. Les frais du prestataire, eux, ne reviennent pas : Sōzō les absorbe.
+    Rend False si le paiement n'est pas confirmé ou déjà remboursé."""
+    p = cx.un("SELECT * FROM payments WHERE id = ? AND etat = 'CONFIRMED'", (payment_id,))
+    if not p or cx.un("SELECT id FROM refunds WHERE payment_id = ?", (payment_id,)):
+        return False
+    m = _now()
+    cx.execute("INSERT INTO refunds (payment_id, user_id, montant, motif, reference, par, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+               (payment_id, p["user_id"], p["montant"], motif, reference, par, m))
+    cx.execute("UPDATE entitlements SET revoque_le = ? WHERE payment_id = ? AND revoque_le IS NULL", (m, payment_id))
+    cx.execute("UPDATE subscriptions SET revoque_le = ? WHERE payment_id = ? AND revoque_le IS NULL", (m, payment_id))
+    lignes = cx.tous("SELECT beneficiaire, author_id, SUM(montant) AS s FROM ledger WHERE payment_id = ? GROUP BY beneficiaire, author_id", (payment_id,))
+    for l in lignes:
+        if l["beneficiaire"] == "frais" or not l["s"]:
+            continue
+        cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, ?, ?, ?, ?)",
+                   (payment_id, l["beneficiaire"], l["author_id"], -l["s"], m))
+    frais = sum(l["s"] for l in lignes if l["beneficiaire"] == "frais")
+    if frais:   # le lecteur récupère tout ; les frais déjà retenus restent une perte de Sōzō
+        cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, 'plateforme', NULL, ?, ?)",
+                   (payment_id, -frais, m))
+    return True
+
+
 DELAI_ACHAT = timedelta(hours=48)
 
 
@@ -176,6 +206,56 @@ def solde_auteur(cx, author_id):
 
 def _public(p):
     return {k: p[k] for k in ("id", "objet", "montant", "devise", "etat", "page_de", "page_a", "operateur", "reference", "motif_refus", "created_at", "confirme_le")}
+
+
+def traiter_evenement(prestataire, d):
+    """Un événement de paiement au format STANDARD de Sōzō (voir prestataires.py),
+    déjà authentifié. Commun au webhook réel et au simulateur de test : le
+    simulateur passe exactement par les mêmes garde-fous."""
+    event_id = v.texte(d, "event_id", maxi=100)
+    pid = v.entier(d, "payment_id", mini=1)
+    statut = v.choix(d, "statut", {"success", "failed", "pending", "unknown"})
+    # Le MONTANT et la DEVISE réellement encaissés sont exigés : une
+    # notification signée mais rattachée au mauvais achat (ou partielle) ne
+    # doit jamais ouvrir un livre plus cher que ce qui a été payé.
+    montant = v.entier(d, "montant", mini=0, maxi=100_000_000) if statut == "success" else None
+    devise = v.texte(d, "devise", maxi=3) if statut == "success" else None
+    frais = v.entier(d, "frais", mini=0, maxi=100_000_000, requis=False) or 0 if statut == "success" else 0
+    # Connexion GLOBALE : le prestataire agit pour le compte de l'acheteur,
+    # authentifié par la signature HMAC vérifiée ci-dessus.
+    cx = db.connecter(globale=True)
+    try:
+        cur = cx.execute("INSERT INTO webhook_events (prestataire, event_id, recu_le) VALUES (?, ?, ?) ON CONFLICT DO NOTHING", (prestataire, event_id, _now()))
+        if cur.rowcount != 1:
+            cx.valider()
+            return {"ok": True, "deja_traite": True}
+        p = cx.un("SELECT montant, devise, etat FROM payments WHERE id = ?", (pid,))
+        if statut == "success" and p and (montant != p["montant"] or devise.upper() != p["devise"] or frais > montant):
+            # Encaissement non conforme : rien n'est ouvert, l'achat part en revue
+            cx.execute("UPDATE payments SET etat = 'UNKNOWN', motif_refus = ?, updated_at = ? WHERE id = ? AND etat IN ('CREATED', 'PENDING', 'EXPIRED')",
+                       (f"Encaissement non conforme : {montant} {devise} reçu(s), {p['montant']} {p['devise']} attendu(s)", _now(), pid))
+            auditer("webhook.montant_divergent", ressource=f"payment:{pid}", apres=f"{event_id}:{montant}{devise}", resultat="refus", cx=cx)
+            cx.valider()
+            return {"ok": True, "applique": False, "revue": True}
+        if statut == "success" and p and p["etat"] == "EXPIRED":
+            # Argent reçu après l'expiration : on ne le perd pas, un humain tranche
+            cx.execute("UPDATE payments SET etat = 'UNKNOWN', motif_refus = 'Payé après expiration', updated_at = ? WHERE id = ? AND etat = 'EXPIRED'", (_now(), pid))
+            auditer("webhook.apres_expiration", ressource=f"payment:{pid}", apres=event_id, resultat="refus", cx=cx)
+            cx.valider()
+            return {"ok": True, "applique": False, "revue": True}
+        if statut == "success":
+            fait = confirmer(cx, pid, f"prestataire:{prestataire}", frais=frais)
+        elif statut == "failed":
+            fait = refuser(cx, pid, f"prestataire:{prestataire}", "Refusé par le prestataire")
+        elif statut == "unknown":
+            fait = cx.execute("UPDATE payments SET etat = 'UNKNOWN', updated_at = ? WHERE id = ? AND etat IN ('CREATED', 'PENDING')", (_now(), pid)).rowcount == 1
+        else:
+            fait = cx.execute("UPDATE payments SET etat = 'PENDING', updated_at = ? WHERE id = ? AND etat = 'CREATED'", (_now(), pid)).rowcount == 1
+        auditer("webhook." + statut, ressource=f"payment:{pid}", apres=event_id, resultat="ok" if fait else "refus", cx=cx)
+        cx.valider()
+        return {"ok": True, "applique": fait}
+    finally:
+        cx.fermer()
 
 
 def enregistrer(app):
@@ -309,50 +389,32 @@ def enregistrer(app):
             assert isinstance(d, dict)
         except Exception:
             raise v.Invalide("Corps JSON invalide.")
-        event_id = v.texte(d, "event_id", maxi=100)
-        pid = v.entier(d, "payment_id", mini=1)
-        statut = v.choix(d, "statut", {"success", "failed", "pending", "unknown"})
-        # Le MONTANT et la DEVISE réellement encaissés sont exigés : une
-        # notification signée mais rattachée au mauvais achat (ou partielle) ne
-        # doit jamais ouvrir un livre plus cher que ce qui a été payé.
-        montant = v.entier(d, "montant", mini=0, maxi=100_000_000) if statut == "success" else None
-        devise = v.texte(d, "devise", maxi=3) if statut == "success" else None
-        frais = v.entier(d, "frais", mini=0, maxi=100_000_000, requis=False) or 0 if statut == "success" else 0
-        # Connexion GLOBALE : le prestataire agit pour le compte de l'acheteur,
-        # authentifié par la signature HMAC vérifiée ci-dessus.
-        cx = db.connecter(globale=True)
+        return jsonify(traiter_evenement(prestataire, prestataires.traduire(prestataire, d)))
+
+
+    @app.post("/api/paiements/<int:pid>/simulation")
+    @connectee
+    def paiement_simuler(pid):
+        """Banc d'essai : joue une réponse de prestataire sur SON propre achat.
+        Inexistant (404) hors mode test : un utilisateur ordinaire ne peut pas
+        s'en servir en production."""
+        if not prestataires.simulation_permise():
+            return jsonify(erreur="Introuvable."), 404
+        issue = v.choix(v.corps_json(request), "issue", prestataires.Simulateur.ISSUES)
+        cx = db.connecter()
         try:
-            cur = cx.execute("INSERT INTO webhook_events (prestataire, event_id, recu_le) VALUES (?, ?, ?) ON CONFLICT DO NOTHING", (prestataire, event_id, _now()))
-            if cur.rowcount != 1:
-                cx.valider()
-                return jsonify(ok=True, deja_traite=True)
-            p = cx.un("SELECT montant, devise, etat FROM payments WHERE id = ?", (pid,))
-            if statut == "success" and p and (montant != p["montant"] or devise.upper() != p["devise"] or frais > montant):
-                # Encaissement non conforme : rien n'est ouvert, l'achat part en revue
-                cx.execute("UPDATE payments SET etat = 'UNKNOWN', motif_refus = ?, updated_at = ? WHERE id = ? AND etat IN ('CREATED', 'PENDING', 'EXPIRED')",
-                           (f"Encaissement non conforme : {montant} {devise} reçu(s), {p['montant']} {p['devise']} attendu(s)", _now(), pid))
-                auditer("webhook.montant_divergent", ressource=f"payment:{pid}", apres=f"{event_id}:{montant}{devise}", resultat="refus", cx=cx)
-                cx.valider()
-                return jsonify(ok=True, applique=False, revue=True)
-            if statut == "success" and p and p["etat"] == "EXPIRED":
-                # Argent reçu après l'expiration : on ne le perd pas, un humain tranche
-                cx.execute("UPDATE payments SET etat = 'UNKNOWN', motif_refus = 'Payé après expiration', updated_at = ? WHERE id = ? AND etat = 'EXPIRED'", (_now(), pid))
-                auditer("webhook.apres_expiration", ressource=f"payment:{pid}", apres=event_id, resultat="refus", cx=cx)
-                cx.valider()
-                return jsonify(ok=True, applique=False, revue=True)
-            if statut == "success":
-                fait = confirmer(cx, pid, f"prestataire:{prestataire}", frais=frais)
-            elif statut == "failed":
-                fait = refuser(cx, pid, f"prestataire:{prestataire}", "Refusé par le prestataire")
-            elif statut == "unknown":
-                fait = cx.execute("UPDATE payments SET etat = 'UNKNOWN', updated_at = ? WHERE id = ? AND etat IN ('CREATED', 'PENDING')", (_now(), pid)).rowcount == 1
-            else:
-                fait = cx.execute("UPDATE payments SET etat = 'PENDING', updated_at = ? WHERE id = ? AND etat = 'CREATED'", (_now(), pid)).rowcount == 1
-            auditer("webhook." + statut, ressource=f"payment:{pid}", apres=event_id, resultat="ok" if fait else "refus", cx=cx)
+            p = _mien(cx, pid)
+            if not p:
+                return jsonify(erreur="Introuvable."), 404
+            cx.execute("UPDATE payments SET prestataire = 'simulateur' WHERE id = ? AND etat IN ('CREATED', 'PENDING')", (pid,))
             cx.valider()
-            return jsonify(ok=True, applique=fait)
         finally:
             cx.fermer()
+        sim = prestataires.ADAPTATEURS["simulateur"]
+        r = traiter_evenement("simulateur", sim.evenement(p, issue, 1))
+        if issue == "doublon":       # le prestataire renvoie la MÊME notification
+            r = {"premier": r, "second": traiter_evenement("simulateur", sim.evenement(p, issue, 1))}
+        return jsonify(r)
 
     # ── Côté auteur : ventes et reversements ───────────────────────────────
     @app.get("/api/studio/ventes")

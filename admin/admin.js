@@ -17,18 +17,38 @@
   const csrf = () => { const m = document.cookie.match(/(?:^|; )sozo_admin_csrf=([^;]+)/); return m ? decodeURIComponent(m[1]) : ''; };
   $('#logo').innerHTML = window.SOZO_LOGO || 'Sōzō';
 
-  async function api(methode, url, corps) {
+  async function api(methode, url, corps, rejoue) {
     const o = { method: methode, credentials: 'same-origin', headers: { 'X-CSRF-Token': csrf() } };
     if (methode !== 'GET') { o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(corps || {}); }
     try {
       const r = await fetch(url, o);
       const d = await r.json().catch(() => ({}));
-      if (r.status === 401 && !url.endsWith('/sessions')) { connexion(); throw new Error('session'); }
+      if (r.status === 401 && !url.endsWith('/sessions') && !url.endsWith('/reauth')) { connexion(); throw new Error('session'); }
+      // Action sensible : le serveur exige un code frais. On le demande, puis on rejoue UNE fois.
+      if (r.status === 403 && d.code === 'reauth' && !rejoue) {
+        if (await codeFrais()) return api(methode, url, corps, true);
+        return { ok: false, status: 403, d: { erreur: 'Action annulée : code non confirmé.' } };
+      }
       return { ok: r.ok, status: r.status, d };
     } catch (e) {
       if (e.message === 'session') throw e;
       return { ok: false, status: 0, d: { erreur: 'Le serveur ne répond pas.' } };
     }
+  }
+
+  function codeFrais() {
+    const d = $('#dlgCode'), f = $('#codeF');
+    f.reset(); $('#codeE').textContent = '';
+    d.showModal(); f.elements.code.focus();
+    return new Promise((fin) => {
+      f.onsubmit = async (e) => {
+        if (e.submitter && e.submitter.value === 'annuler') { fin(false); return; }
+        e.preventDefault();
+        const r = await api('POST', '/api/admin/reauth', { code: f.elements.code.value.trim() });
+        if (!r.ok) { $('#codeE').textContent = r.d.erreur || 'Code refusé.'; return; }
+        d.close(); fin(true);
+      };
+    });
   }
 
   /* ─── fenêtre de décision (élément <dialog> natif : focus et Échap gérés) ─── */
@@ -84,13 +104,14 @@
 
   /* ─── la console ─── */
   const ONGLETS = [['tableau', 'Tableau'], ['paiements', 'Paiements'], ['reversements', 'Reversements'], ['livres', 'Livres'], ['signalements', 'Signalements'], ['utilisateurs', 'Utilisateurs'], ['audit', 'Journal']];
-  let onglet = (location.hash || '#tableau').slice(1), compteurs = {};
+  let onglet = (location.hash || '#tableau').slice(1), compteurs = {}, roles = [];
+  const peut = (r) => roles.includes(r);
   async function console_() {
     const r = await api('GET', '/api/admin/tableau').catch(() => null);
     if (!r) return;
     if (!r.ok) { main.innerHTML = `<p class="warn">${esc(r.d.erreur || 'Console indisponible.')}</p>`; return; }
     compteurs = r.d;
-    $('#who').textContent = `${r.d.admin.nom} · ${r.d.admin.email}`; $('#sortir').hidden = false;
+    $('#who').textContent = `${r.d.admin.nom} · ${r.d.admin.roles.join(', ') || 'aucun rôle'}`; roles = r.d.admin.roles; $('#sortir').hidden = false;
     if (!ONGLETS.some(([k]) => k === onglet)) onglet = 'tableau';
     main.innerHTML = `<nav class="at-tabs ad-tabs" role="tablist" aria-label="Sections">${ONGLETS.map(([k, l]) => {
       const n = { paiements: r.d.paiements_attente, reversements: r.d.reversements_attente, signalements: r.d.signalements }[k];
@@ -105,7 +126,7 @@
   }
   const vide = (t) => `<div class="empty"><strong>${esc(t)}</strong></div>`;
   const table = (tetes, lignes) => `<div class="tbl-wrap"><table class="tbl"><thead><tr>${tetes.map((t) => `<th>${t}</th>`).join('')}</tr></thead><tbody>${lignes.join('')}</tbody></table></div>`;
-  const ETAT = { CREATED: 'À payer', PENDING: 'Déclaré', UNKNOWN: 'Incertain', CONFIRMED: 'Confirmé', FAILED: 'Refusé', CANCELLED: 'Annulé', EXPIRED: 'Expiré', DEMANDE: 'Demandé', PAYE: 'Envoyé', REFUSE: 'Refusé' };
+  const ETAT = { CREATED: 'À payer', PENDING: 'Déclaré', UNKNOWN: 'À examiner', CONFIRMED: 'Confirmé', FAILED: 'Refusé', CANCELLED: 'Annulé', EXPIRED: 'Expiré', DEMANDE: 'Demandé', PAYE: 'Envoyé', REFUSE: 'Refusé' };
   const quoi = (p) => p.objet === 'plume' ? 'Plume (30 j)' : p.objet === 'livre' ? `${esc(p.titre)} — livre` : `${esc(p.titre)} — p. ${p.page_de}${p.page_a !== p.page_de ? `–${p.page_a}` : ''}`;
   const motif = (lib) => `<label class="cx-field">${lib}<textarea name="motif" rows="3" maxlength="300" required></textarea></label>`;
 
@@ -125,11 +146,11 @@
       const r = await api('GET', `/api/admin/paiements?etat=${encodeURIComponent(filtre)}`);
       if (!r.ok) { el.innerHTML = `<p class="warn">${esc(r.d.erreur)}</p>`; return; }
       const P = r.d.paiements;
-      el.innerHTML = `<div class="tbl-tools"><label class="ad-sel">Afficher <select id="pf">${['PENDING', 'UNKNOWN', 'CREATED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'TOUS'].map((k) => `<option value="${k}"${k === filtre ? ' selected' : ''}>${k === 'TOUS' ? 'Tous' : ETAT[k]}</option>`).join('')}</select></label></div>
+      el.innerHTML = `<div class="tbl-tools"><label class="ad-sel">Afficher <select id="pf">${['PENDING', 'UNKNOWN', 'CREATED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED', 'TOUS'].map((k) => `<option value="${k}"${k === filtre ? ' selected' : ''}>${k === 'TOUS' ? 'Tous' : ETAT[k]}</option>`).join('')}</select></label></div>
         ${P.length ? table(['Le', 'Lecteur', 'Achat', 'Montant', 'Opérateur', 'Référence', 'État', ''], P.map((p) => `<tr>
           <td>${date(p.updated_at)}</td><td>${esc(p.lecteur)}<br><small class="ash">${esc(p.email)}</small></td><td>${quoi(p)}</td><td><strong>${usd(p.montant)}</strong></td>
-          <td>${esc(p.operateur || '—')}</td><td class="mono">${esc(p.reference || '—')}</td><td>${esc(ETAT[p.etat] || p.etat)}${p.motif_refus ? `<br><small class="ash">${esc(p.motif_refus)}</small>` : ''}</td>
-          <td>${['PENDING', 'UNKNOWN'].includes(p.etat) ? `<span class="row-acts"><button class="btn btn--sm btn--accent" data-conf="${p.id}">Confirmer</button><button class="btn btn--sm btn--ghost" data-ref="${p.id}">Refuser</button></span>` : ''}</td></tr>`)) : vide('Aucun paiement dans cet état.')}`;
+          <td>${esc(p.operateur || '—')}</td><td class="mono">${esc(p.reference || '—')}</td><td>${p.prestataire === 'simulateur' ? '<b class="ad-test">TEST</b> ' : ''}${p.rembourse_le ? `Remboursé<br><small class="ash">${esc(p.motif_remboursement)}</small>` : esc(ETAT[p.etat] || p.etat)}${p.motif_refus ? `<br><small class="ash">${esc(p.motif_refus)}</small>` : ''}${p.confirme_par ? `<br><small class="ash">par ${esc(p.confirme_par)}</small>` : ''}</td>
+          <td>${!peut('finance') ? '' : ['PENDING', 'UNKNOWN'].includes(p.etat) ? `<span class="row-acts"><button class="btn btn--sm btn--accent" data-conf="${p.id}">Confirmer</button><button class="btn btn--sm btn--ghost" data-ref="${p.id}">Refuser</button></span>` : p.etat === 'CONFIRMED' && !p.rembourse_le ? `<button class="btn btn--sm btn--ghost" data-remb="${p.id}">Rembourser</button>` : ''}</td></tr>`)) : vide('Aucun paiement dans cet état.')}`;
       $('#pf').addEventListener('change', (e) => { sessionStorage.setItem('ad-pf', e.target.value); PANNEAUX.paiements(el); });
       $$('[data-conf]', el).forEach((b) => b.addEventListener('click', () => {
         const p = P.find((x) => x.id === +b.dataset.conf);
@@ -142,6 +163,20 @@
             const x = await api('POST', `/api/admin/paiements/${p.id}/confirmer`);
             if (!x.ok) return x.d.erreur || 'Confirmation refusée.';
             toast(`Paiement confirmé · reçu ${x.d.recu}`); console_();
+          } });
+      }));
+      $$('[data-remb]', el).forEach((b) => b.addEventListener('click', () => {
+        const p = P.find((x) => x.id === +b.dataset.remb);
+        demander({ titre: `Rembourser ${usd(p.montant)} ?`, bouton: 'Rembourser et retirer l’accès',
+          corps: `<div class="recap"><div><span>Lecteur</span><strong>${esc(p.lecteur)}</strong></div><div><span>Achat</span><strong>${quoi(p)}</strong></div></div>
+            ${motif('Motif (le lecteur le verra)')}
+            <label class="cx-field">Référence de VOTRE renvoi d’argent <small>facultatif</small><input name="reference" maxlength="120"></label>
+            <p class="note">Le droit de lecture est retiré ; le registre reçoit des lignes correctrices (rien n’est effacé). Faites le renvoi d’argent vous-même : Sōzō ne le fait pas.</p>`,
+          valider: async (f) => {
+            const m = f.elements.motif.value.trim(); if (m.length < 3) return 'Indiquez un motif.';
+            const x = await api('POST', `/api/admin/paiements/${p.id}/rembourser`, { motif: m, reference: f.elements.reference.value.trim() || null });
+            if (!x.ok) return x.d.erreur || 'Remboursement refusé.';
+            toast('Remboursement enregistré : accès retiré.'); console_();
           } });
       }));
       $$('[data-ref]', el).forEach((b) => b.addEventListener('click', () => {
@@ -162,7 +197,7 @@
       el.innerHTML = R.length ? table(['Demandé le', 'Auteur', 'Montant', 'Vers', 'État', ''], R.map((x) => `<tr>
         <td>${date(x.created_at)}</td><td>${esc(x.nom)}<br><small class="ash">${esc(x.email)}</small></td><td><strong>${usd(x.montant)}</strong></td>
         <td>${esc(x.operateur)}<br><span class="mono">${esc(x.numero)}</span></td><td>${esc(ETAT[x.etat] || x.etat)}${x.reference ? `<br><small class="mono">${esc(x.reference)}</small>` : ''}${x.motif ? `<br><small class="ash">${esc(x.motif)}</small>` : ''}</td>
-        <td>${x.etat === 'DEMANDE' ? `<span class="row-acts"><button class="btn btn--sm btn--accent" data-payer="${x.id}">Marquer envoyé</button><button class="btn btn--sm btn--ghost" data-refus="${x.id}">Refuser</button></span>` : ''}</td></tr>`)) : vide('Aucune demande de reversement.');
+        <td>${x.etat === 'DEMANDE' && peut('finance') ? `<span class="row-acts"><button class="btn btn--sm btn--accent" data-payer="${x.id}">Marquer envoyé</button><button class="btn btn--sm btn--ghost" data-refus="${x.id}">Refuser</button></span>` : ''}</td></tr>`)) : vide('Aucune demande de reversement.');
       $$('[data-payer]', el).forEach((b) => b.addEventListener('click', () => {
         const x = R.find((y) => y.id === +b.dataset.payer);
         demander({ titre: `Reversement de ${usd(x.montant)}`, bouton: 'Enregistrer l’envoi',
@@ -185,7 +220,7 @@
       el.innerHTML = L.length ? table(['Livre', 'Auteur', 'Catégorie', 'Accès', 'Signalements', 'État', ''], L.map((b) => `<tr>
         <td><a href="../app/livre.html?id=${encodeURIComponent(b.slug)}" target="_blank" rel="noopener">${esc(b.titre)}</a>${b.demo ? ' <small class="ash">(démo)</small>' : ''}</td><td>${esc(b.auteur)}</td><td>${esc(b.categorie)}</td><td>${esc(b.acces)}</td>
         <td>${b.signalements ? `<b class="ad-n">${b.signalements}</b>` : '0'}</td><td>${b.statut === 'retire' ? `Retiré<br><small class="ash">${esc(b.retrait_motif)}</small>` : 'En ligne'}</td>
-        <td>${b.statut === 'retire' ? `<button class="btn btn--sm btn--ghost" data-retablir="${b.id}">Rétablir</button>` : `<button class="btn btn--sm btn--ghost" data-retirer="${b.id}">Retirer</button>`}</td></tr>`)) : vide('Aucun livre.');
+        <td>${!peut('moderation') ? '' : b.statut === 'retire' ? `<button class="btn btn--sm btn--ghost" data-retablir="${b.id}">Rétablir</button>` : `<button class="btn btn--sm btn--ghost" data-retirer="${b.id}">Retirer</button>`}</td></tr>`)) : vide('Aucun livre.');
       $$('[data-retirer]', el).forEach((b) => b.addEventListener('click', () => demander({ titre: 'Retirer ce livre du catalogue ?', bouton: 'Retirer',
         corps: `${motif('Motif (l’auteur le verra dans son atelier)')}<p class="note">Les lecteurs qui l’ont acheté le gardent ; il disparaît du catalogue.</p>`,
         valider: async (f) => { const m = f.elements.motif.value.trim(); if (m.length < 3) return 'Indiquez un motif.'; const y = await api('POST', `/api/admin/livres/${b.dataset.retirer}/retirer`, { motif: m }); if (!y.ok) return y.d.erreur; toast('Livre retiré.'); console_(); } })));
@@ -198,7 +233,7 @@
       const S = r.d.signalements;
       el.innerHTML = S.length ? table(['Le', 'Livre', 'Par', 'Motif', 'État', ''], S.map((s) => `<tr>
         <td>${date(s.created_at)}</td><td>${esc(s.titre)}</td><td>${esc(s.par)}</td><td class="ad-motif">${esc(s.motif)}</td><td>${{ ouvert: 'Ouvert', traite: 'Traité', rejete: 'Rejeté' }[s.etat] || esc(s.etat)}</td>
-        <td>${s.etat === 'ouvert' ? `<span class="row-acts"><button class="btn btn--sm" data-sig="${s.id}" data-e="traite">Traité</button><button class="btn btn--sm btn--ghost" data-sig="${s.id}" data-e="rejete">Rejeter</button></span>` : ''}</td></tr>`)) : vide('Aucun signalement.');
+        <td>${s.etat === 'ouvert' && peut('moderation') ? `<span class="row-acts"><button class="btn btn--sm" data-sig="${s.id}" data-e="traite">Traité</button><button class="btn btn--sm btn--ghost" data-sig="${s.id}" data-e="rejete">Rejeter</button></span>` : ''}</td></tr>`)) : vide('Aucun signalement.');
       $$('[data-sig]', el).forEach((b) => b.addEventListener('click', async () => { b.disabled = true; const y = await api('POST', `/api/admin/signalements/${b.dataset.sig}`, { etat: b.dataset.e }); if (!y.ok) { b.disabled = false; toast(y.d.erreur); return; } toast('Signalement clos.'); console_(); }));
     },
 
@@ -210,7 +245,7 @@
       el.innerHTML = `<form class="tbl-tools" id="fq" role="search"><label class="ad-sel">Rechercher <input type="search" name="q" value="${esc(q)}" placeholder="Nom ou e-mail"></label><button class="btn btn--sm" type="submit">Chercher</button></form>
         ${U.length ? table(['Nom', 'E-mail', 'Rôle', 'Inscrit le', 'État', ''], U.map((u) => `<tr>
           <td>${esc(u.nom)}</td><td>${esc(u.email)}${u.email_verifie_at ? '' : ' <small class="ash">(non confirmé)</small>'}</td><td>${esc(u.role)}</td><td>${date(u.created_at)}</td><td>${u.actif ? 'Actif' : 'Désactivé'}</td>
-          <td><button class="btn btn--sm btn--ghost" data-u="${u.id}" data-a="${u.actif ? 'desactiver' : 'reactiver'}">${u.actif ? 'Désactiver' : 'Réactiver'}</button></td></tr>`)) : vide('Personne ne correspond.')}`;
+          <td>${!peut('moderation') ? '' : `<button class="btn btn--sm btn--ghost" data-u="${u.id}" data-a="${u.actif ? 'desactiver' : 'reactiver'}">${u.actif ? 'Désactiver' : 'Réactiver'}</button>`}</td></tr>`)) : vide('Personne ne correspond.')}`;
       $('#fq').addEventListener('submit', (e) => { e.preventDefault(); sessionStorage.setItem('ad-q', e.target.elements.q.value.trim()); PANNEAUX.utilisateurs(el); });
       $$('[data-u]', el).forEach((b) => b.addEventListener('click', () => demander({ titre: b.dataset.a === 'desactiver' ? 'Désactiver ce compte ?' : 'Réactiver ce compte ?', bouton: b.dataset.a === 'desactiver' ? 'Désactiver' : 'Réactiver',
         corps: `${motif('Motif (inscrit au journal)')}${b.dataset.a === 'desactiver' ? '<p class="note">Toutes ses sessions sont fermées immédiatement.</p>' : ''}`,

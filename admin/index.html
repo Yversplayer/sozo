@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="../assets/fonts/fonts.css?v=1">
   <link rel="stylesheet" href="../app/app.css?v=20">
   <link rel="stylesheet" href="../app/atelier.css?v=4">
-  <link rel="stylesheet" href="admin.css?v=3">
+  <link rel="stylesheet" href="admin.css?v=4">
 </head>
 <body class="ad">
   <header class="ad-top">
@@ -28,8 +28,17 @@
       <div class="ad-dlg-a"><button class="btn btn--ghost" value="annuler" type="submit" formnovalidate>Annuler</button><button class="btn btn--accent" value="ok" type="submit" id="dlgOk"></button></div>
     </form>
   </dialog>
+  <dialog class="ad-dlg" id="dlgCode" aria-labelledby="codeT">
+    <form method="dialog" id="codeF">
+      <h2 id="codeT">Confirmez avec votre code</h2>
+      <p class="ash">Action sensible : saisissez le code à 6 chiffres affiché par votre application d’authentification. Il reste valable 10 minutes.</p>
+      <label class="cx-field">Code<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label>
+      <p class="cx-err" id="codeE" role="alert"></p>
+      <div class="ad-dlg-a"><button class="btn btn--ghost" value="annuler" type="submit" formnovalidate>Annuler</button><button class="btn btn--accent" value="ok" type="submit">Confirmer</button></div>
+    </form>
+  </dialog>
   <noscript><p style="padding:24px">L’administration a besoin de JavaScript.</p></noscript>
   <script src="../assets/logo.js?v=16"></script>
-  <script src="admin.js?v=2"></script>
+  <script src="admin.js?v=3"></script>
 </body>
 </html>

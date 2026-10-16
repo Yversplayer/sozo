@@ -15,7 +15,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 3
+VERSION_SCHEMA = 4
 _verrou = threading.Lock()
 
 
@@ -164,6 +164,7 @@ RLS = {
     "payouts": f"author_id = {_MOI}",
     "imports": f"user_id = {_MOI}",
     "signalements": f"user_id = {_MOI}",
+    "refunds": f"user_id = {_MOI}",
 }
 
 
@@ -227,3 +228,10 @@ def _migrer(cx):
     _ajouter_colonne(cx, "users", "photo", "TEXT")
     _ajouter_colonne(cx, "users", "atelier", "TEXT")
     _ajouter_colonne(cx, "users", "demo", "INTEGER NOT NULL DEFAULT 0")
+    # v4 (16/10/2026) : remboursements, rôles d'administration, réauthentification
+    _ajouter_colonne(cx, "entitlements", "revoque_le", "TEXT")
+    _ajouter_colonne(cx, "subscriptions", "revoque_le", "TEXT")
+    # Moindre privilège : un compte d'administration n'a QUE les rôles qu'on
+    # lui donne en ligne de commande (« lecture » seule par défaut).
+    _ajouter_colonne(cx, "admin_users", "roles", "TEXT NOT NULL DEFAULT 'lecture'")
+    _ajouter_colonne(cx, "admin_sessions", "reauth_le", "TEXT")

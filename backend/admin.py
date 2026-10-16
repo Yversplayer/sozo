@@ -75,7 +75,7 @@ def admin_requis(f):
         if jeton and len(jeton) <= 100:
             cx = db.connecter()
             try:
-                g.admin = cx.un("""SELECT a.id, a.email, a.nom, s.id AS session_id FROM admin_sessions s JOIN admin_users a ON a.id = s.admin_id
+                g.admin = cx.un("""SELECT a.id, a.email, a.nom, a.roles, s.id AS session_id, s.reauth_le FROM admin_sessions s JOIN admin_users a ON a.id = s.admin_id
                                     WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND a.actif = 1""",
                                 (security.empreinte("admin:" + jeton), acces.maintenant()))
             finally:
@@ -90,6 +90,40 @@ def admin_requis(f):
                 return jsonify(erreur="Requête refusée (jeton de sécurité)."), 403
         return f(*a, **k)
     enveloppe._sozo = "admin"
+    return enveloppe
+
+
+ROLES = {"lecture", "finance", "moderation"}
+REAUTH = timedelta(minutes=10)
+
+
+def role_requis(nom):
+    """Moindre privilège (audit du 16/10/2026) : avant, TOUT administrateur
+    pouvait confirmer un paiement, verser de l'argent et retirer un livre.
+    Chaque action sensible exige désormais son rôle, lu en base, jamais envoyé
+    par le navigateur. À poser SOUS @admin_requis."""
+    def deco(f):
+        @wraps(f)
+        def enveloppe(*a, **k):
+            if nom not in set((g.admin["roles"] or "").split(",")):
+                auditer("admin.role", ressource=request.path, apres=f"{nom} manquant — admin:{g.admin['id']}", resultat="refus")
+                return jsonify(erreur=f"Votre compte n'a pas le rôle « {nom} » pour cette action.", code="role"), 403
+            return f(*a, **k)
+        return enveloppe
+    return deco
+
+
+def reauth_requise(f):
+    """Rembourser, verser de l'argent, désactiver un compte : une session volée
+    (ou un poste laissé ouvert) ne suffit pas. Un code TOTP frais (< 10 min)
+    est exigé ; l'interface le demande puis rejoue l'action."""
+    @wraps(f)
+    def enveloppe(*a, **k):
+        le = g.admin["reauth_le"]
+        limite = (security.maintenant() - REAUTH).strftime("%Y-%m-%dT%H:%M:%SZ")
+        if not le or le < limite:
+            return jsonify(erreur="Confirmez avec votre code à 6 chiffres.", code="reauth"), 403
+        return f(*a, **k)
     return enveloppe
 
 
@@ -151,6 +185,30 @@ def enregistrer(app):
         rep.delete_cookie(COOKIE_CSRF, path="/")
         return rep
 
+    @app.post("/api/admin/reauth")
+    @admin_requis
+    def admin_reauth():
+        code = v.texte(v.corps_json(request), "code", maxi=6)
+        cx = db.connecter()
+        try:
+            if security.depasse(cx, "admin:reauth", g.admin["email"]):
+                cx.valider()
+                return jsonify(erreur="Trop de tentatives. Réessayez plus tard."), 429
+            a = cx.un("SELECT totp_secret FROM admin_users WHERE id = ?", (g.admin["id"],))
+            pas = pas_valide(a["totp_secret"], code)
+            # même règle qu'à la connexion : un code ne sert qu'une fois
+            if pas is None or cx.execute("UPDATE admin_users SET totp_dernier_pas = ? WHERE id = ? AND totp_dernier_pas < ?",
+                                         (pas, g.admin["id"], pas)).rowcount != 1:
+                auditer("admin.reauth", ressource=f"admin:{g.admin['id']}", resultat="refus", cx=cx)
+                cx.valider()
+                return jsonify(erreur="Code incorrect ou déjà utilisé."), 401
+            cx.execute("UPDATE admin_sessions SET reauth_le = ? WHERE id = ?", (acces.maintenant(), g.admin["session_id"]))
+            auditer("admin.reauth", ressource=f"admin:{g.admin['id']}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
     @app.get("/api/admin/tableau")
     @admin_requis
     def admin_tableau():
@@ -158,7 +216,8 @@ def enregistrer(app):
         try:
             n = lambda q, p=(): cx.un(q, p)["n"]
             return jsonify(
-                admin={"nom": g.admin["nom"], "email": g.admin["email"]},
+                admin={"nom": g.admin["nom"], "email": g.admin["email"], "roles": sorted(set((g.admin["roles"] or "").split(",")) & ROLES)},
+                rembourses=n("SELECT COUNT(*) AS n FROM refunds"),
                 paiements_attente=n("SELECT COUNT(*) AS n FROM payments WHERE etat IN ('PENDING', 'UNKNOWN')"),
                 reversements_attente=n("SELECT COUNT(*) AS n FROM payouts WHERE etat = 'DEMANDE'"),
                 signalements=n("SELECT COUNT(*) AS n FROM signalements WHERE etat = 'ouvert'"),
@@ -184,14 +243,17 @@ def enregistrer(app):
                 cx.valider()
             filtre = "" if etat == "TOUS" else "WHERE p.etat = ?"
             return jsonify(paiements=cx.tous(f"""SELECT p.id, p.objet, p.montant, p.etat, p.operateur, p.reference, p.created_at, p.updated_at,
-                                                        p.page_de, p.page_a, p.motif_refus, u.nom AS lecteur, u.email, b.titre
+                                                        p.page_de, p.page_a, p.motif_refus, p.prestataire, p.confirme_par, u.nom AS lecteur, u.email, b.titre,
+                                                        rf.created_at AS rembourse_le, rf.motif AS motif_remboursement
                                                    FROM payments p JOIN users u ON u.id = p.user_id LEFT JOIN books b ON b.id = p.book_id
+                                                   LEFT JOIN refunds rf ON rf.payment_id = p.id
                                                    {filtre} ORDER BY p.updated_at DESC LIMIT 200""", () if etat == "TOUS" else (etat,)))
         finally:
             cx.fermer()
 
     @app.post("/api/admin/paiements/<int:pid>/confirmer")
     @admin_requis
+    @role_requis("finance")
     def admin_confirmer(pid):
         cx = db.connecter()
         try:
@@ -206,6 +268,7 @@ def enregistrer(app):
 
     @app.post("/api/admin/paiements/<int:pid>/refuser")
     @admin_requis
+    @role_requis("finance")
     def admin_refuser(pid):
         motif = v.texte(v.corps_json(request), "motif", mini=3, maxi=300)
         cx = db.connecter()
@@ -213,6 +276,25 @@ def enregistrer(app):
             if not argent.refuser(cx, pid, f"admin:{g.admin['id']}", motif):
                 return jsonify(erreur="Ce paiement est déjà traité (ou n'existe pas)."), 409
             _trace("paiement.refus", f"payment:{pid}", motif, cx)
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    @app.post("/api/admin/paiements/<int:pid>/rembourser")
+    @admin_requis
+    @role_requis("finance")
+    @reauth_requise
+    def admin_rembourser(pid):
+        d = v.corps_json(request)
+        motif = v.texte(d, "motif", mini=3, maxi=300)
+        reference = v.texte(d, "reference", requis=False, maxi=120)
+        cx = db.connecter()
+        try:
+            if not argent.rembourser(cx, pid, f"admin:{g.admin['id']}", motif, reference):
+                cx.annuler()
+                return jsonify(erreur="Seul un paiement confirmé, pas encore remboursé, peut l'être."), 409
+            _trace("paiement.remboursement", f"payment:{pid}", motif, cx)
             cx.valider()
             return jsonify(ok=True)
         finally:
@@ -230,9 +312,14 @@ def enregistrer(app):
 
     @app.post("/api/admin/reversements/<int:rid>/<action>")
     @admin_requis
+    @role_requis("finance")
     def traiter_reversement(rid, action):
         if action not in ("payer", "refuser"):
             return jsonify(erreur="Introuvable."), 404
+        if action == "payer":
+            refus = reauth_requise(lambda: None)()
+            if refus:
+                return refus
         d = v.corps_json(request)
         detail = v.texte(d, "reference" if action == "payer" else "motif", mini=3, maxi=120)
         cx = db.connecter()
@@ -261,6 +348,7 @@ def enregistrer(app):
 
     @app.post("/api/admin/livres/<int:bid>/<action>")
     @admin_requis
+    @role_requis("moderation")
     def moderer_livre(bid, action):
         if action not in ("retirer", "retablir"):
             return jsonify(erreur="Introuvable."), 404
@@ -290,6 +378,7 @@ def enregistrer(app):
 
     @app.post("/api/admin/signalements/<int:sid>")
     @admin_requis
+    @role_requis("moderation")
     def traiter_signalement(sid):
         etat = v.choix(v.corps_json(request), "etat", {"traite", "rejete"})
         cx = db.connecter()
@@ -316,9 +405,14 @@ def enregistrer(app):
 
     @app.post("/api/admin/utilisateurs/<int:uid>/<action>")
     @admin_requis
+    @role_requis("moderation")
     def moderer_utilisateur(uid, action):
         if action not in ("desactiver", "reactiver"):
             return jsonify(erreur="Introuvable."), 404
+        if action == "desactiver":
+            refus = reauth_requise(lambda: None)()
+            if refus:
+                return refus
         motif = v.texte(v.corps_json(request), "motif", mini=3, maxi=300)
         cx = db.connecter()
         try:

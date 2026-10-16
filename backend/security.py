@@ -165,6 +165,7 @@ LIMITES = {
     "import:compte": (20, 60),
     "admin:ip": (10, 15),
     "admin:compte": (5, 15),
+    "admin:reauth": (5, 15),     # codes de confirmation, comptés à part de la connexion
 }
 
 

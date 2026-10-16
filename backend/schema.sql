@@ -301,3 +301,19 @@ CREATE INDEX IF NOT EXISTS payouts_auteur ON payouts (author_id, etat);         
 CREATE INDEX IF NOT EXISTS signalements_etat ON signalements (etat, id);        -- file de modération
 CREATE INDEX IF NOT EXISTS imports_livre ON imports (book_id);
 CREATE INDEX IF NOT EXISTS subscriptions_utilisateur ON subscriptions (user_id, fin);
+
+-- ── Remboursements (16/10/2026) ────────────────────────────────────────────
+-- Un remboursement ne MODIFIE rien d'historique : il s'ajoute. Le paiement
+-- reste CONFIRMED (il a bien eu lieu) ; le droit de lecture est marqué révoqué
+-- (entitlements.revoque_le) ; le registre reçoit des lignes CORRECTRICES
+-- négatives. Un paiement ne se rembourse qu'une fois (UNIQUE).
+CREATE TABLE IF NOT EXISTS refunds (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  payment_id INTEGER NOT NULL UNIQUE REFERENCES payments (id),
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  montant INTEGER NOT NULL CHECK (montant > 0),
+  motif TEXT NOT NULL,
+  reference TEXT,
+  par TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);

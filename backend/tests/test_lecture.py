@@ -110,6 +110,8 @@ class Balayage(TestBase):
         "paiement_lire": [("GET", "/api/paiements/{pid}", {404})],
         "paiement_declarer": [("POST", "/api/paiements/{pid}/declaration", {404}, {"operateur": "M-Pesa", "reference": "ABC12345"})],
         "paiement_annuler": [("POST", "/api/paiements/{pid}/annulation", {404})],
+        "paiement_simuler": [("POST", "/api/paiements/{pid}/simulation", {404}, {"issue": "success"})],
+        "admin_rembourser": [("POST", "/api/admin/paiements/{pid}/rembourser", {401}, {"motif": "essai"})],
         "studio_livre": [("GET", "/api/studio/livres/{slug}", {404})],
         "modifier_livre": [("PATCH", "/api/studio/livres/{slug}", {404}, {"titre": "Volé"})],
         "studio_chapitres": [("PUT", "/api/studio/livres/{slug}/chapitres", {404}, {"chapitres": []})],

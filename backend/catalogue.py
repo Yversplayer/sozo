@@ -76,7 +76,7 @@ def enregistrer(app):
                    OR (b.statut = 'actif' AND EXISTS (SELECT 1 FROM pages p WHERE p.book_id = b.id AND p.statut <> 'draft'))
                    ORDER BY b.id""", (uid,))
             plages = {}
-            for r in cx.tous("SELECT book_id, page_de, page_a FROM entitlements WHERE user_id = ?", (uid,)):
+            for r in cx.tous("SELECT book_id, page_de, page_a FROM entitlements WHERE user_id = ? AND revoque_le IS NULL", (uid,)):
                 plages.setdefault(r["book_id"], []).append((r["page_de"], r["page_a"]))
             ids = [b["id"] for b in livres]
             pages_par, chap_par = {}, {}
@@ -103,7 +103,7 @@ def enregistrer(app):
         follows = [par_id[r["book_id"]] for r in cx.tous("SELECT book_id FROM follows WHERE user_id = ?", (uid,)) if r["book_id"] in par_id]
         progress = {par_id[r["book_id"]]: r["page_n"] for r in cx.tous("SELECT book_id, page_n FROM progress WHERE user_id = ?", (uid,)) if r["book_id"] in par_id}
         purchases = {}
-        for r in cx.tous("""SELECT e.book_id, e.page_de, e.page_a, e.created_at FROM entitlements e WHERE e.user_id = ? ORDER BY e.created_at""", (uid,)):
+        for r in cx.tous("""SELECT e.book_id, e.page_de, e.page_a, e.created_at FROM entitlements e WHERE e.user_id = ? AND e.revoque_le IS NULL ORDER BY e.created_at""", (uid,)):
             if r["book_id"] not in par_id:
                 continue
             slug = par_id[r["book_id"]]
@@ -223,8 +223,10 @@ def enregistrer(app):
             u = cx.un("SELECT id, email, nom, role, bio, ville, email_verifie_at, created_at FROM users WHERE id = ?", (g.user["id"],))
             achats = cx.tous(
                 """SELECT p.id, p.objet, p.montant, p.devise, p.etat, p.created_at, p.confirme_le, p.page_de, p.page_a,
-                          p.operateur, p.reference, p.motif_refus, b.titre, b.slug, r.numero AS recu
+                          p.operateur, p.reference, p.motif_refus, b.titre, b.slug, r.numero AS recu,
+                          rf.created_at AS rembourse_le, rf.motif AS motif_remboursement
                      FROM payments p LEFT JOIN books b ON b.id = p.book_id LEFT JOIN receipts r ON r.payment_id = p.id
+                     LEFT JOIN refunds rf ON rf.payment_id = p.id
                     WHERE p.user_id = ? ORDER BY p.id DESC LIMIT 100""", (g.user["id"],))
             return jsonify(compte=u, achats=achats, plume=argent.plume_actif(cx, g.user["id"]))
         finally:

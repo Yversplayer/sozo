@@ -40,13 +40,13 @@ window.SOZO_PRET.then(() => {
           <section class="panel" aria-labelledby="hAchats">
             <h2 id="hAchats">Mes achats</h2>
             ${c.achats.length ? c.achats.map((a) => {
-              const e = ETATS[a.etat] || [a.etat, 'draft'];
+              const e = a.rembourse_le ? ['Remboursé', 'draft'] : (ETATS[a.etat] || [a.etat, 'draft']);
               return `<div class="cp-pay">
                 <div><strong>${S.esc(quoi(a))}</strong><br><small>${S.esc(S.dateLong(a.created_at))}${a.reference ? ` · réf. ${S.esc(a.reference)}` : ''}${a.recu ? ` · reçu ${S.esc(a.recu)}` : ''}</small>
-                  ${a.etat === 'FAILED' && a.motif_refus ? `<br><small>Motif : ${S.esc(a.motif_refus)}</small>` : ''}</div>
+                  ${a.etat === 'FAILED' && a.motif_refus ? `<br><small>Motif : ${S.esc(a.motif_refus)}</small>` : ''}${a.rembourse_le ? `<br><small>Remboursé le ${S.esc(S.dateLong(a.rembourse_le))} : ${S.esc(a.motif_remboursement)}. L’accès a été retiré.</small>` : ''}</div>
                 <div class="cp-pay-r"><strong>${S.money(a.montant / 100)}</strong><span class="badge badge--${e[1]}">${e[0]}</span>
                   ${a.etat === 'CREATED' ? `<button class="btn btn--sm" type="button" data-reprendre="${a.id}">Payer et déclarer</button>` : ''}
-                  ${a.etat === 'CONFIRMED' && a.slug ? `<a class="btn btn--ghost btn--sm" href="livre.html?id=${encodeURIComponent(a.slug)}">Lire</a>` : ''}</div>
+                  ${a.etat === 'CONFIRMED' && !a.rembourse_le && a.slug ? `<a class="btn btn--ghost btn--sm" href="livre.html?id=${encodeURIComponent(a.slug)}">Lire</a>` : ''}</div>
               </div>`;
             }).join('') : `<div class="empty"><strong>Aucun achat</strong>Les livres gratuits se lisent sans rien acheter. Un achat apparaîtra ici, avec son état et son reçu.</div>`}
             <p class="note">${S.icon('shield')} Un achat « en vérification » s’ouvre dès que Sōzō a confirmé votre paiement Mobile Money. Ce que vous avez payé reste à vous, même si l’auteur modifie son livre.</p>
