@@ -37,7 +37,20 @@
 
   // Sans profil connu, on n'affiche rien avant la réponse du serveur.
   if (!moi) document.documentElement.style.visibility = 'hidden';
-  fetch('/api/moi', { credentials: 'same-origin', cache: 'no-store' })
+  // Serveur en veille (offre gratuite) : 502/503/504 ou coupure → on réessaie
+  // ~70 s au lieu d'envoyer la personne, connectée, vers la page de connexion.
+  function demander(essai) {
+    return fetch('/api/moi', { credentials: 'same-origin', cache: 'no-store' })
+      .then(function (r) {
+        if ([502, 503, 504].indexOf(r.status) >= 0) throw new TypeError('reveil');
+        return r;
+      })
+      .catch(function (e) {
+        if (!(e instanceof TypeError) || essai >= 7) throw e;
+        return new Promise(function (ok) { setTimeout(ok, 10000); }).then(function () { return demander(essai + 1); });
+      });
+  }
+  demander(0)
     .then(function (r) {
       if (r.status === 401) { garder(null); versConnexion(); return null; }
       if (!r.ok) throw new Error('serveur');

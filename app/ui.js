@@ -335,7 +335,6 @@ window.SOZO = (() => {
     const head = document.createElement('header');
     head.className = 'top';
     head.innerHTML = `
-      <p class="demo-bar mono">VERSION D’ESSAI — LES LIVRES DE DÉMONSTRATION SONT FICTIFS · PAIEMENTS MOBILE MONEY VÉRIFIÉS À LA MAIN PAR SŌZŌ</p>
       <div class="top-in">
         <a class="top-logo" href="${root}index.html" aria-label="Sōzō — accueil">${window.SOZO_LOGO || 'Sōzō'}</a>
         <nav class="top-nav" aria-label="Navigation">
@@ -383,7 +382,7 @@ window.SOZO = (() => {
       <div><p class="mono ash">ÉCRIRE</p><a href="studio.html">Studio auteur</a><a href="studio.html?tab=import">Importer un manuscrit</a><a href="studio.html#revenus">Revenus</a></div>
       <div><p class="mono ash">Sōzō</p><a href="compte.html">Mon compte</a><a href="bible.html">La Bible intégrée</a><a href="${root}index.html">La plateforme</a><a href="${root}index.html#pages">Gratuit, payant, programmé</a></div>
     </div>
-    <p class="foot-legal mono ash">© 2026 Sōzō — PLUS QU’UNE APPLICATION, UN CHEMIN · VERSION D’ESSAI · PHOTOS LIBRES (CC0)</p>`;
+    <p class="foot-legal mono ash">© 2026 Sōzō — PLUS QU’UNE APPLICATION, UN CHEMIN · PHOTOS LIBRES (CC0)</p>`;
     document.body.appendChild(f);
   }
 

@@ -29,7 +29,7 @@ window.SOZO_PRET.then(() => {
     <div class="au-head">
       <div class="au-big"><img src="${S.img(a.photo, true)}" alt="Portrait d'illustration de ${S.esc(a.name)}"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M58,5 C84,8 98,28 96,54 C94,82 72,97 46,95 C20,93 3,74 5,47 C7,22 26,4 52,4 C64,4 72,7 78,12"/></svg></div>
       <div>
-        <p class="kicker">Auteur fictif · ${S.esc(a.city)} · sur Sōzō depuis ${S.esc(a.since)}</p>
+        <p class="kicker">Auteur · ${S.esc(a.city)} · sur Sōzō depuis ${S.esc(a.since)}</p>
         <h1 data-ink-text="${S.esc(a.name)}"></h1>
         <div class="au-stats"><span><b>${books.length}</b> livre${books.length > 1 ? 's' : ''}</span><span><b>${pubs}</b> pages publiées</span><span><b>${a.followers.toLocaleString(window.SOZO_LOCALE || 'fr-FR')}</b> lecteurs (fictifs)</span></div>
       </div>

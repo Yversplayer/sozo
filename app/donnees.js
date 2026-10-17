@@ -40,12 +40,25 @@
   };
 
   var page = location.pathname.split('/').pop();
-  window.SOZO_PRET = page === 'connexion.html' ? Promise.resolve() :
-    fetch('/api/catalogue', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) {
+  /* Le serveur gratuit s'endort après 15 min : sa première réponse peut
+     tarder ou échouer (502/503/504, coupure). On réessaie pendant ~70 s en
+     le DISANT (« Sōzō se réveille… »), au lieu d'afficher une panne. */
+  function catalogue(essai) {
+    return fetch('/api/catalogue', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) {
       if (r.status === 401) { return new Promise(function () {}); }   // auth.js part vers la connexion
+      if ([502, 503, 504].indexOf(r.status) >= 0) throw { reveil: true, status: r.status };
       if (!r.ok) throw new Error('catalogue ' + r.status);
       return r.json();
-    }).then(function (d) {
+    }).catch(function (e) {
+      if (!(e && (e.reveil || e instanceof TypeError)) || essai >= 7) throw e;
+      var m = document.getElementById('main');
+      if (m && !m.querySelector('.sz-reveil')) m.innerHTML = '<div class="wrap sec"><div class="empty sz-reveil" role="status"><strong>Sōzō se réveille…</strong>' +
+        'Le serveur était en veille. Encore quelques secondes, la page se charge toute seule.</div></div>';
+      return new Promise(function (ok) { setTimeout(ok, 10000); }).then(function () { return catalogue(essai + 1); });
+    });
+  }
+  window.SOZO_PRET = page === 'connexion.html' ? Promise.resolve() :
+    catalogue(0).then(function (d) {
       D.authors = d.authors; D.books = d.books; D.reader = d.reader;
     });
 })();

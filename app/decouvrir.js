@@ -37,12 +37,12 @@ window.SOZO_PRET.then(() => {
       </div>
       <div class="hero-proof">
         <span class="faces">${faces.map((f) => `<img src="${S.img(f, true)}" alt="">`).join('')}</span>
-        <p><strong>${Object.keys(D.authors).length} auteurs, ${books.length} livres</strong><br>tous fictifs, pour la démonstration</p>
+        <p>${books.length ? `<strong>${Object.keys(D.authors).length} auteur${Object.keys(D.authors).length > 1 ? 's' : ''}, ${books.length} livre${books.length > 1 ? 's' : ''}</strong><br>à lire sur Sōzō` : '<strong>Les premiers livres arrivent</strong><br>publiez le vôtre dans votre atelier'}</p>
       </div>
     </div>
     <div class="hero-art">
       <img src="${S.img('foi-priere-lumiere')}" alt="Une femme recueillie dans la lumière d'une fenêtre">
-      <div class="stack3d" aria-hidden="true">${[books[3], books[1], books[0]].map((b) => S.cover(b, { big: true })).join('')}</div>
+      <div class="stack3d" aria-hidden="true">${[books[3], books[1], books[0]].filter(Boolean).map((b) => S.cover(b, { big: true })).join('')}</div>
       <div class="seal"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M58,5 C84,8 98,28 96,54 C94,82 72,97 46,95 C20,93 3,74 5,47 C7,22 26,4 52,4 C64,4 72,7 78,12"/></svg><div><strong>${fresh}</strong><span>pages parues<br>cette semaine</span></div></div>
     </div>
   </section>
@@ -67,7 +67,7 @@ window.SOZO_PRET.then(() => {
     <section class="sec">
       <div class="sec-head"><div><p class="kicker">Calendrier des auteurs</p><h2 class="sec-title" data-ink-text="Paraît [[bientôt]]"></h2></div>
         <span class="mono ash">Seule la date est visible avant la parution</span></div>
-      <div class="rail">${soon.map(({ b, st }) => `
+      <div class="rail">${soon.length ? '' : `<div class="empty" style="flex:1"><strong>Aucune parution programmée</strong>Les dates des prochaines pages s’afficheront ici.</div>`}${soon.map(({ b, st }) => `
         <a class="soon-card" href="livre.html?id=${b.id}">
           ${S.cover(b, { d3: false })}
           <div><span class="soon-when">${S.icon('clock')} ${S.esc(S.dateLong(st.next.date))}</span>
@@ -96,8 +96,8 @@ window.SOZO_PRET.then(() => {
     </section>
 
     <section class="sec">
-      <div class="sec-head"><div><p class="kicker">Ils écrivent sur Sōzō</p><h2 class="sec-title" data-ink-text="Les [[auteurs]]"></h2></div><span class="mono ash">Auteurs fictifs · photos d'illustration</span></div>
-      <div class="authors">${Object.entries(D.authors).map(([id, a], i) => `
+      <div class="sec-head"><div><p class="kicker">Ils écrivent sur Sōzō</p><h2 class="sec-title" data-ink-text="Les [[auteurs]]"></h2></div></div>
+      <div class="authors">${Object.keys(D.authors).length ? '' : `<div class="empty" style="grid-column:1/-1"><strong>Aucun auteur pour l’instant</strong>Le vôtre peut être le premier nom ici. <a href="studio.html">Ouvrir mon atelier</a></div>`}${Object.entries(D.authors).map(([id, a], i) => `
         <a class="au rv" style="--d:${i % 6}" href="auteur.html?id=${id}">
           <span class="au-ph"><img src="${S.img(a.photo, true)}" alt="" loading="lazy"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M58,5 C84,8 98,28 96,54 C94,82 72,97 46,95 C20,93 3,74 5,47 C7,22 26,4 52,4 C64,4 72,7 78,12"/></svg></span>
           <strong>${S.esc(a.name)}</strong><span>${S.esc(a.city)} · ${S.booksBy(id).length} livre${S.booksBy(id).length > 1 ? 's' : ''}</span></a>`).join('')}</div>
@@ -142,6 +142,7 @@ window.SOZO_PRET.then(() => {
     else list.sort((a, b) => lastDate(b) - lastDate(a));
     $('#meta').textContent = `${list.length} livre${list.length > 1 ? 's' : ''}${state.cat ? ` · ${state.cat}` : ''}${state.q ? ` · « ${state.q} »` : ''}`;
     $('#grid').innerHTML = list.length ? list.map((b) => S.bookCard(b)).join('')
+      : !books.length ? `<div class="empty" style="grid-column:1/-1"><strong>Aucun livre publié pour l’instant</strong>Les livres apparaîtront ici dès leur première page publiée.<br><br><a class="btn btn--ghost btn--sm" href="studio.html">Publier mon livre</a></div>`
       : `<div class="empty" style="grid-column:1/-1"><strong>Aucun livre ne correspond</strong>Essayez un autre mot, ou retirez un filtre.<br><br><button class="btn btn--ghost btn--sm" type="button" id="reset">Tout afficher</button></div>`;
     const r = $('#reset'); if (r) r.addEventListener('click', reset);
     document.querySelectorAll('.cat').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.cat === state.cat)));
