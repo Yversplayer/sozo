@@ -176,7 +176,45 @@ def vapid():
             with open(chemin) as f:
                 k = json.load(f)
             prive, public = k.get("prive", ""), k.get("public", "")
+    if not (prive and public) and _bool("SOZO_VAPID_AUTO"):
+        prive, public = _vapid_auto()
     return {"prive": prive, "public": public, "contact": "mailto:" + email_contact()}
+
+
+_VAPID_AUTO = {}
+
+
+def _vapid_auto():
+    """Clés générées par le serveur au premier besoin et gardées dans la base
+    (table reglages), pour que personne n'ait à recopier une clé privée dans
+    l'hébergeur. Écrites UNE fois (ON CONFLICT DO NOTHING) : plusieurs
+    processus qui démarrent ensemble relisent tous la même paire. Une paire
+    qui changerait obligerait chaque appareil inscrit à se réinscrire."""
+    ou = (moteur(), url_postgres() if moteur() == "postgres" else chemin_sqlite(), schema_postgres())
+    if ou in _VAPID_AUTO:
+        return _VAPID_AUTO[ou]
+    import base64
+    import json
+    from datetime import datetime, timezone
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    import db
+    b64 = lambda o: base64.urlsafe_b64encode(o).rstrip(b"=").decode()  # noqa: E731
+    k = ec.generate_private_key(ec.SECP256R1())
+    neuve = json.dumps({"prive": b64(k.private_numbers().private_value.to_bytes(32, "big")),
+                        "public": b64(k.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint))})
+    cx = db.connecter(globale=True)
+    try:
+        cx.execute("INSERT INTO reglages (cle, valeur, created_at) VALUES ('vapid', ?, ?) ON CONFLICT (cle) DO NOTHING",
+                   (neuve, datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")))
+        paire = json.loads(cx.un("SELECT valeur FROM reglages WHERE cle = 'vapid'")["valeur"])
+        cx.valider()
+    finally:
+        cx.fermer()
+    _VAPID_AUTO[ou] = (paire["prive"], paire["public"])
+    return _VAPID_AUTO[ou]
 
 
 def push_actif():

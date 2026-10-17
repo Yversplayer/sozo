@@ -103,6 +103,18 @@ class Studio(TestBase):
         self.assertEqual(r.status_code, 422)
         self.assertIn("décompressé", r.get_json()["erreur"])       # arrêtée par la limite, pas par hasard
 
+    def test_archive_de_50_mo_decompresses_refusee(self):
+        """Mesuré le 17/10/2026 : l'analyse prend ~4 fois la taille décompressée.
+        Au-delà de 40 Mo, un DOCX pouvait faire tomber un serveur de 512 Mo."""
+        a = Personne(self.app, "auteur")
+        slug = a.livre(pages=0, publier=(), payantes=())
+        b = io.BytesIO()
+        with zipfile.ZipFile(b, "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr("word/document.xml", "<a>" + "0" * (50 * 1024 * 1024) + "</a>")
+        r = self.importer(a, slug, b.getvalue(), "gros.docx")
+        self.assertEqual(r.status_code, 422)
+        self.assertIn("décompressé", r.get_json()["erreur"])
+
     def test_le_manuscrit_n_est_jamais_servi(self):
         a = Personne(self.app, "auteur")
         slug = a.livre(pages=0, publier=(), payantes=())

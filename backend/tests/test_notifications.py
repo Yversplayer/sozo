@@ -208,3 +208,34 @@ class ChiffrementReel(TestBase):
         finally:
             for k in VAPID:
                 os.environ.pop(k, None)
+
+
+class ClesAutomatiques(TestBase):
+    """SOZO_VAPID_AUTO=1 (17/10/2026) : le serveur génère sa paire VAPID une
+    fois, la garde dans la base, et la relit à l'identique ensuite — sans quoi
+    chaque redémarrage désinscrirait tous les téléphones."""
+
+    def test_paire_generee_une_fois_puis_relue(self):
+        import config
+        env = {"SOZO_VAPID_AUTO": "1", "SOZO_VAPID_PRIVE": "", "SOZO_VAPID_PUBLIC": "", "SOZO_VAPID_DEV": ""}
+        with mock.patch.dict(os.environ, env):
+            config._VAPID_AUTO.clear()
+            a = config.vapid()
+            self.assertTrue(a["prive"] and a["public"] and config.push_actif())
+            config._VAPID_AUTO.clear()                    # autre processus, ou redémarrage
+            b = config.vapid()
+            self.assertEqual((a["prive"], a["public"]), (b["prive"], b["public"]))
+            self.assertEqual(len(sql("SELECT cle FROM reglages WHERE cle = 'vapid'")), 1)
+        config._VAPID_AUTO.clear()
+        with mock.patch.dict(os.environ, {"SOZO_VAPID_AUTO": "", "SOZO_VAPID_PRIVE": "", "SOZO_VAPID_PUBLIC": "", "SOZO_VAPID_DEV": ""}):
+            self.assertFalse(config.push_actif())          # sans réglage : rien ne prétend marcher
+
+    def test_la_paire_signe_vraiment(self):
+        import config
+        from py_vapid import Vapid01
+        with mock.patch.dict(os.environ, {"SOZO_VAPID_AUTO": "1", "SOZO_VAPID_PRIVE": "", "SOZO_VAPID_PUBLIC": "", "SOZO_VAPID_DEV": ""}):
+            config._VAPID_AUTO.clear()
+            v = config.vapid()
+            jeton = Vapid01.from_string(v["prive"]).sign({"aud": "https://fcm.googleapis.com", "sub": v["contact"]})
+            self.assertIn("Authorization", jeton)
+        config._VAPID_AUTO.clear()

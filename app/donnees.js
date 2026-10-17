@@ -19,8 +19,10 @@
 
   /* Appel d'API : JSON, jeton CSRF sur toute mutation. Rend {ok, status, d}.
      Une coupure réseau rend une erreur lisible, jamais un faux succès. */
-  window.SOZO_API = function (methode, url, corps) {
+  window.SOZO_API = function (methode, url, corps, options) {
     var o = { method: methode, credentials: 'same-origin', headers: { 'X-CSRF-Token': csrf() } };
+    // keepalive : la requête part même si la page change aussitôt (clic sur un lien)
+    if (options && options.keepalive) o.keepalive = true;
     // Toute mutation porte un corps JSON (exigé par le serveur, défense CSRF) : {} à défaut
     if (corps === undefined && methode !== 'GET') corps = {};
     if (corps instanceof FormData) o.body = corps;

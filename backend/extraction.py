@@ -23,7 +23,10 @@ from html.parser import HTMLParser
 
 MAX_PAGES = 2000
 MAX_ENTREES_ZIP = 2000
-MAX_DECOMPRESSE = 80 * 1024 * 1024
+# 40 Mo décompressés (mesuré le 17/10/2026) : l'analyse consomme ~4 fois la
+# taille décompressée — 70 Mo de DOCX montaient à 300 Mo, de quoi faire tomber
+# un serveur de 512 Mo (Render gratuit). Un roman de 500 pages en fait 5 à 15.
+MAX_DECOMPRESSE = 40 * 1024 * 1024
 CIBLE_PAGE = 1800          # caractères visés par page quand le fichier n'a pas de pagination
 
 

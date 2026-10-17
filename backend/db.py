@@ -17,7 +17,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 6
+VERSION_SCHEMA = 7   # v7 (17/10/2026) : table reglages
 _verrou = threading.Lock()
 
 

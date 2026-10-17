@@ -392,3 +392,12 @@ CREATE TABLE IF NOT EXISTS appareils (
   dernier_succes TEXT
 );
 CREATE INDEX IF NOT EXISTS appareils_personne ON appareils (user_id);
+
+-- Réglages générés par le serveur lui-même (17/10/2026) : aujourd'hui les clés
+-- VAPID quand SOZO_VAPID_AUTO=1. Écrites une fois, jamais par un client ;
+-- incluses dans les sauvegardes (chiffrées).
+CREATE TABLE IF NOT EXISTS reglages (
+  cle TEXT PRIMARY KEY,
+  valeur TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
