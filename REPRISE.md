@@ -14,7 +14,16 @@
 
 Vérifié en ligne le 16/10 : 26/26 contrôles de bout en bout (lecture protégée, brouillon, isolation des achats, CSRF, corps non-JSON, session inventée, administration, limite anti-abus) ; IP réelle du visiteur reçue par le serveur (secret partagé effectif). Comptes d'essai supprimés, livre d'essai retiré.
 
-Pas encore actif en ligne : e-mails (mode capture → pas de code « mot de passe oublié »), notifications d'appareil (clés VAPID), sauvegardes chiffrées hors site, compte d'administration (à créer avec `backend/tools/admin.py`, adresse de la base en variable d'environnement, par le propriétaire).
+Ajouts du 17/10/2026 (déployés) :
+- compte d'administration du propriétaire créé (`backend/tools/admin_en_ligne.py`, adresse de la base collée au clavier) ; console à `/admin/` ;
+- audit de l'administration sur une copie conforme de la production (PostgreSQL + RLS + pooler transaction + gunicorn + secret du relais) : 30/30 (rôles, CSRF, TOTP à usage unique, réauthentification, audit immuable, désactivation) ;
+- thème nocturne par défaut, clair au choix dans Mon compte (users.theme), plus de bouton sur la landing ni dans la barre ;
+- API joignable seulement par le Worker (403 en direct, sauf /api/sante) ; livres d'un auteur supprimé retirés ;
+- import : 40 Mo décompressés au plus (pic mesuré ~170 Mo au lieu de 300) ;
+- notifications d'appareil ACTIVES : `SOZO_VAPID_AUTO=1` sur Render, paire générée par le serveur et gardée dans `reglages` (ne pas la supprimer : tous les téléphones devraient se réinscrire).
+
+Pas encore actif en ligne : e-mails (mot de passe d'application Gmail → `SOZO_EMAIL_MODE=smtp` + `SOZO_SMTP_PASSWORD`), sauvegardes chiffrées hors site (clé + lieu de stockage à choisir par le propriétaire), paiements (numéros Mobile Money `SOZO_PAIEMENT_NUMEROS`), nom de domaine.
+Limite connue de l'offre gratuite Render : un PDF de 2 000 pages prend ~13 s sur un Mac ; sur 0,1 CPU il peut dépasser les 30 s de l'analyse et être refusé (« a pris trop de temps »).
 
 ## 1. Le projet
 - **Sōzō** : plateforme de lecture et de publication page par page, pour un ami du propriétaire (l'auteur Nawezi N., « Nard »). Les livres sont gratuits, payants ou mixtes, avec parutions programmées, Bible intégrée (LSG 1910), correcteur du français, atelier d'auteur, paiement Mobile Money et administration.
