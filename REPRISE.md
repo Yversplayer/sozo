@@ -32,11 +32,13 @@ Ajouts du 17-18/10/2026 (déployés, commit b29e2e5) :
 
 ## ⏭ Où on s'est arrêté — À FAIRE EN PREMIER
 
-1. **La base EN LIGNE est VIDE** (aucun livre, aucun auteur). Rien n'a été recopié du poste local, exprès : la base locale contient les comptes d'essai (interdits ailleurs) et `tools/demo.py` refuse une base distante. **Question posée au propriétaire, réponse attendue :**
-   - A. charger le catalogue de démonstration (12 auteurs, 14 livres, `demo = 1`, SANS les comptes d'essai) avec une petite étiquette « Exemple » sur chaque livre ;
-   - B. le charger sans étiquette pour ses tests, puis le retirer avant l'ouverture ;
-   - C. laisser vide et publier les vrais livres (Nard).
-   Pour A/B il faudra lever le garde-fou de `tools/demo.py` explicitement (option `--en-ligne`) et le propriétaire collera l'adresse de la base au clavier (même principe que `tools/admin_en_ligne.py`).
+1. **Catalogue en ligne : décision A (18/10/2026), « des livres de religion, d'inspiration, de Dieu et de foi, dans le christianisme ».** Fait dans le code, PAS ENCORE chargé en ligne :
+   - `backend/tools/demo_catalogue.py` écrit `demo.json` : 12 auteurs et 14 livres chrétiens INVENTÉS (méditations, prière, poésie de louange, romans, jeunesse, essai, biographie de Paul…). Les versets sont lus dans la Bible LSG 1910 intégrée, jamais recopiés à la main. Nawezi N. n'y est plus : auteur réel, il publie ses vrais livres lui-même ;
+   - étiquette « Exemple » sur chaque couverture et sur la fiche (`ui.js` `cv-exemple`, `livre.js`) ; une page payante d'un livre d'exemple l'explique au lieu de proposer l'achat (`lire.js`) ;
+   - **un livre d'exemple ne se vend pas** : refus du serveur (`argent._calculer`), test `test_livre_d_exemple_jamais_vendu`, vu tomber sans le correctif ;
+   - `demo.py --en-ligne --projet <ref>` : adresse collée au clavier, puis taper EXEMPLE.
+   **Ordre à respecter** : pousser, faire le Manual Deploy de Render (le refus de vente doit être en ligne AVANT les livres), puis le propriétaire lance `demo.py --en-ligne`. La base de développement locale garde l'ancien catalogue (les comptes d'essai y ont des achats) : pour voir le nouveau, charger une base neuve (`SOZO_DB_PATH=…`).
+   Les tuiles « Polar » et « Manga » de Découvrir resteront vides avec ce catalogue (apparence : à soumettre au propriétaire).
 2. **« Accès à toutes les fonctionnalités »** : seuls les achats (pages, Plume) sont fermés, faute de numéros Mobile Money. Question posée : (1) il donne ses numéros → `SOZO_PAIEMENT_NUMEROS` sur Render, il achète puis confirme lui-même dans l'admin ; ou (2) ajouter dans l'admin « offrir Plume / offrir un livre » (avec audit).
 3. Le propriétaire teste le logiciel ce week-end : traiter ses retours en priorité.
 
@@ -66,7 +68,7 @@ Ajouts du 17-18/10/2026 (déployés, commit b29e2e5) :
 - Tarifs proposés, **non confirmés par le propriétaire** : commission de 15 % (10 % avec Plume), Plume à 4,99 $ pour 30 jours, reversement minimum de 1 $.
 
 ## 3. Ce qui fonctionne (testé)
-**Tests** : 132 sur SQLite et 132 sur PostgreSQL (RLS active), tous verts. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
+**Tests** : 155 sur SQLite (7 réservés à PostgreSQL y sont sautés) et 155 sur PostgreSQL (RLS active), tous verts au 18/10/2026. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
 ```bash
 cd /Users/macbookpro/sozo && backend_venv/bin/python -m unittest discover -s backend/tests -t backend
 cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py
@@ -110,7 +112,7 @@ cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py
 ## 4. Ce qui n'est PAS fait — ne jamais le présenter comme fait
 - **Aucun agrégateur Mobile Money réel.** Plume n'est pas un abonnement récurrent.
 - **Les e-mails sont prêts mais en mode capture** : il faut le « mot de passe d'application » Gmail du propriétaire (`SOZO_SMTP_PASSWORD`) pour qu'ils partent. SMS et WhatsApp : aucun fournisseur.
-- **Jamais déployé.** La restauration a été exercée en local (SQLite et PostgreSQL), pas sur une base de production. La planification des sauvegardes et le stockage hors site restent à mettre en place.
+- **Déployé le 16/10/2026** (§0). La restauration a été exercée en local (SQLite et PostgreSQL), pas sur une base de production. La planification des sauvegardes et le stockage hors site restent à mettre en place.
 - **Notifications d'appareil** : chiffrement vérifié par un test, mais jamais reçues sur un vrai téléphone (le navigateur intégré les bloque). À essayer sur un téléphone après le déploiement (HTTPS obligatoire).
 - Réorganisation des pages limitée aux brouillons placés APRÈS la dernière page sortie (`/pages/ordre`) : les droits d'achat sont liés aux numéros, une page sortie ne bouge jamais.
 - **Pour le bas de page et la mise en ligne, il manque les informations du propriétaire** : éditeur légal (nom, adresse, RCCM), numéros Mobile Money par opérateur, nom de domaine, réseaux sociaux, textes légaux (CGU, confidentialité), e-mail de l'administrateur.

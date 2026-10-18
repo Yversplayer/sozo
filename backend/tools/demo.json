@@ -1,798 +1,1241 @@
 {
  "authors": {
-  "nawezi-n": {
-   "name": "Nawezi N.",
-   "photo": "foi-porte-eglise",
+  "elie-mbuyi": {
+   "name": "Élie Mbuyi",
+   "photo": "portrait-bureau",
+   "city": "Kinshasa",
+   "since": "2024",
+   "bio": "Pasteur de quartier. Écrit avant l'aube une méditation courte, pour ceux qui partent tôt."
+  },
+  "ruth-kabasele": {
+   "name": "Ruth Kabasele",
+   "photo": "portrait-boucles",
+   "city": "Lubumbashi",
+   "since": "2025",
+   "bio": "Poèmes de louange, un chaque jeudi à 20 h. La terre rouge, la pluie, et Celui qui les fait."
+  },
+  "samuel-ndombe": {
+   "name": "Samuel Ndombe",
+   "photo": "portrait-jeune-homme",
+   "city": "Kisangani",
+   "since": "2026",
+   "bio": "Romancier. Raconte des retours : vers une maison, vers une ville, vers Dieu."
+  },
+  "esther-mukendi": {
+   "name": "Esther Mukendi",
+   "photo": "autrice-ordinateur",
+   "city": "Bruxelles",
+   "since": "2025",
+   "bio": "Lit les femmes de la Bible avec les yeux des femmes d'aujourd'hui."
+  },
+  "josue-kalala": {
+   "name": "Josué Kalala",
+   "photo": "portrait-couloir",
+   "city": "Goma",
+   "since": "2025",
+   "bio": "Accompagne des jeunes dans les épreuves. Écrit pour ceux qui tiennent debout à peine."
+  },
+  "grace-nzuzi": {
+   "name": "Grâce Nzuzi",
+   "photo": "portrait-sourire",
    "city": "Kinshasa",
    "since": "2026",
-   "bio": "Des mots entre foi, douleur et espérance, pour celles et ceux qui cherchent encore la lumière.",
-   "followers": 1200
+   "bio": "Monitrice d'école du dimanche. Des prières à lire à voix haute, avec les enfants."
   },
-  "ines-kanza": {
-   "name": "Inès Kanza",
-   "photo": "portrait-sourire",
+  "daniel-obi": {
+   "name": "Daniel Obi",
+   "photo": "portrait-ville",
+   "city": "Lagos",
+   "since": "2024",
+   "bio": "Lit les épîtres lentement, verset par verset, et note ce qui reste."
+  },
+  "marthe-lukusa": {
+   "name": "Marthe Lukusa",
+   "photo": "lectrice-echarpe",
    "city": "Lyon",
    "since": "2025",
-   "bio": "Écrit le jeudi soir, publie quand la page est prête. Romans au bord de l'eau, poèmes courts.",
-   "followers": 412
+   "bio": "Nouvelles d'une nuit de prière. Une page offerte, puis on veille ensemble."
   },
-  "theo-marchetti": {
-   "name": "Théo Marchetti",
-   "photo": "portrait-jeune-homme",
-   "city": "Turin",
-   "since": "2024",
-   "bio": "Fantasy lente, forêts qui parlent. Publie ses livres en entier, d’un seul coup.",
-   "followers": 1280
-  },
-  "hugo-lindqvist": {
-   "name": "Hugo Lindqvist",
-   "photo": "portrait-couloir",
-   "city": "Göteborg",
-   "since": "2025",
-   "bio": "Polars de quartier. Une page, un indice, jamais deux.",
-   "followers": 865
-  },
-  "awa-diop": {
-   "name": "Awa Diop",
-   "photo": "portrait-boucles",
-   "city": "Dakar",
-   "since": "2026",
-   "bio": "Un poème par semaine, le jeudi à 20 h. Gratuit, toujours.",
-   "followers": 2034
-  },
-  "mireille-okafor": {
-   "name": "Mireille Okafor",
-   "photo": "autrice-ordinateur",
-   "city": "Lagos",
-   "since": "2026",
-   "bio": "Roman graphique sur les archives d’une ville. Dessine la nuit, publie à la quinzaine.",
-   "followers": 318
-  },
-  "lina-petrova": {
-   "name": "Lina Petrova",
-   "photo": "portrait-ville",
-   "city": "Sofia",
-   "since": "2025",
-   "bio": "Manga en photo-roman, noir et blanc. Un chapitre par mois.",
-   "followers": 977
-  },
-  "kofi-mensah": {
-   "name": "Kofi Mensah",
-   "photo": "portrait-bureau",
-   "city": "Accra",
-   "since": "2024",
-   "bio": "Histoires à lire à voix haute, pour les enfants et ceux qui les couchent.",
-   "followers": 1540
-  },
-  "sofia-herrera": {
-   "name": "Sofia Herrera",
-   "photo": "lectrice-echarpe",
-   "city": "Valparaíso",
-   "since": "2025",
-   "bio": "Nouvelles de cafés fermés tard. Alterne pages offertes et pages payantes.",
-   "followers": 640
-  },
-  "jun-takeda": {
-   "name": "Jun Takeda",
+  "pierre-andre-lemaire": {
+   "name": "Pierre-André Lemaire",
    "photo": "lecteur-livre-rouge",
-   "city": "Osaka",
-   "since": "2026",
-   "bio": "Essais courts sur la lenteur. Vend le livre entier, rien à l’unité.",
-   "followers": 233
-  },
-  "rafael-costa": {
-   "name": "Rafael Costa",
-   "photo": "lecteur-banc",
-   "city": "Porto",
-   "since": "2024",
-   "bio": "Histoire des bibliothèques, chapitre par chapitre.",
-   "followers": 502
-  },
-  "nadia-belkacem": {
-   "name": "Nadia Belkacem",
-   "photo": "lectrice-canape",
-   "city": "Marseille",
+   "city": "Genève",
    "since": "2023",
-   "bio": "Premier roman, offert en entier. Le second s’écrit.",
-   "followers": 1890
+   "bio": "Raconte les apôtres à partir des Actes et des lettres, sans rien inventer de plus."
+  },
+  "naomi-tshala": {
+   "name": "Naomi Tshala",
+   "photo": "lectrice-canape",
+   "city": "Kananga",
+   "since": "2026",
+   "bio": "Premier roman, offert en entier. Une fille qui part, un père qui attend."
+  },
+  "jean-baptiste-ilunga": {
+   "name": "Jean-Baptiste Ilunga",
+   "photo": "lecteur-banc",
+   "city": "Mbuji-Mayi",
+   "since": "2024",
+   "bio": "Méditations pour la Semaine sainte. Sept paroles, sept soirs."
+  },
+  "lea-bisimwa": {
+   "name": "Léa Bisimwa",
+   "photo": "lectrice-bibliotheque",
+   "city": "Bukavu",
+   "since": "2026",
+   "bio": "Quarante jours pour apprendre à dire merci, même les jours sans."
   }
  },
  "books": [
   {
-   "id": "croix-de-bois",
-   "title": "Croix de bois, Actes de foi",
-   "author": "nawezi-n",
-   "cat": "Foi",
+   "id": "pain-du-matin",
+   "title": "Le Pain du matin",
+   "author": "elie-mbuyi",
+   "cat": "Spiritualité",
    "cover": {
-    "img": "foi-croix-ciel",
+    "img": "foi-soleil-mer",
     "style": "a"
    },
    "mode": "progressive",
-   "access": "mixed",
-   "file": "croix-de-bois.pdf",
-   "desc": "Un recueil entre foi, douleur et espérance. Des mots pour celles et ceux qui cherchent la lumière.",
-   "price": {
-    "page": 2.0,
-    "chapter": 5.0,
-    "all": 9.9
-   },
-   "chapters": [
-    {
-     "t": "Ouverture",
-     "from": 1,
-     "to": 1
-    },
-    {
-     "t": "I. Le commencement",
-     "from": 2,
-     "to": 2
-    },
-    {
-     "t": "II. Entre la douleur et l’espérance",
-     "from": 3,
-     "to": 3
-    },
-    {
-     "t": "III. Ce qui reste",
-     "from": 4,
-     "to": 8
-    },
-    {
-     "t": "IV. Actes de foi",
-     "from": 9,
-     "to": 14
-    },
-    {
-     "t": "V. Le chemin",
-     "from": 15,
-     "to": 20
-    }
-   ],
+   "access": "free",
+   "desc": "Une méditation courte tous les deux jours, à lire avant de sortir. Un verset, une pensée, une prière.",
+   "price": null,
    "pages": [
     {
      "n": 1,
      "access": "free",
      "status": "published",
-     "date": "2026-09-20T18:00",
+     "date": "2026-09-20T06:00",
      "source": "pdf"
     },
     {
      "n": 2,
      "access": "free",
      "status": "published",
-     "date": "2026-09-20T18:00",
+     "date": "2026-09-22T06:00",
      "source": "pdf"
     },
     {
      "n": 3,
      "access": "free",
      "status": "published",
-     "date": "2026-09-20T18:00",
+     "date": "2026-09-24T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 4,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-26T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 5,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-28T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 6,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-30T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 7,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-02T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 8,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-04T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 9,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-06T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 10,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-08T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 11,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-10T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 12,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-12T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 13,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-14T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 14,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-16T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 15,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-18T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 16,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-20T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 17,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-22T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 18,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-24T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 19,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-26T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 20,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-28T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 21,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-30T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 22,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-01T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 23,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-03T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 24,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-05T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 25,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-07T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 26,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-09T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 27,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-11T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 28,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-13T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 29,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-15T06:00",
+     "source": "pdf"
+    },
+    {
+     "n": 30,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-17T06:00",
+     "source": "pdf"
+    }
+   ],
+   "chapters": [
+    {
+     "t": "Se lever",
+     "from": 1,
+     "to": 10
+    },
+    {
+     "t": "Marcher",
+     "from": 11,
+     "to": 20
+    },
+    {
+     "t": "Se reposer",
+     "from": 21,
+     "to": 30
+    }
+   ]
+  },
+  {
+   "id": "prier-sans-mots",
+   "title": "Prier quand les mots manquent",
+   "author": "elie-mbuyi",
+   "cat": "Foi",
+   "cover": {
+    "img": "foi-priere-lumiere",
+    "style": "c"
+   },
+   "mode": "integral",
+   "access": "mixed",
+   "desc": "Pour les jours où l'on ouvre la bouche et où rien ne vient. Ce que l'Écriture dit des soupirs, du silence et de la confiance.",
+   "price": {
+    "page": 0.1,
+    "chapter": 0.4,
+    "all": 1.99
+   },
+   "pages": [
+    {
+     "n": 1,
+     "access": "free",
+     "status": "published",
+     "date": "2026-08-15T09:00",
+     "source": "pdf"
+    },
+    {
+     "n": 2,
+     "access": "free",
+     "status": "published",
+     "date": "2026-08-15T09:00",
+     "source": "pdf"
+    },
+    {
+     "n": 3,
+     "access": "free",
+     "status": "published",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 4,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-27T18:00",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 5,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-27T18:00",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 6,
      "access": "paid",
      "status": "published",
-     "date": "2026-10-04T18:00",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 7,
      "access": "paid",
      "status": "published",
-     "date": "2026-10-04T18:00",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 8,
      "access": "paid",
      "status": "published",
-     "date": "2026-10-04T18:00",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 9,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-18T18:00",
+     "status": "published",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 10,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-18T18:00",
+     "status": "published",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 11,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-01T18:00",
+     "status": "published",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 12,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-01T18:00",
+     "status": "published",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 13,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-01T18:00",
+     "status": "published",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 14,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-01T18:00",
+     "status": "published",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 15,
      "access": "paid",
-     "status": "draft",
-     "date": null,
+     "status": "published",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 16,
      "access": "paid",
-     "status": "draft",
-     "date": null,
+     "status": "published",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 17,
      "access": "paid",
-     "status": "draft",
-     "date": null,
+     "status": "published",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
     },
     {
      "n": 18,
      "access": "paid",
-     "status": "draft",
-     "date": null,
+     "status": "published",
+     "date": "2026-08-15T09:00",
      "source": "pdf"
+    }
+   ],
+   "chapters": [
+    {
+     "t": "Le silence",
+     "from": 1,
+     "to": 6
+    },
+    {
+     "t": "Les soupirs",
+     "from": 7,
+     "to": 12
+    },
+    {
+     "t": "La confiance",
+     "from": 13,
+     "to": 18
+    }
+   ]
+  },
+  {
+   "id": "psaumes-terre-rouge",
+   "title": "Psaumes de la terre rouge",
+   "author": "ruth-kabasele",
+   "cat": "Poésie",
+   "cover": {
+    "img": "foi-champ-dore",
+    "style": "d"
+   },
+   "mode": "progressive",
+   "access": "free",
+   "desc": "Un poème de louange chaque jeudi à 20 h. La latérite, les pluies de novembre, et Celui qui fait lever le grain.",
+   "price": null,
+   "pages": [
+    {
+     "n": 1,
+     "access": "free",
+     "status": "published",
+     "date": "2026-08-27T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 2,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-03T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 3,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-10T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 4,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-17T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 5,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-24T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 6,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-01T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 7,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-08T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 8,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-15T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 9,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-22T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 10,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-29T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 11,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-05T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 12,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-12T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 13,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-19T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 14,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-11-26T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 15,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-12-03T20:00",
+     "source": "editor"
+    },
+    {
+     "n": 16,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-12-10T20:00",
+     "source": "editor"
+    }
+   ],
+   "chapters": [
+    {
+     "t": "Les champs",
+     "from": 1,
+     "to": 8
+    },
+    {
+     "t": "Les pluies",
+     "from": 9,
+     "to": 16
+    }
+   ]
+  },
+  {
+   "id": "cantique-ville",
+   "title": "Cantique pour une ville qui dort",
+   "author": "ruth-kabasele",
+   "cat": "Poésie",
+   "cover": {
+    "img": "foi-bougie-nuit",
+    "style": "b"
+   },
+   "mode": "integral",
+   "access": "mixed",
+   "desc": "Vingt prières en vers pour une ville la nuit : les gardiens, les malades, les mères qui veillent. Les cinq premières sont offertes.",
+   "price": {
+    "page": 0.05,
+    "chapter": null,
+    "all": 0.79
+   },
+   "pages": [
+    {
+     "n": 1,
+     "access": "free",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 2,
+     "access": "free",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 3,
+     "access": "free",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 4,
+     "access": "free",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 5,
+     "access": "free",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 6,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 7,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 8,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 9,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 10,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 11,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 12,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 13,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 14,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 15,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 16,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 17,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
+    },
+    {
+     "n": 18,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-07-14T21:00",
+     "source": "editor"
     },
     {
      "n": 19,
      "access": "paid",
-     "status": "draft",
-     "date": null,
+     "status": "published",
+     "date": "2026-07-14T21:00",
      "source": "editor"
     },
     {
      "n": 20,
      "access": "paid",
-     "status": "draft",
-     "date": null,
+     "status": "published",
+     "date": "2026-07-14T21:00",
      "source": "editor"
+    }
+   ],
+   "chapters": [
+    {
+     "t": "Cantiques",
+     "from": 1,
+     "to": 20
     }
    ]
   },
   {
-   "id": "heures-salees",
-   "title": "Les Heures salées",
-   "author": "ines-kanza",
+   "id": "fleuve-prie",
+   "title": "Quand le fleuve prie",
+   "author": "samuel-ndombe",
    "cat": "Roman",
    "cover": {
-    "img": "couv-mer",
+    "img": "foi-croix-lac",
     "style": "a"
    },
    "mode": "progressive",
    "access": "mixed",
-   "file": "les-heures-salees.pdf",
-   "desc": "À marée basse, Nour trouve sur le sable des lettres posées comme des coquillages. Quelqu'un écrit avec la mer — et c'est son prénom qui revient.",
+   "desc": "Jonas Bokele descend le fleuve pour enterrer sa mère, qu'il n'a pas revue depuis dix ans. Sur le bateau, une vieille femme chante les cantiques qu'elle lui chantait.",
    "price": {
     "page": 0.1,
     "chapter": 0.35,
     "all": 1.49
    },
+   "pages": [
+    {
+     "n": 1,
+     "access": "free",
+     "status": "published",
+     "date": "2026-08-29T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 2,
+     "access": "free",
+     "status": "published",
+     "date": "2026-08-29T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 3,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-05T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 4,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-05T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 5,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-12T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 6,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-12T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 7,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-19T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 8,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-19T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 9,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-26T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 10,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-26T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 11,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-03T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 12,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-03T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 13,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-10T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 14,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-10T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 15,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-17T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 16,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-17T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 17,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-24T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 18,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-24T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 19,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-31T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 20,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-31T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 21,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-11-07T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 22,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-11-07T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 23,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-11-14T18:00",
+     "source": "pdf"
+    },
+    {
+     "n": 24,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-11-14T18:00",
+     "source": "pdf"
+    }
+   ],
    "chapters": [
     {
-     "t": "La marée du soir",
+     "t": "Le départ",
      "from": 1,
-     "to": 5
+     "to": 6
     },
     {
-     "t": "Les lettres",
-     "from": 6,
-     "to": 9
+     "t": "Le bateau",
+     "from": 7,
+     "to": 12
     },
     {
-     "t": "Le port",
-     "from": 10,
-     "to": 14
+     "t": "Les rives",
+     "from": 13,
+     "to": 18
     },
     {
-     "t": "Les volets",
-     "from": 15,
-     "to": 19
-    },
-    {
-     "t": "Ce que la mer garde",
-     "from": 20,
+     "t": "Le retour",
+     "from": 19,
      "to": 24
     }
-   ],
-   "pages": [
-    {
-     "n": 1,
-     "access": "free",
-     "status": "published",
-     "date": "2026-08-29T18:00",
-     "source": "pdf"
-    },
-    {
-     "n": 2,
-     "access": "free",
-     "status": "published",
-     "date": "2026-08-29T18:00",
-     "source": "pdf"
-    },
-    {
-     "n": 3,
-     "access": "free",
-     "status": "published",
-     "date": "2026-08-29T18:00",
-     "source": "pdf"
-    },
-    {
-     "n": 4,
-     "access": "free",
-     "status": "published",
-     "date": "2026-08-30T18:00",
-     "source": "pdf"
-    },
-    {
-     "n": 5,
-     "access": "free",
-     "status": "published",
-     "date": "2026-09-13T18:00",
-     "source": "pdf"
-    },
-    {
-     "n": 6,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-27T18:00",
-     "source": "pdf"
-    },
-    {
-     "n": 7,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-27T18:00",
-     "source": "pdf"
-    },
-    {
-     "n": 8,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-27T18:00",
-     "source": "pdf"
-    },
-    {
-     "n": 9,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-10-01T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 10,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-10-08T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 11,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-10-08T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 12,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-10-08T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 13,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-15T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 14,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-15T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 15,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-29T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 16,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-15T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 17,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-15T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 18,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-15T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 19,
-     "access": "paid",
-     "status": "draft",
-     "date": null,
-     "source": "pdf"
-    },
-    {
-     "n": 20,
-     "access": "paid",
-     "status": "draft",
-     "date": null,
-     "source": "pdf"
-    },
-    {
-     "n": 21,
-     "access": "paid",
-     "status": "draft",
-     "date": null,
-     "source": "editor"
-    },
-    {
-     "n": 22,
-     "access": "paid",
-     "status": "draft",
-     "date": null,
-     "source": "editor"
-    },
-    {
-     "n": 23,
-     "access": "paid",
-     "status": "draft",
-     "date": null,
-     "source": "editor"
-    },
-    {
-     "n": 24,
-     "access": "paid",
-     "status": "draft",
-     "date": null,
-     "source": "editor"
-    }
    ]
   },
   {
-   "id": "jardin-nuit",
-   "title": "Le Jardin de nuit",
-   "author": "theo-marchetti",
-   "cat": "Fantasy",
+   "id": "femmes-bible",
+   "title": "Femmes de la Bible, femmes d'aujourd'hui",
+   "author": "esther-mukendi",
+   "cat": "Essai",
    "cover": {
-    "img": "couv-jardin",
-    "style": "b"
+    "img": "foi-fleurs-claires",
+    "style": "d"
    },
    "mode": "integral",
-   "access": "paid",
-   "desc": "Chaque nuit, le jardin du vieux Sandro change d'allées. Celui qui s'y perd ressort avec un souvenir qui n'est pas le sien.",
+   "access": "mixed",
+   "desc": "Ruth, Anne, Marthe, Marie, Lydie : quatre portraits lus de près, et ce qu'ils disent aux femmes qui travaillent, prient et attendent aujourd'hui.",
    "price": {
-    "page": 0.15,
+    "page": null,
     "chapter": 0.5,
-    "all": 2.99
+    "all": 2.49
    },
-   "chapters": [
-    {
-     "t": "Les allées",
-     "from": 1,
-     "to": 10
-    },
-    {
-     "t": "Le souvenir",
-     "from": 11,
-     "to": 20
-    },
-    {
-     "t": "Sandro",
-     "from": 21,
-     "to": 30
-    }
-   ],
    "pages": [
     {
      "n": 1,
-     "access": "paid",
+     "access": "free",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 2,
-     "access": "paid",
+     "access": "free",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 3,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 4,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 5,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 6,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 7,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 8,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 9,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 10,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 11,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 12,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 13,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 14,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 15,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 16,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 17,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 18,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 19,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 20,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 21,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 22,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 23,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
     },
     {
      "n": 24,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-02T09:00",
+     "date": "2026-09-28T08:00",
      "source": "pdf"
+    }
+   ],
+   "chapters": [
+    {
+     "t": "Ruth, la fidèle",
+     "from": 1,
+     "to": 6
     },
     {
-     "n": 25,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-02T09:00",
-     "source": "pdf"
+     "t": "Anne, la femme qui priait",
+     "from": 7,
+     "to": 12
     },
     {
-     "n": 26,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-02T09:00",
-     "source": "pdf"
+     "t": "Marthe et Marie",
+     "from": 13,
+     "to": 18
     },
     {
-     "n": 27,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-02T09:00",
-     "source": "pdf"
-    },
-    {
-     "n": 28,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-02T09:00",
-     "source": "pdf"
-    },
-    {
-     "n": 29,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-02T09:00",
-     "source": "pdf"
-    },
-    {
-     "n": 30,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-02T09:00",
-     "source": "pdf"
+     "t": "Lydie, la marchande",
+     "from": 19,
+     "to": 24
     }
    ]
   },
   {
-   "id": "fenetre-rouge",
-   "title": "La Fenêtre rouge",
-   "author": "hugo-lindqvist",
-   "cat": "Polar",
+   "id": "debout-tempete",
+   "title": "Debout dans la tempête",
+   "author": "josue-kalala",
+   "cat": "Développement personnel",
    "cover": {
-    "img": "couv-fenetre-rouge",
+    "img": "foi-aube-bras",
     "style": "c"
    },
    "mode": "progressive",
    "access": "mixed",
-   "desc": "Rue Fiskar, une fenêtre reste allumée en rouge toute la nuit. Le lendemain, quelqu’un manque à l’appel.",
+   "desc": "Perdre un emploi, un proche, une certitude. Un chemin en vingt étapes, de la barque qui prend l'eau au grand calme.",
    "price": {
     "page": 0.1,
     "chapter": 0.4,
     "all": 1.79
    },
-   "chapters": [
-    {
-     "t": "La rue Fiskar",
-     "from": 1,
-     "to": 5
-    },
-    {
-     "t": "L’appel",
-     "from": 6,
-     "to": 10
-    },
-    {
-     "t": "Le gardien",
-     "from": 11,
-     "to": 15
-    },
-    {
-     "t": "Rouge",
-     "from": 16,
-     "to": 20
-    }
-   ],
    "pages": [
     {
      "n": 1,
@@ -812,12 +1255,12 @@
      "n": 3,
      "access": "free",
      "status": "published",
-     "date": "2026-09-05T19:00",
+     "date": "2026-09-12T19:00",
      "source": "pdf"
     },
     {
      "n": 4,
-     "access": "paid",
+     "access": "free",
      "status": "published",
      "date": "2026-09-12T19:00",
      "source": "pdf"
@@ -833,1228 +1276,598 @@
      "n": 6,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-26T19:00",
+     "date": "2026-09-19T19:00",
      "source": "pdf"
     },
     {
      "n": 7,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-26T19:00",
+     "source": "pdf"
+    },
+    {
+     "n": 8,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-26T19:00",
+     "source": "pdf"
+    },
+    {
+     "n": 9,
      "access": "paid",
      "status": "published",
      "date": "2026-10-03T19:00",
      "source": "pdf"
     },
     {
-     "n": 8,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-10-10T19:00",
-     "source": "pdf"
-    },
-    {
-     "n": 9,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-10-10T19:00",
-     "source": "pdf"
-    },
-    {
      "n": 10,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-17T19:00",
+     "status": "published",
+     "date": "2026-10-03T19:00",
      "source": "pdf"
     },
     {
      "n": 11,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-17T19:00",
+     "status": "published",
+     "date": "2026-10-10T19:00",
      "source": "pdf"
     },
     {
      "n": 12,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-31T19:00",
+     "status": "published",
+     "date": "2026-10-10T19:00",
      "source": "pdf"
     },
     {
      "n": 13,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-31T19:00",
+     "status": "published",
+     "date": "2026-10-17T19:00",
      "source": "pdf"
     },
     {
      "n": 14,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-31T19:00",
+     "status": "published",
+     "date": "2026-10-17T19:00",
      "source": "pdf"
     },
     {
      "n": 15,
      "access": "paid",
-     "status": "draft",
-     "date": null,
+     "status": "scheduled",
+     "date": "2026-10-24T19:00",
      "source": "pdf"
     },
     {
      "n": 16,
      "access": "paid",
-     "status": "draft",
-     "date": null,
+     "status": "scheduled",
+     "date": "2026-10-24T19:00",
      "source": "pdf"
     },
     {
      "n": 17,
      "access": "paid",
-     "status": "draft",
-     "date": null,
+     "status": "scheduled",
+     "date": "2026-10-31T19:00",
      "source": "pdf"
     },
     {
      "n": 18,
      "access": "paid",
-     "status": "draft",
-     "date": null,
+     "status": "scheduled",
+     "date": "2026-10-31T19:00",
      "source": "pdf"
     },
     {
      "n": 19,
      "access": "paid",
-     "status": "draft",
-     "date": null,
+     "status": "scheduled",
+     "date": "2026-11-07T19:00",
      "source": "pdf"
     },
     {
      "n": 20,
      "access": "paid",
-     "status": "draft",
-     "date": null,
+     "status": "scheduled",
+     "date": "2026-11-07T19:00",
      "source": "pdf"
     }
-   ]
-  },
-  {
-   "id": "petites-lumieres",
-   "title": "Petites lumières",
-   "author": "awa-diop",
-   "cat": "Poésie",
-   "cover": {
-    "img": "couv-lumieres",
-    "style": "d"
-   },
-   "mode": "progressive",
-   "access": "free",
-   "desc": "Un poème chaque jeudi à 20 h. Des lumières de cuisine, de bus, de téléphone — celles qu’on ne regarde jamais.",
-   "price": null,
+   ],
    "chapters": [
     {
-     "t": "Septembre",
+     "t": "Le vent se lève",
      "from": 1,
      "to": 5
     },
     {
-     "t": "Octobre",
+     "t": "La barque",
      "from": 6,
      "to": 10
     },
     {
-     "t": "Novembre",
+     "t": "Silence, tais-toi",
      "from": 11,
-     "to": 14
-    }
-   ],
-   "pages": [
-    {
-     "n": 1,
-     "access": "free",
-     "status": "published",
-     "date": "2026-08-06T20:00",
-     "source": "pdf"
+     "to": 15
     },
     {
-     "n": 2,
-     "access": "free",
-     "status": "published",
-     "date": "2026-08-13T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 3,
-     "access": "free",
-     "status": "published",
-     "date": "2026-08-20T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 4,
-     "access": "free",
-     "status": "published",
-     "date": "2026-08-27T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 5,
-     "access": "free",
-     "status": "published",
-     "date": "2026-09-03T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 6,
-     "access": "free",
-     "status": "published",
-     "date": "2026-09-10T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 7,
-     "access": "free",
-     "status": "published",
-     "date": "2026-09-17T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 8,
-     "access": "free",
-     "status": "published",
-     "date": "2026-09-24T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 9,
-     "access": "free",
-     "status": "published",
-     "date": "2026-10-01T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 10,
-     "access": "free",
-     "status": "published",
-     "date": "2026-10-08T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 11,
-     "access": "free",
-     "status": "scheduled",
-     "date": "2026-10-15T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 12,
-     "access": "free",
-     "status": "scheduled",
-     "date": "2026-10-22T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 13,
-     "access": "free",
-     "status": "scheduled",
-     "date": "2026-10-29T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 14,
-     "access": "free",
-     "status": "scheduled",
-     "date": "2026-11-05T20:00",
-     "source": "pdf"
+     "t": "Le grand calme",
+     "from": 16,
+     "to": 20
     }
    ]
   },
   {
-   "id": "spirale",
-   "title": "La Spirale des archives",
-   "author": "mireille-okafor",
-   "cat": "Roman graphique",
-   "format": "planche",
-   "cover": {
-    "img": "couv-spirale",
-    "style": "a"
-   },
-   "mode": "progressive",
-   "access": "mixed",
-   "desc": "Dans une bibliothèque en spirale, une archiviste recopie chaque nuit une ville qui disparaît le jour.",
-   "price": {
-    "page": 0.2,
-    "chapter": 0.7,
-    "all": 2.49
-   },
-   "chapters": [
-    {
-     "t": "L’escalier",
-     "from": 1,
-     "to": 4
-    },
-    {
-     "t": "Les fiches",
-     "from": 5,
-     "to": 8
-    },
-    {
-     "t": "La ville",
-     "from": 9,
-     "to": 16
-    }
-   ],
-   "pages": [
-    {
-     "n": 1,
-     "access": "free",
-     "status": "published",
-     "date": "2026-09-15T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 2,
-     "access": "free",
-     "status": "published",
-     "date": "2026-09-15T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 3,
-     "access": "free",
-     "status": "published",
-     "date": "2026-09-15T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 4,
-     "access": "free",
-     "status": "published",
-     "date": "2026-09-15T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 5,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-10-01T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 6,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-10-01T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 7,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-10-01T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 8,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-10-01T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 9,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-01T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 10,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-01T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 11,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-01T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 12,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-01T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 13,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-01T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 14,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-01T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 15,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-15T21:00",
-     "source": "pdf"
-    },
-    {
-     "n": 16,
-     "access": "paid",
-     "status": "draft",
-     "date": null,
-     "source": "pdf"
-    }
-   ]
-  },
-  {
-   "id": "capuche",
-   "title": "Sous la capuche",
-   "author": "lina-petrova",
-   "cat": "Manga",
-   "format": "planche",
-   "cover": {
-    "img": "couv-capuche",
-    "style": "c"
-   },
-   "mode": "progressive",
-   "access": "mixed",
-   "desc": "Mila ne retire jamais sa capuche. Le jour où le vent s’en charge, toute la ville la reconnaît.",
-   "price": {
-    "page": null,
-    "chapter": 0.49,
-    "all": 1.99
-   },
-   "chapters": [
-    {
-     "t": "Chapitre 1",
-     "from": 1,
-     "to": 4
-    },
-    {
-     "t": "Chapitre 2",
-     "from": 5,
-     "to": 8
-    },
-    {
-     "t": "Chapitre 3",
-     "from": 9,
-     "to": 12
-    },
-    {
-     "t": "Chapitre 4",
-     "from": 13,
-     "to": 16
-    }
-   ],
-   "pages": [
-    {
-     "n": 1,
-     "access": "free",
-     "status": "published",
-     "date": "2026-07-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 2,
-     "access": "free",
-     "status": "published",
-     "date": "2026-07-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 3,
-     "access": "free",
-     "status": "published",
-     "date": "2026-07-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 4,
-     "access": "free",
-     "status": "published",
-     "date": "2026-07-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 5,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-08-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 6,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-08-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 7,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-08-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 8,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-08-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 9,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 10,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 11,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 12,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 13,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 14,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 15,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-20T12:00",
-     "source": "pdf"
-    },
-    {
-     "n": 16,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-20T12:00",
-     "source": "pdf"
-    }
-   ]
-  },
-  {
-   "id": "marais",
-   "title": "L’Enfant du marais",
-   "author": "kofi-mensah",
+   "id": "petites-prieres",
+   "title": "Petites prières pour grands enfants",
+   "author": "grace-nzuzi",
    "cat": "Jeunesse",
    "cover": {
-    "img": "couv-marais",
+    "img": "foi-bougies",
     "style": "d"
    },
    "mode": "integral",
    "access": "free",
-   "desc": "Ato parle aux grenouilles. Un matin, elles lui répondent — et lui demandent de sauver le marais.",
+   "desc": "Seize prières courtes à lire avec un enfant : pour le matin, pour l'école, pour les jours de peur, pour le soir.",
    "price": null,
-   "chapters": [
-    {
-     "t": "Les grenouilles",
-     "from": 1,
-     "to": 9
-    },
-    {
-     "t": "Le marais",
-     "from": 10,
-     "to": 18
-    }
-   ],
    "pages": [
     {
      "n": 1,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 2,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 3,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 4,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 5,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 6,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 7,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 8,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 9,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 10,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 11,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 12,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 13,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 14,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 15,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
     },
     {
      "n": 16,
      "access": "free",
      "status": "published",
      "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "source": "editor"
+    }
+   ],
+   "chapters": [
+    {
+     "t": "Le matin",
+     "from": 1,
+     "to": 8
     },
     {
-     "n": 17,
-     "access": "free",
-     "status": "published",
-     "date": "2026-06-01T10:00",
-     "source": "pdf"
-    },
-    {
-     "n": 18,
-     "access": "free",
-     "status": "published",
-     "date": "2026-06-01T10:00",
-     "source": "pdf"
+     "t": "Le soir",
+     "from": 9,
+     "to": 16
     }
    ]
   },
   {
-   "id": "cafe-nuit",
-   "title": "Café de nuit",
-   "author": "sofia-herrera",
-   "cat": "Nouvelles",
+   "id": "lettres-timothee",
+   "title": "Lettres à Timothée, lues lentement",
+   "author": "daniel-obi",
+   "cat": "Spiritualité",
    "cover": {
-    "img": "couv-cafe-nuit",
+    "img": "foi-bible-mains",
     "style": "b"
    },
    "mode": "progressive",
+   "access": "paid",
+   "desc": "Les deux lettres de Paul à son jeune disciple, lues un passage à la fois. Un chapitre par mois, vendu au chapitre.",
+   "price": {
+    "page": null,
+    "chapter": 0.6,
+    "all": 1.5
+   },
+   "pages": [
+    {
+     "n": 1,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-01T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 2,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-01T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 3,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-01T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 4,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-01T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 5,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-01T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 6,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-01T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 7,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-01T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 8,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-01T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 9,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-01T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 10,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-01T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 11,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-01T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 12,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-01T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 13,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-31T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 14,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-31T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 15,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-31T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 16,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-31T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 17,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-31T08:00",
+     "source": "pdf"
+    },
+    {
+     "n": 18,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-31T08:00",
+     "source": "pdf"
+    }
+   ],
+   "chapters": [
+    {
+     "t": "Première lettre, chapitres 1 à 3",
+     "from": 1,
+     "to": 6
+    },
+    {
+     "t": "Première lettre, chapitres 4 à 6",
+     "from": 7,
+     "to": 12
+    },
+    {
+     "t": "Seconde lettre",
+     "from": 13,
+     "to": 18
+    }
+   ]
+  },
+  {
+   "id": "veillee",
+   "title": "La Veillée",
+   "author": "marthe-lukusa",
+   "cat": "Nouvelles",
+   "cover": {
+    "img": "foi-bougies-rang",
+    "style": "a"
+   },
+   "mode": "progressive",
    "access": "mixed",
-   "desc": "Quinze nouvelles, un seul café, ouvert jusqu’à quatre heures. Chaque client y laisse une histoire en paiement.",
+   "desc": "Une nuit de prière dans une paroisse de quartier, de 22 h à l'aube. Quinze nouvelles, quinze personnes venues avec ce qu'elles portent.",
    "price": {
     "page": 0.1,
     "chapter": 0.3,
     "all": 0.99
    },
+   "pages": [
+    {
+     "n": 1,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-10T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 2,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-10T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 3,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-17T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 4,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-17T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 5,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-24T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 6,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-09-24T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 7,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-01T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 8,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-01T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 9,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-08T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 10,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-08T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 11,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-15T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 12,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-10-15T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 13,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-22T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 14,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-22T22:00",
+     "source": "pdf"
+    },
+    {
+     "n": 15,
+     "access": "paid",
+     "status": "scheduled",
+     "date": "2026-10-29T22:00",
+     "source": "pdf"
+    }
+   ],
    "chapters": [
     {
-     "t": "Le comptoir",
+     "t": "Vingt-deux heures",
      "from": 1,
      "to": 3
     },
     {
-     "t": "La pluie",
+     "t": "Minuit",
      "from": 4,
-     "to": 6
-    },
-    {
-     "t": "Les habitués",
-     "from": 7,
      "to": 8
     },
     {
-     "t": "Quatre heures",
+     "t": "Trois heures",
      "from": 9,
+     "to": 12
+    },
+    {
+     "t": "L'aube",
+     "from": 13,
      "to": 15
     }
-   ],
-   "pages": [
-    {
-     "n": 1,
-     "access": "free",
-     "status": "published",
-     "date": "2026-09-10T22:00",
-     "source": "pdf"
-    },
-    {
-     "n": 2,
-     "access": "free",
-     "status": "published",
-     "date": "2026-09-10T22:00",
-     "source": "pdf"
-    },
-    {
-     "n": 3,
-     "access": "free",
-     "status": "published",
-     "date": "2026-09-10T22:00",
-     "source": "pdf"
-    },
-    {
-     "n": 4,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-24T22:00",
-     "source": "pdf"
-    },
-    {
-     "n": 5,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-24T22:00",
-     "source": "pdf"
-    },
-    {
-     "n": 6,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-24T22:00",
-     "source": "pdf"
-    },
-    {
-     "n": 7,
-     "access": "free",
-     "status": "published",
-     "date": "2026-10-08T22:00",
-     "source": "pdf"
-    },
-    {
-     "n": 8,
-     "access": "free",
-     "status": "published",
-     "date": "2026-10-08T22:00",
-     "source": "pdf"
-    },
-    {
-     "n": 9,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-10-15T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 10,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-12-01T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 11,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-12-01T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 12,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-12-01T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 13,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-12-01T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 14,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-12-01T20:00",
-     "source": "pdf"
-    },
-    {
-     "n": 15,
-     "access": "paid",
-     "status": "scheduled",
-     "date": "2026-12-01T20:00",
-     "source": "pdf"
-    }
    ]
   },
   {
-   "id": "eventail",
-   "title": "L’Éventail",
-   "author": "jun-takeda",
-   "cat": "Essai",
+   "id": "paul-en-chemin",
+   "title": "Paul, l'apôtre en chemin",
+   "author": "pierre-andre-lemaire",
+   "cat": "Biographie",
    "cover": {
-    "img": "couv-eventail",
-    "style": "d"
+    "img": "foi-chapelle",
+    "style": "c"
    },
    "mode": "integral",
    "access": "paid",
-   "desc": "Neuf essais sur le geste de tourner une page, et sur tout ce qu’on décide pendant ce temps-là.",
-   "price": {
-    "page": null,
-    "chapter": null,
-    "all": 1.49
-   },
-   "chapters": [
-    {
-     "t": "Essais",
-     "from": 1,
-     "to": 22
-    }
-   ],
-   "pages": [
-    {
-     "n": 1,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 2,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 3,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 4,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 5,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 6,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 7,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 8,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 9,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 10,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 11,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 12,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 13,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 14,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 15,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 16,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 17,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 18,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 19,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 20,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 21,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    },
-    {
-     "n": 22,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-09-28T08:00",
-     "source": "pdf"
-    }
-   ]
-  },
-  {
-   "id": "silhouettes",
-   "title": "Silhouettes au couchant",
-   "author": "ines-kanza",
-   "cat": "Poésie",
-   "cover": {
-    "img": "couv-silhouette",
-    "style": "b"
-   },
-   "mode": "integral",
-   "access": "mixed",
-   "desc": "Vingt poèmes écrits face à l’ouest. Les cinq premiers sont offerts.",
-   "price": {
-    "page": 0.05,
-    "chapter": null,
-    "all": 0.79
-   },
-   "chapters": [
-    {
-     "t": "Poèmes",
-     "from": 1,
-     "to": 20
-    }
-   ],
-   "pages": [
-    {
-     "n": 1,
-     "access": "free",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 2,
-     "access": "free",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 3,
-     "access": "free",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 4,
-     "access": "free",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 5,
-     "access": "free",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 6,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 7,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 8,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 9,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 10,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 11,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 12,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 13,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 14,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 15,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 16,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 17,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 18,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 19,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    },
-    {
-     "n": 20,
-     "access": "paid",
-     "status": "published",
-     "date": "2026-07-14T19:00",
-     "source": "editor"
-    }
-   ]
-  },
-  {
-   "id": "plafond",
-   "title": "Le Plafond des lecteurs",
-   "author": "rafael-costa",
-   "cat": "Histoire",
-   "cover": {
-    "img": "couv-plafond",
-    "style": "a"
-   },
-   "mode": "progressive",
-   "access": "paid",
-   "desc": "Une histoire des grandes salles de lecture, racontée par ceux qui levaient les yeux.",
+   "desc": "De Tarse à Rome : la vie de l'apôtre Paul racontée à partir des Actes et de ses lettres, avec chaque référence à portée de main.",
    "price": {
     "page": null,
     "chapter": 0.6,
     "all": 2.2
    },
-   "chapters": [
-    {
-     "t": "Les dômes",
-     "from": 1,
-     "to": 8
-    },
-    {
-     "t": "Les lampes vertes",
-     "from": 9,
-     "to": 16
-    },
-    {
-     "t": "Les catalogues",
-     "from": 17,
-     "to": 24
-    }
-   ],
    "pages": [
     {
      "n": 1,
@@ -2116,141 +1929,151 @@
      "n": 9,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-10T09:00",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 10,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-10T09:00",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 11,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-10T09:00",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 12,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-10T09:00",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 13,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-10T09:00",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 14,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-10T09:00",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 15,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-10T09:00",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 16,
      "access": "paid",
      "status": "published",
-     "date": "2026-09-10T09:00",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 17,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-10T09:00",
+     "status": "published",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 18,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-10T09:00",
+     "status": "published",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 19,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-10T09:00",
+     "status": "published",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 20,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-10T09:00",
+     "status": "published",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 21,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-10T09:00",
+     "status": "published",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 22,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-10T09:00",
+     "status": "published",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 23,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-10T09:00",
+     "status": "published",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
     },
     {
      "n": 24,
      "access": "paid",
-     "status": "scheduled",
-     "date": "2026-11-10T09:00",
+     "status": "published",
+     "date": "2026-08-10T09:00",
      "source": "pdf"
+    }
+   ],
+   "chapters": [
+    {
+     "t": "Saul de Tarse",
+     "from": 1,
+     "to": 6
+    },
+    {
+     "t": "Le chemin de Damas",
+     "from": 7,
+     "to": 12
+    },
+    {
+     "t": "Les voyages",
+     "from": 13,
+     "to": 18
+    },
+    {
+     "t": "Les lettres",
+     "from": 19,
+     "to": 24
     }
    ]
   },
   {
-   "id": "vitrine",
-   "title": "La Vitrine",
-   "author": "nadia-belkacem",
+   "id": "fille-prodigue",
+   "title": "La Fille prodigue",
+   "author": "naomi-tshala",
    "cat": "Roman",
    "cover": {
-    "img": "couv-vitrine",
-    "style": "c"
+    "img": "foi-porte-eglise",
+    "style": "b"
    },
    "mode": "integral",
    "access": "free",
-   "desc": "Une libraire décide de ne plus rien vendre et de tout prêter. Le quartier ne s’en remet pas.",
+   "desc": "Bijou quitte Kananga avec l'argent de son père et la certitude d'avoir raison. Quatre ans plus tard, elle reprend la route du retour. Roman offert en entier.",
    "price": null,
-   "chapters": [
-    {
-     "t": "Première partie",
-     "from": 1,
-     "to": 14
-    },
-    {
-     "t": "Seconde partie",
-     "from": 15,
-     "to": 28
-    }
-   ],
    "pages": [
     {
      "n": 1,
@@ -2448,198 +2271,850 @@
      "date": "2026-03-21T10:00",
      "source": "pdf"
     }
+   ],
+   "chapters": [
+    {
+     "t": "Partir",
+     "from": 1,
+     "to": 14
+    },
+    {
+     "t": "Revenir",
+     "from": 15,
+     "to": 28
+    }
+   ]
+  },
+  {
+   "id": "sept-paroles",
+   "title": "Sept paroles sur la croix",
+   "author": "jean-baptiste-ilunga",
+   "cat": "Foi",
+   "cover": {
+    "img": "foi-croix-ciel",
+    "style": "a"
+   },
+   "mode": "integral",
+   "access": "mixed",
+   "desc": "Les sept paroles de Jésus sur la croix, méditées une par soir. L'ouverture est offerte.",
+   "price": {
+    "page": 0.2,
+    "chapter": null,
+    "all": 0.99
+   },
+   "pages": [
+    {
+     "n": 1,
+     "access": "free",
+     "status": "published",
+     "date": "2026-04-01T19:00",
+     "source": "pdf"
+    },
+    {
+     "n": 2,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-04-01T19:00",
+     "source": "pdf"
+    },
+    {
+     "n": 3,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-04-01T19:00",
+     "source": "pdf"
+    },
+    {
+     "n": 4,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-04-01T19:00",
+     "source": "pdf"
+    },
+    {
+     "n": 5,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-04-01T19:00",
+     "source": "pdf"
+    },
+    {
+     "n": 6,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-04-01T19:00",
+     "source": "pdf"
+    },
+    {
+     "n": 7,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-04-01T19:00",
+     "source": "pdf"
+    },
+    {
+     "n": 8,
+     "access": "paid",
+     "status": "published",
+     "date": "2026-04-01T19:00",
+     "source": "pdf"
+    }
+   ],
+   "chapters": [
+    {
+     "t": "Ouverture",
+     "from": 1,
+     "to": 1
+    },
+    {
+     "t": "Les sept paroles",
+     "from": 2,
+     "to": 8
+    }
+   ]
+  },
+  {
+   "id": "quarante-jours",
+   "title": "Quarante jours de gratitude",
+   "author": "lea-bisimwa",
+   "cat": "Développement personnel",
+   "cover": {
+    "img": "foi-fleurs-sechees",
+    "style": "d"
+   },
+   "mode": "progressive",
+   "access": "free",
+   "desc": "Une page par jour pendant quarante jours : un merci à écrire, un verset à garder, une personne à qui le dire.",
+   "price": null,
+   "pages": [
+    {
+     "n": 1,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-20T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 2,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-21T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 3,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-22T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 4,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-23T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 5,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-24T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 6,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-25T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 7,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-26T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 8,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-27T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 9,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-28T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 10,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-29T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 11,
+     "access": "free",
+     "status": "published",
+     "date": "2026-09-30T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 12,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-01T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 13,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-02T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 14,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-03T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 15,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-04T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 16,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-05T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 17,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-06T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 18,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-07T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 19,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-08T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 20,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-09T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 21,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-10T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 22,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-11T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 23,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-12T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 24,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-13T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 25,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-14T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 26,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-15T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 27,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-16T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 28,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-17T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 29,
+     "access": "free",
+     "status": "published",
+     "date": "2026-10-18T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 30,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-19T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 31,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-20T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 32,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-21T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 33,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-22T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 34,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-23T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 35,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-24T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 36,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-25T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 37,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-26T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 38,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-27T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 39,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-28T07:00",
+     "source": "editor"
+    },
+    {
+     "n": 40,
+     "access": "free",
+     "status": "scheduled",
+     "date": "2026-10-29T07:00",
+     "source": "editor"
+    }
+   ],
+   "chapters": [
+    {
+     "t": "Pour le pain",
+     "from": 1,
+     "to": 10
+    },
+    {
+     "t": "Pour les visages",
+     "from": 11,
+     "to": 20
+    },
+    {
+     "t": "Pour les épreuves",
+     "from": 21,
+     "to": 30
+    },
+    {
+     "t": "Pour demain",
+     "from": 31,
+     "to": 40
+    }
    ]
   }
  ],
  "texts": {
-  "croix-de-bois": [
+  "pain-du-matin": [
    [
-    "Il y a des chemins qui ne se voient pas,",
-    "mais qui nous trouvent quand même.",
+    "Premier matin.",
+    "« Les bontés de l’Éternel ne sont pas épuisées, Ses compassions ne sont pas à leur terme ; Elles se renouvellent chaque matin. Oh ! que ta fidélité est grande ! » — Lamentations 3:22-23",
+    "Il y a des matins où l'on se lève avec la fatigue d'hier encore sur les épaules. On n'a pas fini la nuit, et déjà le jour réclame.",
+    "Ce verset a été écrit au milieu des ruines. Jérusalem était tombée. L'homme qui écrit n'a rien de neuf à raconter, sauf ceci : chaque matin, la bonté de Dieu recommence.",
+    "Avant de sortir aujourd'hui, ne demandez pas encore de force pour toute la semaine. Demandez celle de ce matin. Elle suffira.",
+    "Prière : Seigneur, je ne te demande pas demain. Donne-moi ce matin, et ta fidélité dedans. Amen."
+   ],
+   [
+    "Deuxième matin.",
+    "« Cantique de David. L’Éternel est mon berger : je ne manquerai de rien. » — Psaume 23:1",
+    "Un berger ne promet pas qu'il n'y aura pas de chemin difficile. Il promet d'y être.",
+    "« Je ne manquerai de rien » ne veut pas dire : j'aurai tout ce que je veux. Cela veut dire : ce dont j'ai besoin pour la route me sera donné sur la route.",
+    "Regardez aujourd'hui ce qui ne vous a pas manqué hier. Le compte est souvent plus long qu'on ne le croit.",
+    "Prière : Berger, marche devant moi aujourd'hui. Là où je ne vois pas, fais-moi entendre ta voix."
+   ],
+   [
+    "Troisième matin.",
+    "« Ta parole est une lampe à mes pieds, Et une lumière sur mon sentier. » — Psaume 119:105",
+    "Une lampe à mes pieds, pas un projecteur sur tout le chemin. Elle éclaire le pas suivant, rarement le suivant d'après.",
+    "Nous voudrions voir la fin avant de commencer. Dieu nous donne souvent juste assez de lumière pour un pas.",
+    "Quel est le pas d'aujourd'hui ? Un appel à passer, une excuse à présenter, une porte à ouvrir. Faites celui-là.",
+    "Prière : Que ta parole éclaire mes pieds aujourd'hui, et que je m'en contente."
+   ]
+  ],
+  "prier-sans-mots": [
+   [
+    "Avant-propos",
+    "Ce livre est né d'une question qu'on m'a posée à la sortie d'un culte : « Pasteur, comment on prie quand on n'a plus rien à dire ? »",
+    "La femme qui me la posait venait de perdre son mari. Elle avait prié des mois pour sa guérison. Maintenant, elle ne savait plus quoi demander.",
+    "Je n'avais pas de réponse ce jour-là. J'en ai une un peu meilleure aujourd'hui, et elle ne vient pas de moi :",
+    "« De même aussi l’Esprit nous aide dans notre faiblesse, car nous ne savons pas ce qu’il nous convient de demander dans nos prières. Mais l’Esprit lui-même intercède par des soupirs inexprimables ; » — Romains 8:26",
+    "Ce livre parle de ces soupirs-là."
+   ],
+   [
+    "Le silence n'est pas l'absence",
+    "Nous avons appris que prier, c'est parler. On ferme les yeux, on joint les mains, et les phrases viennent.",
+    "Mais il y a des saisons où les phrases ne viennent pas. Où l'on s'assied au bord du lit et où l'on reste là.",
+    "Ce silence-là n'est pas un échec. Élie, sur la montagne, n'a pas trouvé Dieu dans le vent fort, ni dans le tremblement de terre, ni dans le feu. Il l'a trouvé dans « un murmure doux et léger » (1 Rois 19:12).",
+    "Asseyez-vous. Ne dites rien. Restez. C'est déjà une prière."
+   ],
+   [
+    "Un seul mot suffit",
+    "Le publicain de la parabole ne fait pas un long discours. Il se tient à distance, il n'ose pas lever les yeux, et il dit une phrase : « Ô Dieu, sois apaisé envers moi, qui suis un pécheur. » (Luc 18:13)",
+    "Jésus dit qu'il rentra chez lui justifié.",
+    "Si aujourd'hui vous n'avez qu'un mot, dites-le : « Aide. » « Merci. » « Pardon. » « Reste. »",
+    "Dieu n'a jamais compté les mots."
+   ]
+  ],
+  "psaumes-terre-rouge": [
+   [
+    "I. Louange du premier jour",
     "",
-    "Confiez-vous en l’Éternel à perpétuité — Ésaïe 26:4."
-   ],
-   [
-    "Tout a commencé par un silence. Un silence plus fort que toutes les voix que j’avais connues.",
-    "Un silence qui ne faisait pas peur, mais qui appelait."
-   ],
-   [
-    "Entre la douleur et l’espérance, il n’y a parfois qu’une nuit.",
-    "« Quand je marche dans la vallée de l’ombre de la mort, je ne crains aucun mal » — Psaume 23:4.",
-    "Cette page raconte cette nuit-là, et le matin qui l’a suivie (Lamentations 3:22-23)."
-   ],
-   [
-    "Il reste cette foi, même quand tout vacille. Il reste cette lumière, même dans les nuits les plus longues.",
-    "Il reste un nom, au-dessus de tous les noms."
-   ],
-   [
-    "Chaque pas est un acte de foi.",
-    "Chaque page en est un aussi."
-   ]
-  ],
-  "heures-salees": [
-   [
-    "La mer montait toujours à l'heure où sa grand-mère fermait les volets. Ce soir-là, Nour resta dehors.",
-    "Elle voulait voir ce que la marée emportait quand personne ne regardait : les seaux oubliés, les traces de pas, les promesses faites trop fort."
-   ],
-   [
-    "Sur le sable, il y avait des lettres. Pas des mots : des lettres seules, posées comme des coquillages — un A, un R, un M renversé.",
-    "Quelqu'un écrivait avec la mer, et la mer ne savait pas encore lire."
-   ],
-   [
-    "Nour les compta deux fois. Onze. Elle les recopia dans le carnet bleu, celui des listes de courses, entre « pain » et « allumettes ».",
-    "Quand elle releva la tête, la vague avait déjà avalé le premier A."
-   ],
-   [
-    "Le lendemain, les lettres avaient changé de place. Elles ne formaient plus une ligne mais un cercle, autour d'un seul galet noir.",
-    "Sa grand-mère, sans quitter la fenêtre, dit seulement : « Ne réponds pas tout de suite. »"
-   ],
-   [
-    "Répondre à qui ? Il n'y avait personne sur la plage, à part le chien du pêcheur et le vent qui remettait ses cheveux devant ses yeux.",
-    "Nour posa pourtant un caillou à côté du galet noir. Un seul. Juste pour voir."
-   ],
-   [
-    "Au matin, le caillou de Nour avait disparu. À sa place, deux lettres : un N et un O.",
-    "Elle sentit son cœur cogner, comme quand on entend son prénom dans une foule et qu'on ne sait pas encore qui l'a dit."
-   ]
-  ],
-  "petites-lumieres": [
-   [
-    "La lampe du frigo, à trois heures,",
-    "éclaire un pot de confiture entamé",
-    "et ma main qui hésite.",
+    "Toi qui fais lever la terre rouge",
+    "comme une pâte sous la main,",
+    "toi qui mets la pluie dans les nuages",
+    "et le grain dans le creux du matin,",
     "",
-    "Je referme doucement :",
-    "il y a des lumières",
-    "qu'on ne réveille pas."
-   ]
-  ],
-  "fenetre-rouge": [
-   [
-    "Rue Fiskar, tout le monde connaît la fenêtre du troisième. Elle s'allume en rouge vers minuit et ne s'éteint qu'au matin.",
-    "Ce mardi-là, elle resta allumée jusqu'à midi. Et Mme Berg ne descendit pas chercher son pain."
-   ]
-  ],
-  "cafe-nuit": [
-   [
-    "Le café s'appelle Ouvert. C'est écrit sur la porte, en lettres collées une à une, et c'est vrai jusqu'à quatre heures.",
-    "Pilar, derrière le comptoir, ne fait pas payer le café. Elle demande une histoire. Courte, si possible."
-   ]
-  ],
-  "marais": [
-   [
-    "Ato parlait aux grenouilles depuis qu'il savait parler. Les grenouilles, elles, ne répondaient jamais.",
-    "Jusqu'à ce matin de pluie où la plus petite, toute verte et toute ronde, lui dit : « Enfin. On t'attendait. »"
-   ]
-  ],
-  "vitrine": [
-   [
-    "Le lundi, Mme Aït posa une pancarte dans la vitrine : « Plus rien à vendre. Tout à prêter. »",
-    "Le mardi, il y avait la queue jusqu'au boulanger."
-   ]
-  ],
-  "jardin-nuit": [
-   [
-    "Le jardin du vieux Sandro n'avait pas de plan. Il avait des humeurs.",
-    "Certaines nuits, l'allée des tilleuls menait au puits ; d'autres, elle ne menait qu'à elle-même, et l'on tournait en rond jusqu'au chant du coq."
-   ]
-  ],
-  "eventail": [
-   [
-    "Tourner une page prend moins d'une seconde. C'est pourtant le seul moment où le lecteur est tout à fait libre :",
-    "il n'est plus dans la page d'avant, pas encore dans la suivante. Cet essai parle de cette seconde-là."
-   ]
-  ],
-  "silhouettes": [
-   [
-    "Face à l'ouest",
-    "tout devient contour —",
-    "le phare, la grue, ton épaule.",
+    "je te loue pour la poussière",
+    "qui colle encore à mes pieds :",
+    "c'est la preuve que j'ai marché",
+    "et que tu ne m'as pas laissée.",
     "",
-    "On ne voit plus les couleurs,",
-    "on voit enfin les formes."
+    "« Psaume de David. À l’Éternel la terre et ce qu’elle renferme, Le monde et ceux qui l’habitent ! » — Psaume 24:1"
+   ],
+   [
+    "II. Psaume du marché",
+    "",
+    "Au marché de la Kenya, à sept heures,",
+    "les mamans déplient les pagnes,",
+    "comptent les tomates par trois,",
+    "et chantent sans y penser.",
+    "",
+    "Seigneur, entends-tu leurs cantiques",
+    "entre deux prix et deux rires ?",
+    "Ce sont des psaumes sans livre,",
+    "des louanges qui ont les mains sales.",
+    "",
+    "Reçois-les comme l'encens."
+   ],
+   [
+    "III. Pour la pluie de novembre",
+    "",
+    "Elle arrive d'un coup, la pluie,",
+    "elle ne frappe pas avant d'entrer.",
+    "Les enfants courent sous les tôles,",
+    "les chèvres se serrent au mur.",
+    "",
+    "Toi aussi tu viens d'un coup",
+    "dans les vies qui ne t'attendaient plus,",
+    "et l'on ne sait plus si l'on pleure",
+    "ou si c'est le ciel sur nos joues.",
+    "",
+    "« Comme la pluie et la neige descendent des cieux, Et n’y retournent pas Sans avoir arrosé, fécondé la terre, et fait germer les plantes, Sans avoir donné de la semence au semeur Et du pain à celui qui mange, » — Ésaïe 55:10"
+   ],
+   [
+    "IV. Psaume pour celle qui n'a pas dormi",
+    "",
+    "Elle a veillé l'enfant fiévreux",
+    "jusqu'à l'heure où chante le coq.",
+    "Elle n'a pas prié avec des mots,",
+    "elle a prié avec un linge mouillé.",
+    "",
+    "Seigneur, compte cela comme prière.",
+    "Compte la nuit, compte le linge,",
+    "compte les mains qui tremblent.",
+    "Tu l'as dit : tu ne dors pas.",
+    "",
+    "« Voici, il ne sommeille ni ne dort, Celui qui garde Israël. » — Psaume 121:4"
    ]
   ],
-  "plafond": [
+  "cantique-ville": [
    [
-    "Les premières grandes salles de lecture ont été pensées pour lever les yeux. Le plafond était le premier livre qu'on y lisait.",
-    "Ce chapitre raconte les dômes, et ceux qui les ont regardés plus que leurs pages."
+    "Cantique du gardien",
+    "",
+    "Il est assis devant la grille",
+    "avec sa lampe et son sifflet.",
+    "Toute la rue dort sur son dos,",
+    "et lui, il ne dort jamais.",
+    "",
+    "Garde le gardien, Seigneur,",
+    "toi qui gardes Israël.",
+    "Que sa lampe tienne jusqu'au jour",
+    "et que son cœur ne soit pas seul."
+   ],
+   [
+    "Cantique de l'hôpital",
+    "",
+    "Dans la salle commune, au deuxième,",
+    "une mère dort sur une chaise.",
+    "Son fils respire mal, mais il respire.",
+    "C'est déjà ça. C'est déjà toi.",
+    "",
+    "Passe dans le couloir, Seigneur,",
+    "comme tu passais à Capernaüm.",
+    "Touche celui que tu veux toucher,",
+    "et pour les autres, reste un peu."
+   ],
+   [
+    "Cantique du dernier bus",
+    "",
+    "Le dernier bus est plein de gens",
+    "qui rentrent trop tard pour souper.",
+    "Ils ont vendu, porté, nettoyé,",
+    "ils ont les yeux qui se ferment.",
+    "",
+    "Toi qui as dit : venez à moi,",
+    "toi qui connais le poids des jours,",
+    "",
+    "« Venez à moi, vous tous qui êtes fatigués et chargés, et je vous donnerai du repos. » — Matthieu 11:28"
+   ],
+   [
+    "Cantique de la mère qui attend",
+    "",
+    "Elle laisse la porte entrouverte.",
+    "Son fils n'est pas rentré ce soir.",
+    "Elle a mis l'assiette sous un linge,",
+    "elle a mis son cœur sous la lampe.",
+    "",
+    "Seigneur, toi qui attendais aussi",
+    "au bout du chemin, le fils parti,",
+    "assieds-toi près d'elle un moment.",
+    "Vous attendrez mieux à deux."
+   ],
+   [
+    "Cantique avant l'aube",
+    "",
+    "Quatre heures. Le muezzin du quartier,",
+    "le coq de la voisine, la première moto.",
+    "La ville se retourne dans son lit.",
+    "",
+    "Toi qui étais là avant la ville,",
+    "toi qui seras là après,",
+    "bénis ce jour qui ne sait pas encore",
+    "ce qu'il va porter.",
+    "",
+    "« C’est ici la journée que l’Éternel a faite : Qu’elle soit pour nous un sujet d’allégresse et de joie ! » — Psaume 118:24"
+   ]
+  ],
+  "fleuve-prie": [
+   [
+    "Chapitre premier",
+    "Le message était arrivé un mardi, à six heures du soir, entre deux réunions : « Maman est partie ce matin. Viens. »",
+    "Jonas Bokele avait relu la phrase plusieurs fois sur l'écran de son téléphone. Il n'avait pas remis les pieds à Bumba depuis dix ans. Il n'avait pas appelé non plus. Il envoyait de l'argent, au début de chaque mois, et il croyait que cela suffisait.",
+    "Il n'y avait pas d'avion pour Bumba avant deux semaines. Il restait le bateau.",
+    "Le jeudi, à l'aube, il était sur le port de Kinshasa, avec un sac trop petit et une valise trop neuve, au milieu des sacs de manioc et des cages de poules, à regarder la baleinière qu'on chargeait comme si elle ne devait jamais partir."
+   ],
+   [
+    "Chapitre premier (suite)",
+    "Une vieille femme s'assit à côté de lui sur un bidon retourné. Elle portait un foulard bleu et une Bible enveloppée dans un sachet plastique.",
+    "« Tu vas loin, mon fils ?",
+    "— À Bumba.",
+    "— Alors nous allons passer du temps ensemble. »",
+    "Elle sourit, sortit un éventail de raphia, et se mit à fredonner. Jonas reconnut l'air au bout de trois notes. Sa mère le chantait en pilant le foufou : « Quel ami fidèle et tendre nous avons en Jésus-Christ… »",
+    "Il se leva brusquement et alla s'accouder au bastingage. Le fleuve était large comme une mer, brun et lent. Il ne voulait pas que la vieille femme le voie pleurer."
+   ],
+   [
+    "Chapitre premier (fin)",
+    "Le bateau partit à midi, avec six heures de retard. Personne ne s'en étonna.",
+    "Le soir, quand le soleil tomba derrière la forêt, les passagers sortirent des lampes, des marmites, des radios. Sur le pont arrière, quelqu'un entonna un cantique, puis un autre. La vieille femme au foulard bleu chantait plus fort que tout le monde.",
+    "Jonas resta assis sur son sac. Il ne chantait pas. Il n'avait plus chanté depuis le jour où il avait quitté Bumba en se jurant de ne plus jamais remettre les pieds dans une église.",
+    "Mais il écoutait. Et pour la première fois depuis dix ans, il eut l'impression que quelqu'un, quelque part, l'écoutait aussi."
+   ],
+   [
+    "Chapitre 2",
+    "Elle s'appelait Mama Bolumbu. Elle allait à Lisala, chez sa fille, qui venait d'accoucher de son septième enfant.",
+    "« Sept, dit-elle en levant les doigts. Comme les jours de la création. Dieu a travaillé six jours, ma fille aussi. Maintenant, elle va se reposer, et c'est moi qui vais travailler. »",
+    "Elle riait de ses propres plaisanteries avant de les avoir finies. Jonas se surprit à rire avec elle.",
+    "Le troisième jour, elle lui demanda pourquoi il allait à Bumba. Il le lui dit. Elle ne dit rien pendant un long moment. Puis elle posa sa main sèche sur la sienne.",
+    "« L’Éternel est près de ceux qui ont le cœur brisé, Et il sauve ceux qui ont l’esprit dans l’abattement. » — Psaume 34:19"
+   ],
+   [
+    "Chapitre 2 (suite)",
+    "« Tu lui en veux encore ? » demanda Mama Bolumbu.",
+    "Jonas fit semblant de ne pas comprendre. Puis il haussa les épaules.",
+    "« Elle priait pour moi tous les soirs. À voix haute. Devant tout le monde. Elle disait : Seigneur, ramène Jonas. Je n'étais même pas parti. J'étais dans la pièce à côté. »",
+    "La vieille femme hocha la tête.",
+    "« Elle voyait que tu étais déjà parti, dit-elle. Les mères voient ça avant les fils. »",
+    "Le fleuve faisait un grand coude. Sur la rive, un village entier était descendu au bord de l'eau pour vendre du poisson fumé au bateau qui passait."
+   ]
+  ],
+  "femmes-bible": [
+   [
+    "Avant-propos",
+    "Pendant longtemps, j'ai lu les femmes de la Bible comme on regarde des vitraux : de loin, avec respect, sans penser qu'elles avaient eu faim, sommeil ou peur.",
+    "Puis j'ai relu le livre de Ruth un soir de décembre, dans un train entre Bruxelles et Liège, après une journée où j'avais été la seule femme noire de toutes les réunions. Et j'ai vu une étrangère qui glanait dans le champ d'un autre, en espérant qu'on la laisse faire.",
+    "Ce livre est né ce soir-là. Il ne prétend pas tout dire de ces femmes. Il les regarde de près, avec les questions d'aujourd'hui : le travail, l'exil, la stérilité, la fatigue, l'argent, la prière.",
+    "Chaque chapitre part du texte biblique, que vous pourrez ouvrir d'un geste. Puis il s'approche."
+   ],
+   [
+    "Ruth, la fidèle — I",
+    "Le livre de Ruth commence par trois enterrements. Élimélec meurt en terre de Moab, puis ses deux fils. Il reste trois veuves, sans terre, sans fils, sans avenir.",
+    "Naomi, la belle-mère, décide de rentrer à Bethléhem. Elle dit à ses deux belles-filles de retourner chez leur mère. Orpa l'embrasse et s'en va. Personne ne le lui reproche, et le texte non plus.",
+    "Ruth reste. Et elle prononce l'une des phrases les plus fortes de toute l'Écriture :",
+    "« Ruth répondit : Ne me presse pas de te laisser, de retourner loin de toi ! Où tu iras j’irai, où tu demeureras je demeurerai ; ton peuple sera mon peuple, et ton Dieu sera mon Dieu ; » — Ruth 1:16",
+    "Ce n'est pas une déclaration d'amour romantique. C'est une femme qui choisit une autre femme, plus âgée, plus pauvre, plus amère qu'elle — et qui choisit son Dieu avec elle."
+   ]
+  ],
+  "debout-tempete": [
+   [
+    "Étape 1 — Nommer le vent",
+    "Le jour où j'ai perdu mon travail, j'ai dit à tout le monde que ça allait. À ma femme, à mes amis, au pasteur. Je l'ai dit si souvent que j'ai fini par m'étonner de ne pas y croire.",
+    "La première étape pour traverser une tempête, c'est d'admettre qu'il y en a une.",
+    "Les disciples, dans la barque, n'ont pas fait semblant. Ils ont réveillé Jésus en criant : « Maître, ne t'inquiètes-tu pas de ce que nous périssons ? » (Marc 4:38)",
+    "Ce n'est pas une prière très polie. Mais elle est vraie. Et Jésus y a répondu.",
+    "Exercice : écrivez en une phrase ce qui vous arrive. Sans l'arranger. « J'ai peur de ne pas retrouver de travail. » « Je n'arrive pas à pardonner. » « Je suis fatigué de croire. »"
+   ],
+   [
+    "Étape 2 — Ne pas rester seul dans la barque",
+    "Remarquez une chose : dans l'histoire de la tempête, les disciples ne sont pas seuls. Ils sont plusieurs, et Jésus est avec eux.",
+    "La tempête nous isole. On se retire, on répond moins, on ne va plus aux réunions. On croit protéger les autres de notre poids. En réalité, on se prive de ceux qui pourraient ramer avec nous.",
+    "« Deux valent mieux qu’un, parce qu’ils retirent un bon salaire de leur travail. Car, s’ils tombent, l’un relève son compagnon ; mais malheur à celui qui est seul et qui tombe, sans avoir un second pour le relever ! » — Ecclésiaste 4:9-10",
+    "Exercice : nommez une personne à qui vous direz cette semaine la phrase écrite à l'étape 1."
+   ],
+   [
+    "Étape 3 — Il dort, mais il est là",
+    "Ce qui a le plus effrayé les disciples, je crois, ce n'est pas le vent. C'est que Jésus dormait.",
+    "Il y a des saisons où Dieu semble dormir. On prie, et le ciel ne répond pas. On lit, et les mots restent sur la page.",
+    "Mais il dormait dans la barque. Pas sur le rivage. Pas dans une autre ville. Dans la même barque, sous la même pluie.",
+    "« Dieu est pour nous un refuge et un appui, Un secours qui ne manque jamais dans la détresse. » — Psaume 46:2",
+    "Exercice : écrivez une chose qui, hier, vous a montré que vous n'étiez pas seul. Même petite."
+   ],
+   [
+    "Étape 4 — Ce que la tempête ne prend pas",
+    "Faites la liste. Pas de ce que vous avez perdu — vous la connaissez par cœur. La liste de ce qui reste.",
+    "Quand Job a tout perdu, il lui restait une chose qu'on oublie : sa capacité à parler à Dieu, même pour se plaindre. Il ne l'a jamais perdue.",
+    "« Car j’ai l’assurance que ni la mort ni la vie, ni les anges ni les dominations, ni les choses présentes ni les choses à venir, ni les puissances, ni la hauteur, ni la profondeur, ni aucune autre créature ne pourra nous séparer de l’amour de Dieu manifesté en Jésus-Christ notre Seigneur. » — Romains 8:38-39",
+    "Exercice : trois choses que la tempête ne vous a pas prises."
+   ]
+  ],
+  "petites-prieres": [
+   [
+    "Prière pour se réveiller",
+    "",
+    "Bonjour, Seigneur !",
+    "J'ouvre les yeux, tu étais déjà là.",
+    "Tu as gardé la maison toute la nuit,",
+    "et maman, et papa, et le petit chat.",
+    "",
+    "Aujourd'hui, aide-moi à être gentil,",
+    "même avec celui qui me pousse dans la cour.",
+    "",
+    "Merci pour le pain, merci pour le jour.",
+    "Amen !"
+   ],
+   [
+    "Prière pour aller à l'école",
+    "",
+    "Seigneur, je mets mon sac sur le dos.",
+    "Dedans il y a mes cahiers,",
+    "et peut-être un peu de peur.",
+    "",
+    "Viens avec moi sur le chemin.",
+    "Assieds-toi à côté de moi en classe.",
+    "Quand je ne comprends pas,",
+    "aide-moi à lever la main.",
+    "",
+    "Et si je me trompe, rappelle-moi",
+    "que tu m'aimes quand même.",
+    "Amen !"
+   ],
+   [
+    "Prière pour un jour de peur",
+    "",
+    "Seigneur, aujourd'hui j'ai peur.",
+    "Je ne sais pas toujours de quoi.",
+    "Mon ventre est serré comme un poing.",
+    "",
+    "Tu as dit : n'aie pas peur.",
+    "Tu l'as dit à beaucoup de gens dans la Bible,",
+    "alors je crois que tu le dis à moi aussi.",
+    "",
+    "« Ne crains rien, car je suis avec toi ; Ne promène pas des regards inquiets, car je suis ton Dieu ; Je te fortifie, je viens à ton secours, Je te soutiens de ma droite triomphante. » — Ésaïe 41:10",
+    "",
+    "Prends ma main. Amen."
+   ],
+   [
+    "Prière pour les copains",
+    "",
+    "Seigneur, je te présente mes amis :",
+    "Benjamin qui court plus vite que moi,",
+    "Divine qui partage son goûter,",
+    "et le nouveau qui ne parle à personne.",
+    "",
+    "Bénis-les tous les trois,",
+    "et aide-moi à parler au nouveau demain.",
+    "",
+    "« Et Jésus dit : Laissez les petits enfants, et ne les empêchez pas de venir à moi ; car le royaume des cieux est pour ceux qui leur ressemblent. » — Matthieu 19:14",
+    "Amen !"
+   ]
+  ],
+  "lettres-timothee": [
+   [
+    "Première lettre, 1:1-2 — Un père et un fils",
+    "La lettre s'ouvre comme toutes les lettres de l'Antiquité : celui qui écrit, celui qui reçoit, une salutation.",
+    "Mais regardez comment Paul désigne Timothée : « mon enfant légitime en la foi ». Timothée n'est pas son fils. Son père était grec, sa mère juive, sa grand-mère s'appelait Loïs. Paul l'a rencontré à Lystre, jeune homme.",
+    "Il y a dans l'Église des pères et des mères que l'on n'a pas choisis par le sang. Qui sont les vôtres ? À qui êtes-vous, sans l'avoir décidé, un père ou une mère dans la foi ?"
+   ]
+  ],
+  "veillee": [
+   [
+    "Vingt-deux heures — Mama Kapinga",
+    "Elle arrive toujours la première. Elle a la clé de la petite porte, celle qui donne sur la cour, parce qu'elle balaie l'église depuis vingt-trois ans et que personne n'a jamais pensé à la lui reprendre.",
+    "Ce vendredi, elle balaie comme les autres vendredis. Elle range les chaises en plastique en rangées de huit, elle allume les deux ampoules du fond, elle pose une Bible sur le pupitre.",
+    "Puis elle s'assied au premier rang et elle attend. Elle ne prie pas encore. Elle écoute la rue : les motos, le générateur du voisin, un enfant qui pleure deux parcelles plus loin.",
+    "« Tu entends tout ça, toi aussi », dit-elle à voix basse. Ce n'est pas une question."
+   ],
+   [
+    "Vingt-deux heures — Mama Kapinga (suite)",
+    "Les premiers arrivent vers vingt-deux heures trente. Le diacre Mutombo et sa femme, avec un thermos de thé. Trois jeunes de la chorale, qui rient trop fort dans la cour et se taisent en entrant. Une femme que Mama Kapinga ne connaît pas, avec un bébé endormi dans le dos.",
+    "La femme au bébé s'assied tout au fond, près de la porte, comme quelqu'un qui veut pouvoir partir vite.",
+    "Mama Kapinga la regarde un moment. Puis elle se lève, prend le thermos du diacre sans lui demander, verse une tasse et va la porter au fond.",
+    "« Tu es venue pour quelque chose de lourd, dit-elle. Alors bois d'abord. On a toute la nuit. »"
+   ],
+   [
+    "Vingt-deux heures — Le diacre Mutombo",
+    "Le diacre Mutombo ouvre la veillée comme il l'ouvre depuis douze ans : par le Psaume 134.",
+    "« Cantique des degrés. Voici, bénissez l’Éternel, vous tous, serviteurs de l’Éternel, Qui vous tenez dans la maison de l’Éternel pendant les nuits ! Élevez vos mains vers le sanctuaire, Et bénissez l’Éternel ! » — Psaume 134:1-2",
+    "Il le lit d'une voix qui tremble un peu, et personne ne sait que c'est la dernière fois. Le lundi suivant, il partira pour Lubumbashi rejoindre son fils. Il ne l'a dit qu'à sa femme.",
+    "Il lève les mains, comme le psaume le demande. Derrière lui, les chaises grincent : tout le monde se lève."
+   ]
+  ],
+  "fille-prodigue": [
+   [
+    "Partir — 1",
+    "Bijou avait dix-neuf ans le jour où elle demanda sa part.",
+    "Son père vendait des pièces de vélo sur l'avenue Lumumba, à Kananga. Il avait un petit dépôt, deux apprentis, un compte à la coopérative, et la réputation d'un homme qui ne mentait jamais sur le prix d'une chaîne.",
+    "« Ta part de quoi ? » demanda-t-il sans lever les yeux de son cahier.",
+    "« De ce que tu me donneras quand tu seras mort. Je la veux maintenant. »",
+    "Il leva les yeux, alors. Il la regarda longtemps. Elle soutint son regard. Elle avait préparé cette phrase pendant des semaines, elle n'allait pas baisser les yeux maintenant."
+   ],
+   [
+    "Partir — 2",
+    "Il ne cria pas. C'est ce qui la troubla le plus, plus tard, quand elle repensait à cette soirée.",
+    "Il ferma son cahier, se leva, alla dans la chambre. Elle l'entendit ouvrir la vieille valise sous le lit, celle où il gardait les papiers de la parcelle et l'argent qu'il ne mettait pas à la coopérative.",
+    "Il revint avec une enveloppe. Il la posa sur la table entre eux.",
+    "« Ta mère aurait su quoi te dire, dit-il. Moi, je ne sais pas. Alors je fais ce que tu demandes. »",
+    "Bijou prit l'enveloppe. Elle était plus épaisse qu'elle ne l'aurait cru."
+   ],
+   [
+    "Partir — 3",
+    "Elle partit le jeudi, par le bus de Kinshasa. Elle n'avait dit au revoir qu'à sa petite sœur, Grâce, qui pleurait sur le pas de la porte en tenant un ballon dégonflé.",
+    "Son père n'était pas là. Il était au dépôt, comme tous les jeudis. Elle s'en était voulu de penser qu'il aurait pu, au moins ce jour-là, fermer la boutique.",
+    "Elle ne sut que quatre ans plus tard qu'il avait fermé la boutique ce jour-là. Qu'il avait regardé le bus partir depuis le carrefour, caché derrière le kiosque de la vendeuse de crédit. Et qu'il y était retourné, ensuite, presque chaque jeudi.",
+    "« Et il se leva, et alla vers son père. Comme il était encore loin, son père le vit et fut ému de compassion, il courut se jeter à son cou et le baisa. » — Luc 15:20"
+   ]
+  ],
+  "sept-paroles": [
+   [
+    "Ouverture",
+    "Jésus a parlé peu sur la croix. Les quatre évangiles, ensemble, rapportent sept phrases. Aucun évangile ne les donne toutes.",
+    "Pendant longtemps, nos Églises les ont méditées le Vendredi saint, une par une, entre midi et trois heures, à l'heure où « il y eut des ténèbres sur toute la terre » (Luc 23:44).",
+    "Ce petit livre vous propose de les reprendre une par soir, pendant une semaine. Chaque méditation commence par la parole elle-même, que vous pourrez ouvrir dans la Bible intégrée. Puis elle s'arrête sur un mot, un seul.",
+    "Il ne faut pas lire vite. Sept paroles, sept soirs.",
+    "Première parole :",
+    "« Jésus dit : Père, pardonne-leur, car ils ne savent ce qu’ils font. Ils se partagèrent ses vêtements, en tirant au sort. » — Luc 23:34"
+   ]
+  ],
+  "quarante-jours": [
+   [
+    "Jour 1 — Pour le pain",
+    "« Rendez grâces en toutes choses, car c’est à votre égard la volonté de Dieu en Jésus-Christ. » — 1 Thessaloniciens 5:18",
+    "« En toutes choses », pas « pour toutes choses ». Paul ne demande pas de remercier pour la maladie ou le deuil. Il demande de trouver, au milieu de tout, quelque chose à remercier.",
+    "Aujourd'hui, commencez petit : le pain. Celui que vous avez mangé ce matin, ou celui que vous mangerez ce soir. Qui l'a semé, cuit, porté, vendu ?",
+    "Écrivez : « Merci pour… » et terminez la phrase.",
+    "À qui le dire : à la personne qui vous a servi à manger."
+   ],
+   [
+    "Jour 2 — Pour l'eau",
+    "À Bukavu, on a le lac sous les yeux et, certains jours, rien au robinet. On apprend vite à ne pas tenir l'eau pour acquise.",
+    "« mais celui qui boira de l’eau que je lui donnerai n’aura jamais soif, et l’eau que je lui donnerai deviendra en lui une source d’eau qui jaillira jusque dans la vie éternelle. » — Jean 4:14",
+    "Aujourd'hui, chaque fois que vous boirez, dites merci intérieurement. Comptez le soir combien de fois vous l'avez fait.",
+    "À qui le dire : à celle ou celui qui va chercher l'eau dans votre maison."
+   ],
+   [
+    "Jour 3 — Pour le toit",
+    "Un toit, même qui fuit, même qui n'est pas à nous. Un endroit où l'on peut fermer les yeux.",
+    "Jésus a dit que « le Fils de l’homme n’a pas où reposer sa tête » (Matthieu 8:20). Il savait ce que c'est que de dormir dehors.",
+    "Écrivez : merci pour le lieu où je dormirai ce soir.",
+    "À qui le dire : à quelqu'un qui vous a un jour ouvert sa porte."
    ]
   ]
- },
- "reader": {
-  "name": "Lecteur de démonstration",
-  "purchases": {
-   "heures-salees": {
-    "pages": [
-     6,
-     7,
-     8,
-     9
-    ],
-    "date": "2026-10-02"
-   },
-   "fenetre-rouge": {
-    "pages": [
-     4,
-     5,
-     6,
-     7
-    ],
-    "date": "2026-10-04"
-   },
-   "jardin-nuit": {
-    "pages": [
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12,
-     13,
-     14,
-     15,
-     16,
-     17,
-     18,
-     19,
-     20,
-     21,
-     22,
-     23,
-     24,
-     25,
-     26,
-     27,
-     28,
-     29,
-     30
-    ],
-    "date": "2026-09-20"
-   }
-  },
-  "follows": [
-   "croix-de-bois",
-   "heures-salees",
-   "fenetre-rouge",
-   "petites-lumieres",
-   "cafe-nuit",
-   "spirale"
-  ],
-  "progress": {
-   "croix-de-bois": 3,
-   "heures-salees": 9,
-   "fenetre-rouge": 7,
-   "petites-lumieres": 10,
-   "cafe-nuit": 3,
-   "spirale": 2,
-   "jardin-nuit": 12
-  }
  }
 }

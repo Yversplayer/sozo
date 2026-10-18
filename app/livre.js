@@ -44,10 +44,12 @@ window.SOZO_PRET.then(() => {
           <span class="badge badge--${b.access}">${S.accessLabel(b)}</span>
           <span class="badge badge--free">${S.esc(b.cat)}</span>
           <span class="badge badge--free">${b.mode === 'progressive' ? 'Parution progressive' : 'Publié en entier'}</span>
+          ${b.demo ? '<span class="badge badge--exemple">Exemple</span>' : ''}
         </div>
         <h1 data-ink-text="${S.esc(b.title)}"></h1>
         <a class="bk-by" href="auteur.html?id=${a.id}"><img src="${S.img(a.photo, true)}" alt="">${S.esc(a.name)}</a>
         <p class="bk-desc">${S.esc(b.desc)}</p>
+        ${b.demo ? '<p class="bk-exemple">Livre d’exemple : auteur et texte inventés pour montrer Sōzō. Il ne se vend pas.</p>' : ''}
         <div class="bk-facts">
           <div><strong>${st.published}</strong><span>pages publiées</span></div>
           ${st.scheduled ? `<div><strong>${st.scheduled}</strong><span>pages à venir</span></div>` : ''}

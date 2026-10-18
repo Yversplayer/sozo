@@ -86,7 +86,14 @@ window.SOZO_PRET.then(() => {
     }[st];
     content = `<p class="rd-chap">${ch ? S.esc(ch.t) : ''}</p><div class="rd-page-h"><h1>Page ${n}</h1>${badge}</div>`;
     if (S.readable(st)) content += `<div id="rdTexte" aria-busy="true"><p class="ash"><span class="spin" style="display:inline-block;vertical-align:-3px"></span> Chargement de la page…</p></div>`;
-    else if (st === 'locked') {
+    else if (st === 'locked' && b.demo) {
+      content += `<div class="gate">
+        <div class="gate-ghost" aria-hidden="true">${Array.from({ length: 9 }, (_, i) => `<span style="width:${[96, 90, 94, 72, 88, 92, 80, 95, 60][i]}%"></span>`).join('')}</div>
+        <div class="gate-card">${S.icon('lock')}
+          <h2>Page payante d’un livre d’exemple</h2>
+          <p>Ce livre montre comment une page payante se présente sur Sōzō. Il a été écrit pour l’exemple et ne se vend pas.</p>
+        </div></div>`;
+    } else if (st === 'locked') {
       const opts = S.buy.options(b, n);
       content += `<div class="gate">
         <div class="gate-ghost" aria-hidden="true">${Array.from({ length: 9 }, (_, i) => `<span style="width:${[96, 90, 94, 72, 88, 92, 80, 95, 60][i]}%"></span>`).join('')}</div>

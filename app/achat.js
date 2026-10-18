@@ -17,7 +17,7 @@
 
   /* Ce qu'on peut acheter autour d'une page n (affichage ; le serveur décide). */
   function options(b, n) {
-    if (!b.price) return [];
+    if (!b.price || b.demo) return [];   // un livre d'exemple ne se vend pas (le serveur refuse aussi)
     const etat = (k) => S.access(b, k);
     const paid = b.pages.filter((p) => p.access === 'paid');
     const out = [];

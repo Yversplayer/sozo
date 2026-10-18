@@ -14,7 +14,13 @@ Résolution limitée à 960 px de large pour la plupart : à remplacer
 (Higgsfield ou photos propres) avant une mise en ligne.
 
 ## Données
-Livres, auteurs, prix, dates, achats et lecteurs sont fictifs, sauf
+**Catalogue d'exemple de l'application** (`backend/tools/demo.json`, écrit par
+`demo_catalogue.py`, 18/10/2026) : 12 auteurs et 14 livres de foi chrétienne,
+tous INVENTÉS, textes originaux. Les versets cités sont lus dans la Bible
+Louis Segond 1910 intégrée (domaine public), jamais recopiés à la main.
+Chaque livre porte l'étiquette « Exemple » et ne se vend pas.
+
+**Vitrine de la landing** (`app/data.js`, figée) : livres, auteurs, prix, dates, achats et lecteurs sont fictifs, sauf
 « Croix de bois, Actes de foi » (Nawezi N.), dont le titre, les chapitres et
 les premières lignes viennent des maquettes du propriétaire. Le recueil
 personnel « Sōzō » n'est PAS dans le catalogue : il inspire, il n'est pas publié.

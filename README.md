@@ -2,15 +2,23 @@
 
 Plateforme de lecture et de publication page par page : livres gratuits, payants ou mixtes, parutions programmées, Bible intégrée, correcteur du français, atelier d'auteur, paiement Mobile Money vérifié par l'équipe.
 
-> **État au 16/10/2026 : jamais déployé.** Aucun agrégateur de paiement n'est branché. L'envoi d'e-mails est prêt (Gmail SMTP ou Brevo) mais reste en mode capture tant que le mot de passe d'application n'est pas saisi. La restauration de sauvegarde a été exercée (SQLite et PostgreSQL), pas encore sur la base de production.
+> **État au 18/10/2026 : en ligne depuis le 16/10** (Cloudflare → Render → Supabase, voir `REPRISE.md` §0). Aucun agrégateur de paiement n'est branché. L'envoi d'e-mails est prêt (Gmail SMTP ou Brevo) mais reste en mode capture tant que le mot de passe d'application n'est pas saisi. La restauration de sauvegarde a été exercée (SQLite et PostgreSQL), pas encore sur la base de production.
 
 ## Lancer en local
 
 ```bash
 python3 -m venv backend_venv && backend_venv/bin/pip install -r requirements.txt -r requirements-dev.txt
 SOZO_MODE_TEST=1 backend_venv/bin/python backend/app.py          # http://localhost:4385
-backend_venv/bin/python backend/tools/demo.py                     # livres de démonstration (base locale seulement)
+backend_venv/bin/python backend/tools/demo.py                     # catalogue d'exemple (base locale)
 ```
+
+**Catalogue d'exemple** : 14 livres de foi chrétienne, auteurs et textes inventés (`backend/tools/demo_catalogue.py` → `demo.json`). Chaque livre porte l'étiquette « Exemple » et **ne se vend pas** (le serveur refuse, `test_livre_d_exemple_jamais_vendu`). Pour la base en ligne :
+
+```bash
+backend_venv/bin/python backend/tools/demo.py --en-ligne --projet dcbbvcvnpdllxjyefzln --port 6543
+```
+
+L'adresse de la base est collée au clavier (rien ne s'affiche), puis il faut taper `EXEMPLE`. Sans `--en-ligne`, une base distante est refusée.
 
 `SOZO_MODE_TEST=1` affiche des numéros de paiement factices et active le simulateur de prestataire. Il est **refusé sur une base distante**.
 
@@ -52,6 +60,7 @@ Les deux suites doivent être vertes. Chaque garde-fou a été **vu tomber** qua
   - Deux onglets ouverts sur la même page sont détectés (`version_attendue`, réponse 409).
 - **Argent.**
   - Le prix est toujours calculé par le serveur.
+  - Un livre d'exemple (`books.demo = 1`) ne se vend jamais.
   - Clé d'idempotence ; confirmation atomique (droit, reçu, registre) ; une référence Mobile Money ne paie qu'un achat.
   - Une notification n'est appliquée que si le montant et la devise sont conformes.
   - Un achat jamais payé expire au bout de 48 h.

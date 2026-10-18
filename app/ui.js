@@ -207,6 +207,7 @@ window.SOZO = (() => {
         <span class="cv-author">${esc(a.name)}</span>
         <span class="cv-title">${esc(b.title)}</span>
         <span class="cv-cat">${esc(b.cat)}</span>
+        ${b.demo ? '<span class="cv-exemple">Exemple</span>' : ''}
         ${st === 'd' ? '<svg class="cv-oval" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50,6 C88,4 98,22 97,50 C96,82 76,96 49,95 C16,94 3,76 4,48 C5,18 20,7 50,6 Z"/></svg>' : ''}
       </div>
       <span class="cv-spine" aria-hidden="true"></span><span class="cv-edge" aria-hidden="true"></span>

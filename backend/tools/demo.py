@@ -1,16 +1,26 @@
-"""Remplit une base LOCALE avec le catalogue de démonstration (livres et
-auteurs fictifs, marqués demo = 1).
+"""Charge le catalogue d'EXEMPLE (livres et auteurs inventés, marqués
+demo = 1, affichés avec l'étiquette « Exemple » et jamais vendus).
 
-    backend_venv/bin/python backend/tools/demo.py
+    backend_venv/bin/python backend/tools/demo.py                       # base locale
+    backend_venv/bin/python backend/tools/demo.py --en-ligne --projet <ref> [--port 6543]
 
-Refusé sur une base distante : des livres inventés ne doivent jamais
-apparaître en production par une commande lancée au mauvais endroit.
-Rejouable : ne fait rien si la démonstration est déjà chargée.
+Le contenu vient de `demo.json`, écrit par `demo_catalogue.py`.
+
+Une base distante est REFUSÉE sans `--en-ligne` : des livres inventés ne
+doivent jamais entrer en production par une commande lancée au mauvais
+endroit. Avec `--en-ligne` (décision du propriétaire, 18/10/2026 : option A),
+l'adresse de la base est collée au clavier, jamais écrite dans une commande ni
+dans l'historique, et il faut taper EXEMPLE pour confirmer. Les comptes
+d'essai locaux ne sont jamais chargés : seuls des auteurs sans mot de passe
+connu (adresse en .invalid, à laquelle aucun e-mail ne part).
+Rejouable : ne fait rien si un livre d'exemple est déjà chargé.
 """
+import getpass
 import json
 import os
 import re
 import sys
+from urllib.parse import quote
 from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -20,8 +30,8 @@ import db  # noqa: E402
 import security  # noqa: E402
 
 KINSHASA = timezone(timedelta(hours=1))
-FILLER = ("La suite de cette page existe dans le manuscrit de l'auteur. Ce livre de démonstration n'en montre "
-          "que l'ouverture : le texte réel sera servi page par page par le serveur.")
+FILLER = ("Ce livre est un exemple, écrit pour montrer comment Sōzō présente un livre page par page. "
+          "Le texte de cette page n'a pas été écrit.")
 
 
 def utc(local):
@@ -34,16 +44,41 @@ def centimes(x):
     return None if x is None else int(round(x * 100))
 
 
+def _en_ligne(args):
+    """Prépare la connexion à la base EN LIGNE (même principe que admin_en_ligne.py)."""
+    try:
+        projet = args[args.index("--projet") + 1]
+    except (ValueError, IndexError):
+        sys.exit("Indiquez --projet <identifiant du projet Supabase>.")
+    port = args[args.index("--port") + 1] if "--port" in args else "6543"
+    if not projet.isalnum() or port not in ("5432", "6543"):
+        sys.exit("Projet ou port invalide.")
+    mdp = getpass.getpass("Collez l'adresse SOZO_DATABASE_URL de Render, ou le seul mot de passe de la base (rien ne s'affiche, c'est normal) : ").strip()
+    if not mdp:
+        sys.exit("Rien n'a été collé.")
+    if mdp.startswith(("postgresql://", "postgres://")):
+        url = re.sub(r":(5432|6543)/", f":{port}/", mdp, count=1)
+    else:
+        url = f"postgresql://postgres.{projet}:{quote(mdp, safe='')}@aws-1-eu-central-1.pooler.supabase.com:{port}/postgres"
+    os.environ.update(SOZO_DB_BACKEND="postgres", SOZO_DATABASE_URL=url, SOZO_PG_SCHEMA="public", SOZO_PG_ROLE="sozo_app")
+    os.environ.pop("SOZO_MODE_TEST", None)
+    if input("Les 14 livres d'exemple vont entrer dans la base EN LIGNE. Tapez EXEMPLE pour confirmer : ").strip() != "EXEMPLE":
+        sys.exit("Annulé : rien n'a été chargé.")
+
+
 def main():
-    if config.base_distante():
-        sys.exit("Refusé : la démonstration ne se charge que sur une base locale.")
+    args = sys.argv[1:]
+    if "--en-ligne" in args:
+        _en_ligne(args)
+    elif config.base_distante():
+        sys.exit("Refusé : base distante. Pour la base en ligne, utilisez --en-ligne --projet <ref>.")
     with open(os.path.join(os.path.dirname(__file__), "demo.json"), encoding="utf-8") as f:
         D = json.load(f)
     db.appliquer_schema()
     cx = db.connecter()
     try:
         if cx.un("SELECT id FROM books WHERE demo = 1 LIMIT 1"):
-            print("Démonstration déjà chargée.")
+            print("Le catalogue d'exemple est déjà chargé : rien n'a changé.")
             return
         m = security._utc(security.maintenant())
         auteurs = {}
@@ -73,7 +108,7 @@ def main():
                 cx.execute("INSERT INTO page_versions (page_id, version, contenu, is_current, auteur_id, created_at) VALUES (?, 1, ?, 1, ?, ?)",
                            (pid, contenu, auteurs[b["author"]], m))
         cx.valider()
-        print(f"{len(auteurs)} auteurs et {len(D['books'])} livres de démonstration chargés.")
+        print(f"{len(auteurs)} auteurs et {len(D['books'])} livres d'exemple chargés.")
     finally:
         cx.fermer()
 

@@ -870,3 +870,9 @@ html[data-theme="dark"] .cx-temps.is-fini { color: #FF8A7A; }
 .cx-capture { display: block; margin-top: 6px; font-size: 13.5px; color: var(--ash); }
 .md .cx-field input[type="password"] { height: 46px; width: 100%; border: 1px solid var(--line); border-radius: var(--r); padding: 0 12px; background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; }
 .warn[hidden] { display: none; }
+
+/* ─── livre d'exemple (books.demo = 1) : étiquette sur la couverture et la fiche ─── */
+.cv-exemple { position: absolute; top: .7em; right: .7em; z-index: 2; font-family: var(--mono); font-size: max(8px, .5em); letter-spacing: .12em; text-transform: uppercase;
+  background: #D4AF37; color: #2A1014; padding: .25em .6em; border-radius: 999px; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+.badge--exemple { background: #D4AF37; color: #2A1014; }
+.bk-exemple { max-width: 36em; margin: -10px 0 22px; font-size: 14px; opacity: .8; font-style: italic; }
