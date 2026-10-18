@@ -1,4 +1,4 @@
-# REPRISE — Sōzō (état au 16/10/2026)
+# REPRISE — Sōzō (état au 18/10/2026)
 
 À lire en entier avant de toucher au code. Puis lire `README.md` (lancement, tests, garanties, architecture).
 
@@ -24,6 +24,21 @@ Ajouts du 17/10/2026 (déployés) :
 
 Pas encore actif en ligne : e-mails (mot de passe d'application Gmail → `SOZO_EMAIL_MODE=smtp` + `SOZO_SMTP_PASSWORD`), sauvegardes chiffrées hors site (clé + lieu de stockage à choisir par le propriétaire), paiements (numéros Mobile Money `SOZO_PAIEMENT_NUMEROS`), nom de domaine.
 Limite connue de l'offre gratuite Render : un PDF de 2 000 pages prend ~13 s sur un Mac ; sur 0,1 CPU il peut dépasser les 30 s de l'analyse et être refusé (« a pris trop de temps »).
+
+Ajouts du 17-18/10/2026 (déployés, commit b29e2e5) :
+- bandeau « VERSION D'ESSAI », mentions « fictifs » / « démonstration » retirés de l'application (demande du propriétaire) ;
+- Découvrir plantait sur un catalogue VIDE (« Sōzō n'a pas pu se charger ») : corrigé, états vides partout, vérifié en ligne et sur toutes les pages ;
+- serveur gratuit en veille : catalogue et /api/moi réessayés ~70 s avec « Sōzō se réveille… ».
+
+## ⏭ Où on s'est arrêté — À FAIRE EN PREMIER
+
+1. **La base EN LIGNE est VIDE** (aucun livre, aucun auteur). Rien n'a été recopié du poste local, exprès : la base locale contient les comptes d'essai (interdits ailleurs) et `tools/demo.py` refuse une base distante. **Question posée au propriétaire, réponse attendue :**
+   - A. charger le catalogue de démonstration (12 auteurs, 14 livres, `demo = 1`, SANS les comptes d'essai) avec une petite étiquette « Exemple » sur chaque livre ;
+   - B. le charger sans étiquette pour ses tests, puis le retirer avant l'ouverture ;
+   - C. laisser vide et publier les vrais livres (Nard).
+   Pour A/B il faudra lever le garde-fou de `tools/demo.py` explicitement (option `--en-ligne`) et le propriétaire collera l'adresse de la base au clavier (même principe que `tools/admin_en_ligne.py`).
+2. **« Accès à toutes les fonctionnalités »** : seuls les achats (pages, Plume) sont fermés, faute de numéros Mobile Money. Question posée : (1) il donne ses numéros → `SOZO_PAIEMENT_NUMEROS` sur Render, il achète puis confirme lui-même dans l'admin ; ou (2) ajouter dans l'admin « offrir Plume / offrir un livre » (avec audit).
+3. Le propriétaire teste le logiciel ce week-end : traiter ses retours en priorité.
 
 ## 1. Le projet
 - **Sōzō** : plateforme de lecture et de publication page par page, pour un ami du propriétaire (l'auteur Nawezi N., « Nard »). Les livres sont gratuits, payants ou mixtes, avec parutions programmées, Bible intégrée (LSG 1910), correcteur du français, atelier d'auteur, paiement Mobile Money et administration.
