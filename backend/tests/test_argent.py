@@ -49,6 +49,23 @@ class Achats(TestBase):
         self.assertEqual(self.acheter(lec, "gratuite-1", n=1).status_code, 400)
         self.assertEqual(self.acheter(self.auteur, "mon-livre-1").status_code, 400)
 
+    def test_livre_d_exemple_jamais_vendu(self):
+        # Le catalogue d'exemple (books.demo = 1) est chargé EN LIGNE : un
+        # visiteur ne doit pas pouvoir payer en vrai un livre inventé.
+        slug = self.auteur.livre(titre="Exemple", prix=(25, 75, 300))
+        cx = db.connecter(globale=True)
+        try:
+            cx.execute("UPDATE books SET demo = 1 WHERE slug = ?", (slug,))
+            cx.valider()
+        finally:
+            cx.fermer()
+        lec = Personne(self.app)
+        for objet in ("page", "chapitre", "livre"):
+            r = self.acheter(lec, "exemple-" + objet, objet=objet, livre=slug)
+            self.assertEqual(r.status_code, 400, objet)
+            self.assertIn("exemple", r.get_json()["erreur"])
+        self.assertEqual(sql("SELECT COUNT(*) AS n FROM payments p JOIN books b ON b.id = p.book_id WHERE b.slug = ?", (slug,))[0]["n"], 0)
+
     def test_recu_et_droits_seulement_apres_confirmation(self):
         lec = Personne(self.app)
         pid = self.acheter(lec, "recu-1").get_json()["paiement"]["id"]

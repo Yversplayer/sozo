@@ -90,6 +90,12 @@ def _calculer(cx, user, d):
         return None
     if b["owner_id"] == user["id"]:
         raise v.Invalide("Vous ne pouvez pas acheter votre propre livre.", "livre")
+    # Un livre d'EXEMPLE (books.demo = 1 : auteur et texte inventés, chargés en
+    # ligne le 18/10/2026 pour montrer Sōzō) ne se vend pas : sans ce refus, un
+    # visiteur pouvait payer en vrai Mobile Money une page qui n'existe pas.
+    # L'interface masque déjà l'achat ; c'est ici que la règle vaut.
+    if b["demo"]:
+        raise v.Invalide("Ce livre est un exemple : il ne se vend pas.", "livre")
     plages = _deja(cx, user["id"], b["id"])
     if objet == "livre":
         if b["prix_livre"] is None:
