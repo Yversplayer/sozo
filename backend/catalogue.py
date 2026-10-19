@@ -281,7 +281,9 @@ def enregistrer(app):
             if e not in ("free", "owned", "auteur"):
                 return jsonify(erreur="Cette page n’est pas lisible pour vous : rien à épingler."), 403
             contenu, _ = acces.contenu_courant(cx, p["id"])
-            norme = lambda t: " ".join(t.replace("'", "’").split())
+            # Les caractères invisibles du filigrane (acces.marquer) ne comptent pas
+            invisibles = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff"))
+            norme = lambda t: " ".join(t.translate(invisibles).replace("'", "’").split())
             if norme(extrait) not in norme(contenu):
                 raise v.Invalide("Ce passage ne figure pas dans la page.", "extrait")
             # Une page achetée : une citation, pas une copie (même limite que la liseuse)
