@@ -416,6 +416,7 @@ window.SOZO = (() => {
       ['atelier', 'studio.html', 'Mon atelier', 'feather'],
       ['nouveau', 'studio.html?action=nouveau', 'Nouveau livre', 'plus'],
       ['ecrire', 'studio.html?action=ecrire', 'Écrire une page', 'pen'],
+      ['brouillons', 'studio.html?action=brouillons', 'Brouillons', 'file'],
       ['importer', 'studio.html?action=importer', 'Importer un manuscrit', 'upload']
     ],
     lire: [

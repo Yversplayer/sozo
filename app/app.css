@@ -1231,3 +1231,148 @@ html[data-theme="dark"] .btn--ghost { background: var(--surface-2); }
 .foot-in div > a:hover { color: var(--ink); }
 .foot-tag { display: none; }
 @media (max-width: 760px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; } }
+
+/* ═══════════ ÉCRIRE — plein écran, comme une page Word (19/10/2026) ═══════════ */
+body.ecriture { background: var(--surface); padding: 0 !important; }
+.ec-barre { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 12px; padding: 8px clamp(10px, 2vw, 22px); background: color-mix(in srgb, var(--bone) 90%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.ec-titre { flex: 1; min-width: 0; display: grid; }
+.ec-titre strong { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ec-titre > span { font-size: 12.5px; color: var(--ash); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ec-outils { display: flex; align-items: center; gap: 6px; }
+.ec-nb { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #C2261A; color: #fff; font-size: 11.5px; display: inline-grid; place-items: center; }
+.ec-nb[hidden] { display: none; }
+.ec { padding: 26px clamp(10px, 3vw, 40px) 70px; transition: padding-right .3s var(--ease); }
+.ec-msg { max-width: 820px; margin: 0 auto 14px; }
+.ec-feuille { max-width: 820px; margin: 0 auto; background: #FFFFFF; border-radius: 4px; box-shadow: 0 1px 3px rgba(0, 0, 0, .06), 0 18px 50px -28px rgba(0, 0, 0, .3); }
+html[data-theme="dark"] .ec-feuille { background: #1C1C1E; }
+.ec-feuille .ed-stack { position: relative; height: auto; min-height: 60vh; }
+.ec-feuille .ed-back, .ec-feuille .ed-stack textarea { padding: clamp(28px, 6vw, 72px) clamp(22px, 7vw, 84px); font-size: 20px; line-height: 1.75; overflow: hidden; }
+.ec-feuille .ed-stack textarea { color: #1C1C1E; caret-color: #6B0F1A; }
+html[data-theme="dark"] .ec-feuille .ed-stack textarea { color: #F2F2F7; caret-color: var(--gold); }
+.ec-feuille .ed-stack textarea:focus-visible { box-shadow: none; }
+.ec-sans-soulignes .ed-back mark { text-decoration: none; background: none; }
+.ec-pied { max-width: 820px; margin: 12px auto 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--ash); }
+.ec-pied-a { display: flex; gap: 16px; }
+.ec-lien { border: 0; background: none; color: var(--ash); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; padding: 0; }
+.ec-lien:hover:not([disabled]) { color: var(--ink); }
+.ec-lien[disabled] { opacity: .5; cursor: default; text-decoration: none; }
+.ec-lien[hidden] { display: none; }
+/* le panneau de correction : à droite, fermé par défaut, refermable */
+.ec-panneau { position: fixed; z-index: 60; top: 57px; right: 0; bottom: 0; width: min(380px, 100%); overflow-y: auto; background: var(--bone); border-left: 1px solid var(--line); padding: 14px 16px 30px; display: grid; align-content: start; gap: 12px; max-height: none; }
+.ec-panneau[hidden] { display: none; }
+.ec-panneau-h { display: flex; align-items: center; gap: 10px; }
+.ec-panneau-h strong { font-size: 17px; margin-right: auto; }
+.ec-coche { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--ash); cursor: pointer; }
+.ec-coche input { accent-color: var(--ink); }
+.ec-panneau .ed-status { padding: 0; font-size: 13.5px; color: var(--ash); }
+.ec-panneau .ed-item { background: var(--surface); border-color: transparent; border-left-width: 3px; border-radius: 10px; }
+.ec-panneau .ed-chip { background: var(--surface); border-color: transparent; border-radius: 10px; }
+.ec-astuce { font-size: 12.5px; color: var(--ash); }
+@media (min-width: 1100px) { body.ec-avec-panneau .ec { padding-right: 400px; } }
+@media (max-width: 760px) {
+  .ec-l { display: none; }
+  .ec-barre { gap: 6px; }
+  .ec { padding: 10px 0 60px; }
+  .ec-feuille { border-radius: 0; box-shadow: none; }
+  .ec-feuille .ed-back, .ec-feuille .ed-stack textarea { font-size: 18px; padding: 22px 18px; }
+  .ec-pied { padding: 0 16px; }
+  .ec-panneau { top: auto; height: 70vh; width: 100%; border-left: 0; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -20px 50px -20px rgba(0, 0, 0, .4); }
+}
+@media (prefers-reduced-motion: reduce) { .ec { transition: none; } }
+
+/* ═══════════ FICHE D'UN LIVRE (19/10/2026) — sur le modèle d'une liseuse mobile ═══════════ */
+.lv { max-width: 720px; margin: 0 auto; padding: 0 var(--g) 20px; }
+.lv-tete { display: grid; justify-items: center; text-align: center; padding: 34px 0 18px; }
+.lv-cv { width: clamp(150px, 34vw, 210px); margin-bottom: 20px; }
+.lv-cv .cv { font-size: clamp(11px, 1.6vw, 15px); }
+.lv-titre { font-family: var(--serif); font-weight: 600; font-size: clamp(28px, 4.4vw, 40px); letter-spacing: -0.01em; line-height: 1.1; }
+.lv-auteur { color: var(--ash); font-size: 16px; margin-top: 6px; }
+.lv-auteur:hover { color: var(--ink); }
+.lv-pastilles { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
+.lv-chiffres { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; max-width: 460px; margin: 22px 0 18px; padding: 14px 6px; background: var(--surface); border-radius: 16px; }
+.lv-chiffres > div { display: grid; justify-items: center; gap: 2px; }
+.lv-chiffres > div + div { border-left: 1px solid var(--line); }
+.lv-chiffres .ic { width: 18px; height: 18px; color: var(--ash); }
+.lv-chiffres dt { font-size: 12.5px; color: var(--ash); }
+.lv-chiffres dd { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+.lv-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; width: 100%; max-width: 460px; }
+.lv-lire { min-height: 52px; font-size: 16px; }
+.lv-plus { width: 52px; min-height: 52px; padding: 0; background: var(--surface); color: var(--ink); border-color: transparent; }
+.lv-plus[aria-pressed="true"] { background: var(--ink); color: var(--bone); }
+.lv-plus .ic { width: 22px; height: 22px; }
+.lv-tout { margin-top: 12px; }
+.lv-onglets { display: flex; gap: 22px; border-bottom: 1px solid var(--line); margin: 12px 0 4px; overflow-x: auto; scrollbar-width: none; }
+.lv-onglets button { border: 0; background: none; padding: 12px 0; font: 600 16px/1 var(--sans); color: var(--ash); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.lv-onglets button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.lv-panneau { padding: 18px 0 0; }
+.lv-panneau[hidden] { display: none; }
+.lv-panneau h2 { font-size: 18px; margin: 18px 0 8px; }
+.lv-panneau h2:first-child { margin-top: 4px; }
+.lv-desc { font-size: 16.5px; line-height: 1.6; color: var(--ink); }
+.lv-details { display: grid; }
+.lv-details > div { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.lv-details dt { color: var(--ash); }
+.lv-details dd { font-weight: 600; text-align: right; }
+.lv-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.lv-carte { padding: 14px; background: var(--surface); border-radius: 16px; }
+.lv .chap { border-top-color: var(--line); }
+@media (max-width: 760px) { .lv-tete { padding-top: 22px; } }
+
+/* ═══════════ ACCUEIL v2 (19/10/2026) — profil, recherche, à la une, genres, reprise ═══════════ */
+.ac-tete { display: grid; grid-template-columns: 1fr; gap: 14px; padding: 22px 0 6px; align-items: stretch; }
+.ac-profil { display: grid; grid-template-columns: 48px 1fr 42px 42px; gap: 12px; align-items: center; }
+.ac-avatar { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); font: 700 19px/1 var(--sans); }
+.ac-profil strong { display: block; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.ac-profil small { display: block; font-size: 13.5px; color: var(--ash); }
+.ac-rond { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); }
+.ac-rond .ic { width: 19px; height: 19px; }
+.ac-cherche { height: 48px; border-radius: 14px; background: var(--surface); border: 0; max-width: none; }
+.ac-portes { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.ac-porte { display: flex; align-items: center; gap: 12px; padding: 14px; border: 0; border-radius: 16px; background: var(--surface); }
+.ac-porte:hover { transform: none; box-shadow: none; background: var(--surface-2); }
+.ac-porte .ic { width: 22px; height: 22px; margin: 0; color: var(--ink); flex: 0 0 auto; }
+.ac-porte strong { font: 700 16px/1.2 var(--sans); }
+.ac-porte small { display: block; font-size: 12.5px; }
+.ac-porte--ecrire { background: var(--ink); color: var(--bone); }
+.ac-porte--ecrire .ic { color: var(--gold); }
+.ac-porte--ecrire small { color: color-mix(in srgb, var(--bone) 70%, transparent); }
+html[data-theme="dark"] .ac-porte--ecrire { background: #2C2C2E; border: 0; }
+.ac-sec--une { padding-top: 18px; }
+.ac-une { background: #EFE7DA; color: #1C1C1E; border-radius: 20px; padding: clamp(18px, 3vw, 32px); grid-template-columns: 1fr minmax(110px, 170px); }
+html[data-theme="dark"] .ac-une { background: #2A2520; color: #F2F2F7; }
+.ac-une-fond { display: none; }
+.ac-une h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 3vw, 34px); margin: 10px 0 6px; }
+.ac-une p { opacity: .8; font-size: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ac-une-pastille { display: inline-block; font-size: 12.5px; font-weight: 600; background: #FFFFFF; color: #1C1C1E; border-radius: 999px; padding: 5px 12px; }
+.ac-genres { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: 14px; }
+.ac-genres .chip { white-space: nowrap; }
+.ac-rang--cartes { grid-auto-columns: minmax(140px, 160px); }
+.ac-reprise { display: grid; gap: 10px; }
+.ac-rep { display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; padding: 12px; border-radius: 16px; background: var(--surface); }
+.ac-rep-cv .cv { font-size: 6px; }
+.ac-rep-t { display: grid; gap: 4px; justify-items: start; }
+.ac-rep-t strong { font-size: 16px; font-weight: 600; }
+.ac-rep .prog { width: 100%; max-width: none; height: 5px; margin: 4px 0 0; background: var(--surface-2); }
+.ac-rep .prog i { background: #2E7D4F; }
+.ac-pas { background: var(--surface); }
+.ac-pas-l a { background: var(--bone); border-color: transparent; }
+@media (max-width: 560px) { .ac-portes { grid-template-columns: 1fr 1fr; } .ac-porte--ecrire { grid-column: 1 / -1; } }
+
+/* ═══════════ BIBLIOTHÈQUE : l'étagère (19/10/2026) ═══════════ */
+.bi-etageres { background: linear-gradient(180deg, #F3EEE6, #EDE6DA); border-radius: 18px; padding: 18px clamp(12px, 3vw, 28px) 6px; margin-bottom: 26px; }
+html[data-theme="dark"] .bi-etageres { background: linear-gradient(180deg, #1F1C19, #181614); }
+.bi-rangee { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: clamp(10px, 3vw, 28px); align-items: end; padding: 0 4%; min-height: 120px; }
+.bi-livre { position: relative; display: block; transition: transform .3s var(--ease); }
+.bi-livre:hover { transform: translateY(-4px); }
+.bi-livre .cv { font-size: clamp(6px, 1vw, 10px); }
+.bi-marque { position: absolute; right: -4px; top: 8px; background: var(--ink); color: var(--bone); font-size: 11px; font-weight: 600; border-radius: 6px; padding: 2px 6px; }
+.bi-planche { height: 14px; margin: 0 -6px 18px; border-radius: 3px; background: linear-gradient(180deg, #5A4636, #3D2E22); box-shadow: 0 10px 18px -8px rgba(0, 0, 0, .45); }
+.bi-sous { font-size: 18px; margin: 6px 0 12px; }
+.follow-list .fl-row { background: var(--surface); border: 0; border-radius: 16px; }
+@media (max-width: 599px) { .bi-rangee { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding: 0 2%; min-height: 90px; } .bi-marque { font-size: 10px; } }
+.ed-ia[hidden], .ed-word[hidden] { display: none !important; }
+@media (max-width: 760px) {
+  .ec-outils > a.icon-btn { display: none; }
+  .ec-titre { min-width: 90px; }
+  .ec-outils .btn--sm { padding: 0 10px; }
+}

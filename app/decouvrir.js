@@ -44,16 +44,24 @@ window.SOZO_PRET.then(() => {
 
   main.innerHTML = `<div class="wrap ac">
     <section class="ac-tete">
-      <div>
-        <p class="kicker">${S.esc(salut)}${prenom ? `, ${S.esc(prenom)}` : ''}</p>
-        <h1 class="ac-titre" data-ink-text="${auteur ? 'Qu’allez-vous [[écrire]] aujourd’hui ?' : 'Que voulez-vous [[lire]] aujourd’hui ?'}"></h1>
-        <a class="search ac-cherche" href="explorer.html#q">${S.icon('search')}<span>Rechercher un livre, un auteur, un thème…</span></a>
+      <div class="ac-profil">
+        <a class="ac-avatar" href="compte.html" aria-label="Mon compte">${S.esc(((moi.name || '?').trim()[0] || '?').toUpperCase())}</a>
+        <div><strong>${S.esc(salut)}${prenom ? `, ${S.esc(prenom)}` : ''}</strong><small>${auteur ? 'Qu’allez-vous écrire aujourd’hui ?' : 'Que voulez-vous lire aujourd’hui ?'}</small></div>
+        <a class="ac-rond" href="suivis.html" aria-label="Ma bibliothèque">${S.icon('heart')}</a>
+        <a class="ac-rond" href="suivis.html#notifications" aria-label="Notifications">${S.icon('bell')}</a>
       </div>
+      <a class="ac-cherche" href="explorer.html#q">${S.icon('search')}<span>Rechercher un livre, un auteur…</span></a>
       <div class="ac-portes">
-        <a class="ac-porte ac-porte--ecrire" href="studio.html?action=ecrire">${S.icon('feather')}<strong>Écrire</strong><small>${auteur ? (miens.length ? 'Reprendre ou commencer une page' : 'Créer votre premier livre') : 'Ouvrir votre atelier d’auteur'}</small></a>
-        <a class="ac-porte" href="explorer.html">${S.icon('book')}<strong>Lire</strong><small>${D.books.length} livre${D.books.length > 1 ? 's' : ''} à découvrir</small></a>
+        <a class="ac-porte ac-porte--ecrire" href="studio.html?action=ecrire">${S.icon('feather')}<span><strong>Écrire</strong><small>${auteur ? (miens.length ? 'Reprendre ou commencer une page' : 'Créer votre premier livre') : 'Ouvrir votre atelier'}</small></span></a>
+        <a class="ac-porte" href="studio.html?action=brouillons">${S.icon('file')}<span><strong>Brouillons</strong><small>Vos pages en cours</small></span></a>
+        <a class="ac-porte" href="explorer.html">${S.icon('book')}<span><strong>Lire</strong><small>${D.books.length} livre${D.books.length > 1 ? 's' : ''}</small></span></a>
       </div>
     </section>
+
+    ${aLaUne ? `<section class="ac-sec ac-sec--une"><a class="ac-une" href="livre.html?id=${encodeURIComponent(aLaUne.id)}" style="--cv:url('${S.img(aLaUne.cover.img)}')">
+        <span class="ac-une-fond" aria-hidden="true"></span>
+        <div class="ac-une-t"><span class="ac-une-pastille">À la une</span><h2>${S.esc(aLaUne.title)}</h2><p>${S.esc(aLaUne.desc)}</p><span class="btn btn--accent btn--sm">Lire la suite</span></div>
+        <div class="ac-une-cv">${S.cover(aLaUne, { big: true })}</div></a></section>` : ''}
 
     ${pasVisibles ? `<section class="panel ac-pas" aria-labelledby="pasT">
       <div class="ac-pas-h"><div><p class="kicker">Premiers pas · ${faits} sur ${PAS.length}</p><h2 id="pasT">${auteur ? 'Votre livre, en quelques gestes' : 'Bien commencer sur Sōzō'}</h2></div>
@@ -72,18 +80,16 @@ window.SOZO_PRET.then(() => {
     </section>` : ''}
 
     ${enCours.length ? `<section class="sec ac-sec">
-      <div class="sec-head"><div><p class="kicker">Reprendre</p><h2 class="sec-title" data-ink-text="Votre [[lecture]]"></h2></div><a class="sec-link" href="suivis.html">Ma bibliothèque ${S.icon('right')}</a></div>
-      <div class="ac-rang">${enCours.map((b) => { const lu = D.reader.progress[b.id]; const vis = S.visiblePages(b); const p = vis.find((x) => x.n === lu) ? lu : (vis[0] && vis[0].n); return `<a class="ac-rep" href="lire.html?id=${encodeURIComponent(b.id)}&p=${p}">${S.cover(b, { d3: false })}<strong>${S.esc(b.title)}</strong><small>${lu ? `Page ${lu}` : 'Commencer'}</small></a>`; }).join('')}</div>
+      <div class="sec-head"><h2 class="sec-title">Reprendre la lecture</h2><a class="sec-link" href="suivis.html">Tout voir ${S.icon('right')}</a></div>
+      <div class="ac-reprise">${enCours.slice(0, 3).map((b) => { const lu = D.reader.progress[b.id]; const vis = S.visiblePages(b); const pub = vis.filter((p) => S.access(b, p.n) !== 'soon'); const p = vis.find((x) => x.n === lu) ? lu : (vis[0] && vis[0].n); const pct = pub.length ? Math.round((Math.min(lu || 0, pub.length) / pub.length) * 100) : 0;
+        return `<a class="ac-rep" href="lire.html?id=${encodeURIComponent(b.id)}&p=${p}"><span class="ac-rep-cv">${S.cover(b, { d3: false })}</span><span class="ac-rep-t"><small class="badge badge--free">${lu ? `Page ${lu}` : 'À commencer'}</small><strong>${S.esc(b.title)}</strong><small class="ash">${S.esc(S.author(b.author).name)}</small><span class="prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression"><i style="width:${pct}%"></i></span></span></a>`; }).join('')}</div>
     </section>` : ''}
 
-    ${aLaUne ? `<section class="sec ac-sec"><a class="ac-une" href="livre.html?id=${encodeURIComponent(aLaUne.id)}" style="--cv:url('${S.img(aLaUne.cover.img)}')">
-        <span class="ac-une-fond" aria-hidden="true"></span>
-        <div class="ac-une-t"><p class="kicker">À la une</p><h2>${S.esc(aLaUne.title)}</h2><p>${S.esc(aLaUne.desc)}</p><span class="btn btn--accent btn--sm">Découvrir ${S.icon('right')}</span></div>
-        <div class="ac-une-cv">${S.cover(aLaUne, { big: true })}</div></a></section>` : ''}
 
     ${nouveautes.length ? `<section class="sec ac-sec">
-      <div class="sec-head"><div><p class="kicker">Ce qui vient de paraître</p><h2 class="sec-title" data-ink-text="[[Nouveautés]]"></h2></div><a class="sec-link" href="explorer.html">Tout explorer ${S.icon('right')}</a></div>
-      <div class="ac-rang ac-rang--cartes">${nouveautes.map((b) => S.bookCard(b)).join('')}</div>
+      <div class="sec-head"><h2 class="sec-title">Nouveautés</h2><a class="sec-link" href="explorer.html">Tout explorer ${S.icon('right')}</a></div>
+      <div class="ac-genres" role="group" aria-label="Genres"><button class="chip" type="button" data-genre="" aria-pressed="true">Tous</button>${[...new Set(autres.map((b) => b.cat))].map((c) => `<button class="chip" type="button" data-genre="${S.esc(c)}" aria-pressed="false">${S.esc(c)}</button>`).join('')}</div>
+      <div class="ac-rang ac-rang--cartes" id="nouv">${nouveautes.map((b) => S.bookCard(b)).join('')}</div>
     </section>` : `<section class="sec ac-sec"><div class="empty"><strong>Les premiers livres arrivent</strong>${auteur ? 'Le vôtre peut être le premier : ' : ''}<a href="studio.html">ouvrir l’atelier</a>.</div></section>`}
 
     ${soon.length ? `<section class="sec ac-sec">
@@ -97,6 +103,12 @@ window.SOZO_PRET.then(() => {
     </section>` : ''}
   </div>`;
 
+  // Genres : filtrent les nouveautés sur place
+  $$('[data-genre]').forEach((c) => c.addEventListener('click', () => {
+    $$('[data-genre]').forEach((x) => x.setAttribute('aria-pressed', String(x === c)));
+    const liste = [...autres].sort((x, y) => parution(y) - parution(x)).filter((b) => !c.dataset.genre || b.cat === c.dataset.genre).slice(0, 12);
+    $('#nouv').innerHTML = liste.map((b) => S.bookCard(b)).join('');
+  }));
   const px = $('#pasX');
   if (px) px.addEventListener('click', () => { try { localStorage.setItem('sozo-pas-ferme', auteur ? 'a' : 'l'); } catch (e) {} $('.ac-pas').remove(); });
   S.inkAll(); S.prepAll(); S.reveals(); S.tilt(main); S.footer();
