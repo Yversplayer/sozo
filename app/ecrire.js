@@ -8,7 +8,8 @@
    ═══════════════════════════════════════════════════════════ */
 window.SOZO_PRET.then(async () => {
   const S = window.SOZO, $ = (s, c = document) => c.querySelector(s);
-  S.shell('studio');
+  // Plein écran, comme une page Word (19/10/2026) : pas de menu du site, une barre fine
+  document.body.classList.add('ecriture');
   const main = $('#main');
   const id = S.q('id'), n = +S.q('p');
   if (!id || !n) { location.replace('studio.html'); return; }
@@ -41,46 +42,66 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
   if (secours === enregistre) { secours = null; try { localStorage.removeItem(KEY); } catch (e) {} }
   const ETAT = { published: ['Publiée', 'owned'], scheduled: ['Programmée', 'soon'], draft: ['Brouillon', 'draft'] }[page.statut];
 
-  main.innerHTML = `<div class="wrap ed">
-    <div class="ed-head">
-      <a class="icon-btn" href="studio.html?id=${encodeURIComponent(id)}" aria-label="Retour à l’atelier">${S.icon('left')}</a>
-      <div><p class="kicker">Atelier · ${S.esc(livre.titre)}</p><h1>Page ${n} <small class="ash ed-sur">sur ${total}</small></h1></div>
-      <span class="badge badge--${ETAT[1]}">${ETAT[0]}</span>
-      <span class="ed-save mono ash" id="save" role="status" aria-live="polite">${version ? `Version ${version}` : ''}</span>
-      <span class="ed-nav">
-        ${n > 1 ? `<a class="btn btn--ghost btn--sm" href="ecrire.html?id=${encodeURIComponent(id)}&p=${n - 1}" aria-label="Page précédente">${S.icon('left')}</a>` : ''}
-        ${n < total ? `<a class="btn btn--ghost btn--sm" href="ecrire.html?id=${encodeURIComponent(id)}&p=${n + 1}" aria-label="Page suivante">${S.icon('right')}</a>` : ''}
-        <a class="btn btn--ghost btn--sm" id="apercu" href="lire.html?id=${encodeURIComponent(id)}&p=${n}" target="_blank" rel="noopener">${S.icon('eye')} Aperçu lecteur</a>
-        <button class="btn btn--accent btn--sm" type="button" id="saveBtn"${verrou ? ' disabled' : ''}>${S.icon('check')} Enregistrer</button>
+  let panneau = false;
+  try { panneau = localStorage.getItem('sozo-ed-panneau') === '1'; } catch (e) {}
+  main.innerHTML = `
+  <header class="ec-barre">
+    <a class="icon-btn" href="studio.html?id=${encodeURIComponent(id)}&tab=pages" aria-label="Retour à l’atelier">${S.icon('left')}</a>
+    <div class="ec-titre"><strong>${S.esc(livre.titre)}</strong><span>Page ${n} sur ${total} · ${ETAT[0]} · <span id="save" role="status" aria-live="polite">${version ? `Version ${version}` : ''}</span></span></div>
+    <div class="ec-outils">
+      ${n > 1 ? `<a class="icon-btn" href="ecrire.html?id=${encodeURIComponent(id)}&p=${n - 1}" aria-label="Page précédente">${S.icon('left')}</a>` : ''}
+      ${n < total ? `<a class="icon-btn" href="ecrire.html?id=${encodeURIComponent(id)}&p=${n + 1}" aria-label="Page suivante">${S.icon('right')}</a>` : ''}
+      <a class="icon-btn" id="apercu" href="lire.html?id=${encodeURIComponent(id)}&p=${n}" target="_blank" rel="noopener" aria-label="Aperçu lecteur" title="Aperçu lecteur">${S.icon('eye')}</a>
+      <button class="btn btn--ghost btn--sm" type="button" id="panneauBtn" aria-expanded="${panneau}" aria-controls="edPanneau">${S.icon('check')} <span class="ec-l">Correction</span> <span class="ec-nb" id="nbFautes" hidden></span></button>
+      <button class="btn btn--ghost btn--sm" type="button" id="iaBtn">${S.icon('spark')} <span class="ec-l">IA</span></button>
+      <button class="btn btn--accent btn--sm" type="button" id="saveBtn"${verrou ? ' disabled' : ''}>Enregistrer</button>
+    </div>
+  </header>
+  <div class="ec">
+    ${verrou ? `<p class="warn ec-msg">${S.icon('lock')}<span><strong>Page publiée.</strong> Son texte ne se corrige qu’avec Plume, en nouvelle version (l’ancienne reste dans l’historique). <button class="btn btn--sm" type="button" id="plumeBtn">Passer à Plume</button></span></p>` : ''}
+    ${page.statut === 'published' && page.plume ? `<p class="note ec-msg">${S.icon('feather')} Page publiée, corrigée avec Plume : chaque enregistrement crée une nouvelle version.</p>` : ''}
+    ${secours != null && !verrou ? `<p class="warn ec-msg" id="secours">${S.icon('clock')}<span>Une copie plus récente de cette page est restée sur cet appareil. <button class="btn btn--sm" type="button" id="restaurer">La reprendre</button> <button class="btn btn--ghost btn--sm" type="button" id="oublier">L’oublier</button></span></p>` : ''}
+    <section class="ec-feuille" aria-label="Texte de la page">
+      <div class="ed-stack">
+        <div class="ed-back" id="back" aria-hidden="true"></div>
+        <textarea id="ta" spellcheck="false" lang="fr" aria-label="Texte de la page ${n}" placeholder="Écrivez ici…"${verrou ? ' readonly' : ''}>${S.esc(enregistre)}</textarea>
+      </div>
+    </section>
+    <footer class="ec-pied">
+      <span id="count"></span>
+      <span class="ec-pied-a">
+        <button class="ec-lien" type="button" id="essai"${enregistre ? ' hidden' : ''}>Essayer le correcteur</button>
+        <button class="ec-lien" type="button" id="fixTypo" disabled>Harmoniser la typographie</button>
       </span>
-    </div>
-    ${verrou ? `<p class="warn" style="margin-bottom:14px">${S.icon('lock')}<span><strong>Page publiée.</strong> Des lecteurs ont peut-être des droits dessus : son texte ne se corrige qu’avec Plume, en nouvelle version (l’ancienne reste dans l’historique). Vous pouvez la relire et passer le correcteur. <button class="btn btn--sm" type="button" id="plumeBtn">Passer à Plume</button></span></p>` : ''}
-    ${page.statut === 'published' && page.plume ? `<p class="note" style="margin:0 0 14px">${S.icon('feather')} Page publiée, corrigée avec Plume : chaque enregistrement crée une nouvelle version ; les lecteurs voient toujours le texte courant.</p>` : ''}
-    ${secours != null && !verrou ? `<p class="warn" id="secours" style="margin-bottom:14px">${S.icon('clock')}<span>Une copie de cette page, plus récente que celle du serveur, est restée sur cet appareil (enregistrement interrompu ?). <button class="btn btn--sm" type="button" id="restaurer">Reprendre cette copie</button> <button class="btn btn--ghost btn--sm" type="button" id="oublier">L’oublier</button></span></p>` : ''}
-    <div class="ed-grid">
-      <section class="ed-paper" aria-label="Texte de la page">
-        <div class="ed-tools" role="toolbar" aria-label="Outils">
-          <span class="mono ash" id="count"></span>
-          <button class="btn btn--ghost btn--sm" type="button" id="essai"${enregistre ? ' hidden' : ''}>${S.icon('spark')} Voir le correcteur à l’œuvre</button>
-          <button class="btn btn--ghost btn--sm" type="button" id="fixTypo" disabled>${S.icon('check')} Harmoniser la typographie</button>
-          <button class="btn btn--accent btn--sm" type="button" id="iaBtn">${S.icon('spark')} Relecture par l’IA</button>
-        </div>
-        <div class="ed-stack">
-          <div class="ed-back" id="back" aria-hidden="true"></div>
-          <textarea id="ta" spellcheck="false" lang="fr" aria-label="Texte de la page ${n}" aria-describedby="status" placeholder="Écrivez ici…"${verrou ? ' readonly' : ''}>${S.esc(enregistre)}</textarea>
-        </div>
-        <p class="note">${S.icon('book')} Les références bibliques (« Ps 23:4 », « Jean 3:16 ») deviendront des liens pour le lecteur. Raccourci : ⌘ S ou Ctrl S pour enregistrer.</p>
-      </section>
-      <aside class="ed-side" aria-label="Correction">
-        <div class="panel ed-status" id="status" aria-live="polite"><span class="spin" aria-hidden="true"></span> Chargement du dictionnaire…</div>
-        <div class="panel ed-ia" id="ia" hidden aria-live="polite"></div>
-        <div class="ed-sum" id="sum" role="group" aria-label="Filtrer les remarques"></div>
-        <div class="ed-list" id="list"></div>
-        <div class="panel ed-word" id="word" hidden></div>
-        ${page.versions.length > 1 ? `<details class="panel ed-hist"><summary>Historique : ${page.versions.length} versions</summary><ol>${page.versions.map((v) => `<li><strong>Version ${v.version}</strong> <span class="ash">${S.esc(S.dateLong(v.created_at))}${v.remplacee_le ? '' : ' · courante'}</span></li>`).join('')}</ol><p class="ash" style="font-size:13px">Rien n’est effacé : chaque version reste conservée.</p></details>` : ''}
-      </aside>
-    </div>
-  </div>`;
+    </footer>
+  </div>
+  <aside class="ed-side ec-panneau" id="edPanneau" aria-label="Correction"${panneau ? '' : ' hidden'}>
+    <div class="ec-panneau-h"><strong>Correction</strong>
+      <label class="ec-coche"><input type="checkbox" id="souligner" checked> Souligner dans le texte</label>
+      <button class="icon-btn" type="button" id="panneauX" aria-label="Fermer la correction">${S.icon('x')}</button></div>
+    <div class="ed-status" id="status" aria-live="polite"><span class="spin" aria-hidden="true"></span> Chargement du dictionnaire…</div>
+    <div class="panel ed-ia" id="ia" hidden aria-live="polite"></div>
+    <div class="ed-sum" id="sum" role="group" aria-label="Filtrer les remarques"></div>
+    <div class="ed-list" id="list"></div>
+    <div class="panel ed-word" id="word" hidden></div>
+    ${page.versions.length > 1 ? `<details class="ed-hist"><summary>Historique : ${page.versions.length} versions</summary><ol>${page.versions.map((v) => `<li><strong>Version ${v.version}</strong> <span class="ash">${S.esc(S.dateLong(v.created_at))}${v.remplacee_le ? '' : ' · courante'}</span></li>`).join('')}</ol><p class="ash" style="font-size:13px">Rien n’est effacé : chaque version reste conservée.</p></details>` : ''}
+    <p class="ec-astuce">Les références bibliques (« Ps 23:4 ») deviennent des liens pour le lecteur. ⌘ S ou Ctrl S : enregistrer.</p>
+  </aside>`;
+
+  /* ─── le panneau de correction : ouvert ou fermé, au choix (retenu sur l'appareil) ─── */
+  const ouvrirPanneau = (o) => {
+    panneau = o; $('#edPanneau').hidden = !o; $('#panneauBtn').setAttribute('aria-expanded', String(o));
+    document.body.classList.toggle('ec-avec-panneau', o);
+    try { localStorage.setItem('sozo-ed-panneau', o ? '1' : '0'); } catch (e) {}
+  };
+  document.body.classList.toggle('ec-avec-panneau', panneau);
+  $('#panneauBtn').addEventListener('click', () => ouvrirPanneau(!panneau));
+  $('#panneauX').addEventListener('click', () => { ouvrirPanneau(false); $('#panneauBtn').focus(); });
+  let souligner = true;
+  try { souligner = localStorage.getItem('sozo-ed-souligner') !== '0'; } catch (e) {}
+  $('#souligner').checked = souligner;
+  document.body.classList.toggle('ec-sans-soulignes', !souligner);
+  $('#souligner').addEventListener('change', (e) => { souligner = e.target.checked; document.body.classList.toggle('ec-sans-soulignes', !souligner); try { localStorage.setItem('sozo-ed-souligner', souligner ? '1' : '0'); } catch (er) {} });
 
   const ta = $('#ta'), back = $('#back');
   const TYPES = { orth: ['Orthographe', 'orth'], gram: ['Grammaire', 'gram'], typo: ['Typographie', 'typo'], voc: ['Vocabulaire', 'voc'] };
@@ -96,8 +117,16 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
       last = x.e;
     });
     back.innerHTML = html + S.esc(txt.slice(last)) + '\n';
-    back.scrollTop = ta.scrollTop;
+    hauteur();
   }
+  /* La feuille grandit avec le texte, comme une page Word : on fait défiler la
+     page, pas une petite zone. (Le calque des soulignés suit, même hauteur.) */
+  function hauteur() {
+    const pile = ta.parentElement, mini = Math.max(420, innerHeight - 190);
+    pile.style.height = mini + 'px';
+    pile.style.height = Math.max(mini, ta.scrollHeight + 4) + 'px';
+  }
+  addEventListener('resize', hauteur);
   const keyOf = (x) => `${x.rule}|${ta.value.slice(x.s, x.e)}`;
   const visible = () => issues.filter((x) => x.type !== 'auto' && !ignored.has(keyOf(x)) && (!filter || x.type === filter));
 
@@ -105,6 +134,9 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
     const v = issues.filter((x) => x.type !== 'auto' && !ignored.has(keyOf(x)));
     const c = { orth: 0, gram: 0, typo: 0, voc: 0 };
     v.forEach((x) => { c[x.type] = (c[x.type] || 0) + 1; });
+    const nb = v.length, pastille = $('#nbFautes');
+    pastille.hidden = !nb; pastille.textContent = nb;
+    $('#panneauBtn').setAttribute('aria-label', `Correction${nb ? ` : ${nb} remarque${nb > 1 ? 's' : ''}` : ''}`);
     $('#sum').innerHTML = Object.entries(TYPES).map(([k, [l]]) =>
       `<button type="button" class="ed-chip ed-chip--${k}" data-f="${k}" aria-pressed="${filter === k}"><b>${c[k]}</b>${l}</button>`).join('');
     const vis = visible();
@@ -154,8 +186,9 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
     changed(true);
   });
   function scrollToSel() {
-    const before = ta.value.slice(0, ta.selectionStart).split('\n').length;
-    ta.scrollTop = Math.max(0, (before - 4) * parseFloat(getComputedStyle(ta).lineHeight));
+    const m = back.querySelector('mark[data-i]') && [...back.querySelectorAll('mark')].find((x) => x.textContent && ta.value.indexOf(x.textContent, ta.selectionStart) === ta.selectionStart);
+    const y = m ? m.getBoundingClientRect().top : ta.getBoundingClientRect().top + (ta.value.slice(0, ta.selectionStart).split('\n').length - 1) * parseFloat(getComputedStyle(ta).lineHeight);
+    scrollTo({ top: Math.max(0, scrollY + y - innerHeight / 3), behavior: S.reduced ? 'auto' : 'smooth' });
   }
 
   /* ─── le correcteur (Web Worker) ─── */
@@ -202,6 +235,7 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
         actions: [{ label: 'Annuler' }, { label: 'J’accepte, relire la page', primary: true, onClick: (close) => { close(); try { localStorage.setItem(IA_OK, '1'); } catch (e) {} relectureIA(); } }] });
       return;
     }
+    ouvrirPanneau(true);
     const btn = $('#iaBtn'), el = $('#ia');
     btn.disabled = true; btn.setAttribute('aria-busy', 'true');
     el.hidden = false; el.innerHTML = `<p><span class="spin" style="display:inline-block;vertical-align:-3px"></span> L’IA relit la page… (quelques secondes)</p>`;
@@ -326,5 +360,4 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
   const pb = $('#plumeBtn');
   if (pb) pb.addEventListener('click', async () => { const r = await window.SOZO_API('GET', '/api/studio'); if (r.ok) S.buy.plume(r.d.plume.prix); else S.toast(r.d.erreur || 'Plume est indisponible pour le moment.'); });
   changed(true);
-  S.inkAll(); S.footer();
 }).catch(window.SOZO_ERREUR);
