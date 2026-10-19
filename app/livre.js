@@ -1,4 +1,4 @@
-/* Sōzō — fiche d'un livre : couverture 3D, état de chaque page, prix, calendrier. */
+/* Sōzō — fiche d'un livre : couverture, chiffres, lire / suivre, puis À propos, Sommaire, Prix, Similaires. */
 window.SOZO_PRET.then(() => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
   S.shell('explorer');
@@ -34,101 +34,104 @@ window.SOZO_PRET.then(() => {
   const upcoming = Object.entries(groups).sort((x, y) => S.parse(x[0]) - S.parse(y[0]));
   const MO = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
-  main.innerHTML = `
-  <section class="bk-hero on-dark" style="--cv:url('${S.img(b.cover.img)}')">
-    <div class="bk-hero-bg" aria-hidden="true"></div>
-    <div class="bk-hero-in">
-      <div data-tilt>${S.cover(b, { big: true })}</div>
-      <div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <span class="badge badge--${b.access}">${S.accessLabel(b)}</span>
-          <span class="badge badge--free">${S.esc(b.cat)}</span>
-          <span class="badge badge--free">${b.mode === 'progressive' ? 'Parution progressive' : 'Publié en entier'}</span>
-          ${b.demo ? '<span class="badge badge--exemple">Exemple</span>' : ''}
-        </div>
-        <h1 data-ink-text="${S.esc(b.title)}"></h1>
-        <a class="bk-by" href="auteur.html?id=${a.id}"><img src="${S.img(a.photo, true)}" alt="">${S.esc(a.name)}</a>
-        <p class="bk-desc">${S.esc(b.desc)}</p>
-        ${b.demo ? '<p class="bk-exemple">Livre d’exemple : auteur et texte inventés pour montrer Sōzō. Il ne se vend pas.</p>' : ''}
-        <div class="bk-facts">
-          <div><strong>${st.published}</strong><span>pages publiées</span></div>
-          ${st.scheduled ? `<div><strong>${st.scheduled}</strong><span>pages à venir</span></div>` : ''}
-          <div><strong>${S.priceFrom(b) == null ? 'Gratuit' : 'dès ' + S.money(S.priceFrom(b))}</strong><span>${b.access === 'mixed' ? `${st.free} page${st.free > 1 ? 's' : ''} offerte${st.free > 1 ? 's' : ''}` : b.access === 'free' ? 'tout le livre' : 'contenu payant'}</span></div>
-          ${st.next ? `<div><strong>${S.dateShort(st.next.date)}</strong><span>prochaine page</span></div>` : ''}
-        </div>
-        <div class="bk-actions">
-          ${firstReadable ? `<a class="btn btn--accent" href="lire.html?id=${b.id}&p=${prog && visible.some((p) => p.n === prog) ? prog : firstReadable.n}">${prog ? `Reprendre page ${prog}` : 'Commencer à lire'} ${S.icon('right')}</a>` : `<a class="btn btn--accent" href="lire.html?id=${b.id}&p=${visible[0].n}">Voir la première page ${S.icon('right')}</a>`}
-          <button class="btn btn--ghost" type="button" id="follow"></button>
-          ${allOpt && st.locked ? `<button class="btn btn--ghost" type="button" id="buyAll">Tout le contenu payant — ${S.money(allOpt.price)}</button>` : ''}
-        </div>
+  /* Fiche refaite le 19/10/2026 sur le modèle d'une liseuse mobile (demande du
+     propriétaire) : couverture centrée, titre, auteur, trois chiffres, un gros
+     bouton « Lire » et « + » pour suivre ; puis des onglets. Rien d'inventé :
+     pas d'avis ni de notes, Sōzō n'en a pas. */
+  const pagesLues = firstReadable ? `lire.html?id=${encodeURIComponent(b.id)}&p=${prog && visible.some((p) => p.n === prog) ? prog : firstReadable.n}` : `lire.html?id=${encodeURIComponent(b.id)}&p=${visible[0] ? visible[0].n : 1}`;
+  const same = S.booksBy(a.id).filter((x) => x.id !== b.id);
+  const voisins = same.length ? same : D.books.filter((x) => x.cat === b.cat && x.id !== b.id && x.author !== a.id);
+  const ONGLETS = [['propos', 'À propos'], ['sommaire', 'Sommaire'], ...(b.price ? [['prix', 'Prix']] : []), ...(voisins.length ? [['similaires', same.length ? 'Du même auteur' : 'Similaires']] : [])];
+  const derniere = Math.max(0, ...b.pages.filter((p) => S.status(p) === 'published' && p.date).map((p) => +S.parse(p.date)));
+  main.innerHTML = `<div class="lv">
+    <header class="lv-tete">
+      <div class="lv-cv">${S.cover(b, { big: true, d3: false })}</div>
+      <h1 class="lv-titre">${S.esc(b.title)}</h1>
+      <a class="lv-auteur" href="auteur.html?id=${encodeURIComponent(a.id)}">par ${S.esc(a.name)}</a>
+      <div class="lv-pastilles"><span class="badge badge--${b.access}">${S.accessLabel(b)}</span><span class="badge badge--free">${S.esc(b.cat)}</span>${b.demo ? '<span class="badge badge--exemple">Exemple</span>' : ''}</div>
+      <dl class="lv-chiffres">
+        <div>${S.icon('book')}<dt>Pages</dt><dd>${st.published}</dd></div>
+        <div>${S.icon('file')}<dt>Chapitres</dt><dd>${b.chapters.length || '—'}</dd></div>
+        <div>${S.icon(st.next ? 'clock' : 'check')}<dt>${st.next ? 'Prochaine page' : 'Parution'}</dt><dd>${st.next ? S.esc(S.dateShort(st.next.date)) : b.mode === 'progressive' ? 'à jour' : 'complet'}</dd></div>
+      </dl>
+      <div class="lv-actions">
+        <a class="btn btn--accent lv-lire" href="${pagesLues}">${firstReadable ? (prog ? `Reprendre page ${prog}` : 'Commencer à lire') : 'Voir la première page'}</a>
+        <button class="btn lv-plus" type="button" id="follow"></button>
       </div>
-    </div>
-  </section>
+      ${allOpt && st.locked ? `<button class="ec-lien lv-tout" type="button" id="buyAll">Tout le contenu payant — ${S.money(allOpt.price)}</button>` : ''}
+    </header>
+    <nav class="lv-onglets" role="tablist" aria-label="À propos du livre">${ONGLETS.map(([k, l], i) => `<button type="button" role="tab" id="lo-${k}" aria-controls="lp-${k}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" data-lo="${k}">${l}</button>`).join('')}</nav>
 
-  <div class="wrap">
-    <section class="sec" style="padding-top:40px">
-      <p class="kicker">Les pages, une par une</p>
+    <section class="lv-panneau" id="lp-propos" role="tabpanel" aria-labelledby="lo-propos">
+      <h2>Présentation</h2>
+      <p class="lv-desc">${S.esc(b.desc) || '<span class="ash">L’auteur n’a pas encore écrit de présentation.</span>'}</p>
+      ${b.demo ? '<p class="note">Livre d’exemple : auteur et texte inventés pour montrer Sōzō. Il ne se vend pas.</p>' : ''}
+      <h2>Détails</h2>
+      <dl class="lv-details">
+        <div><dt>Pages publiées</dt><dd>${st.published}</dd></div>
+        ${st.scheduled ? `<div><dt>Pages à venir</dt><dd>${st.scheduled}</dd></div>` : ''}
+        <div><dt>Parution</dt><dd>${b.mode === 'progressive' ? 'Page après page' : 'Publié en entier'}</dd></div>
+        ${derniere ? `<div><dt>Dernière page</dt><dd>${S.esc(S.dayLong(new Date(derniere)))}</dd></div>` : ''}
+        <div><dt>Accès</dt><dd>${b.access === 'free' ? 'Gratuit, en entier' : b.access === 'paid' ? 'Payant' : `${st.free} page${st.free > 1 ? 's' : ''} offerte${st.free > 1 ? 's' : ''}, le reste payant`}</dd></div>
+        <div><dt>Langue</dt><dd>Français</dd></div>
+      </dl>
+      <div class="lv-tags"><span class="chip">${S.esc(b.cat)}</span>${b.verse ? '<span class="chip">Vers</span>' : ''}${b.mode === 'progressive' ? '<span class="chip">En cours</span>' : ''}</div>
+      ${upcoming.length ? `<h2>Prochaines parutions</h2><div class="cal">${upcoming.slice(0, 5).map(([d, ns]) => {
+        const dt = S.parse(d);
+        return `<div class="cal-row"><div class="cal-day"><b>${dt.getDate()}</b><span>${MO[dt.getMonth()]}</span></div><div>${S.esc(S.pagesRange(ns).replace(/^p/, 'P'))}<small>à ${dt.getHours()} h — contenu invisible jusque-là</small></div></div>`;
+      }).join('')}</div>` : ''}
+      <h2>L’auteur</h2>
+      <a class="author-card lv-carte" href="auteur.html?id=${encodeURIComponent(a.id)}"><img src="${S.img(a.photo, true)}" alt=""><div><strong>${S.esc(a.name)}</strong>${a.city ? `<span class="ash"> · ${S.esc(a.city)}</span>` : ''}<p>${S.esc(a.bio)}</p></div></a>
+    </section>
+
+    <section class="lv-panneau" id="lp-sommaire" role="tabpanel" aria-labelledby="lo-sommaire" hidden>
       <div class="strip" aria-label="État des pages">${strip}</div>
-      <div class="legend">
-        <span><i class="st-free"></i>Gratuite</span><span><i class="st-owned"></i>Achetée</span>
-        <span><i class="st-locked"></i>Payante</span><span><i class="st-soon"></i>À venir — date seulement</span>
-      </div>
+      <div class="legend"><span><i class="st-free"></i>Gratuite</span><span><i class="st-owned"></i>Achetée</span><span><i class="st-locked"></i>Payante</span><span><i class="st-soon"></i>À venir</span></div>
+      ${b.chapters.map((c, i) => {
+        const ps = visible.filter((p) => p.n >= c.from && p.n <= c.to);
+        if (!ps.length) return '';
+        return `<details class="chap"${i === 0 || ps.some((p) => p.n === prog) ? ' open' : ''}>
+          <summary><span><strong>${S.esc(c.t)}</strong> <span class="ash">· ${S.pagesRange(ps.map((p) => p.n))}</span></span>${S.icon('chevron')}</summary>
+          <div class="pl">${ps.map((p) => {
+            const [t, k, sub] = label(p.n);
+            const inner = `<span class="mono">Page ${p.n}</span><span>${S.esc(sub)}</span><span class="badge badge--${k}">${k === 'locked' ? S.icon('lock') : k === 'owned' ? S.icon('check') : k === 'soon' ? S.icon('clock') : ''}${S.esc(t)}</span>`;
+            return k === 'soon' ? `<div class="pl-row">${inner}</div>` : `<a class="pl-row" href="lire.html?id=${encodeURIComponent(b.id)}&p=${p.n}">${inner}</a>`;
+          }).join('')}</div></details>`;
+      }).join('') || `<div class="pl">${visible.map((p) => { const [t, k, sub] = label(p.n); return `<a class="pl-row" href="lire.html?id=${encodeURIComponent(b.id)}&p=${p.n}"><span class="mono">Page ${p.n}</span><span>${S.esc(sub)}</span><span class="badge badge--${k}">${S.esc(t)}</span></a>`; }).join('')}</div>`}
+      ${st.draft ? `<p class="note">${S.icon('eyeOff')} L'auteur prépare d'autres pages : elles n'apparaîtront qu'une fois programmées.</p>` : ''}
     </section>
 
-    <section class="sec" style="padding-top:40px">
-      <div class="cols">
-        <div class="panel">
-          <h2 data-ink-text="Sommaire"></h2>
-          ${b.chapters.map((c, i) => {
-            const ps = visible.filter((p) => p.n >= c.from && p.n <= c.to);
-            if (!ps.length) return '';
-            return `<details class="chap"${i === 0 || ps.some((p) => p.n === prog) ? ' open' : ''}>
-              <summary><span><strong>${S.esc(c.t)}</strong> <span class="mono ash">· ${S.pagesRange(ps.map((p) => p.n))}</span></span>${S.icon('chevron')}</summary>
-              <div class="pl">${ps.map((p) => {
-                const [t, k, sub] = label(p.n);
-                const inner = `<span class="mono">Page ${p.n}</span><span>${S.esc(sub)}</span><span class="badge badge--${k}">${k === 'locked' ? S.icon('lock') : k === 'owned' ? S.icon('check') : k === 'soon' ? S.icon('clock') : ''}${S.esc(t)}</span>`;
-                return k === 'soon' ? `<div class="pl-row">${inner}</div>` : `<a class="pl-row" href="lire.html?id=${b.id}&p=${p.n}">${inner}</a>`;
-              }).join('')}</div></details>`;
-          }).join('')}
-          ${st.draft ? `<p class="note">${S.icon('eyeOff')} L'auteur prépare d'autres pages : elles n'apparaîtront qu'une fois programmées.</p>` : ''}
-        </div>
-        <div>
-          <div class="panel">
-            <h2 data-ink-text="${b.price ? 'Les [[prix]]' : 'Gratuit, [[en entier]]'}"></h2>
-            ${b.price ? `<div class="price-box">
-              ${b.price.page != null ? `<div class="price-opt"><span>Une page<br><small>à l'unité</small></span><strong>${S.money(b.price.page)}</strong></div>` : ''}
-              ${b.price.chapter != null ? `<div class="price-opt"><span>Un chapitre<br><small>pages à venir comprises</small></span><strong>${S.money(b.price.chapter)}</strong></div>` : ''}
-              ${b.price.all != null ? `<div class="price-opt"><span>Tout le contenu payant<br><small>${allOpt ? S.esc(allOpt.detail) : ''}</small></span><strong>${S.money(b.price.all)}</strong></div>` : ''}
-            </div>
-            ${owned ? `<p class="note">${S.icon('check')} Vous possédez ${S.esc(S.pagesRange(owned.pages))}, achetées le ${S.dateShort(owned.date + 'T12:00')}.</p>` : ''}
-            <p class="note">${S.icon('tag')} Le prix s'affiche toujours avant l'achat. Ce que vous payez reste à vous.</p>`
-            : `<p>Toutes les pages de ce livre se lisent librement${st.scheduled ? ', y compris celles qui paraîtront' : ''}.</p>`}
-          </div>
-          ${upcoming.length ? `<div class="panel"><h2 data-ink-text="Prochaines [[parutions]]"></h2><div class="cal">${upcoming.slice(0, 5).map(([d, ns]) => {
-            const dt = S.parse(d);
-            return `<div class="cal-row"><div class="cal-day"><b>${dt.getDate()}</b><span>${MO[dt.getMonth()]}</span></div><div>${S.esc(S.pagesRange(ns).replace(/^p/, 'P'))}<small>à ${dt.getHours()} h — contenu invisible jusque-là</small></div></div>`;
-          }).join('')}</div></div>` : ''}
-          <div class="panel">
-            <a class="author-card" href="auteur.html?id=${a.id}"><img src="${S.img(a.photo, true)}" alt=""><div><strong>${S.esc(a.name)}</strong><span class="mono ash"> · ${S.esc(a.city)}</span><p>${S.esc(a.bio)}</p></div></a>
-          </div>
-        </div>
+    ${b.price ? `<section class="lv-panneau" id="lp-prix" role="tabpanel" aria-labelledby="lo-prix" hidden>
+      <div class="price-box">
+        ${b.price.page != null ? `<div class="price-opt"><span>Une page<br><small>à l'unité</small></span><strong>${S.money(b.price.page)}</strong></div>` : ''}
+        ${b.price.chapter != null ? `<div class="price-opt"><span>Un chapitre<br><small>pages à venir comprises</small></span><strong>${S.money(b.price.chapter)}</strong></div>` : ''}
+        ${b.price.all != null ? `<div class="price-opt"><span>Tout le contenu payant<br><small>${allOpt ? S.esc(allOpt.detail) : ''}</small></span><strong>${S.money(b.price.all)}</strong></div>` : ''}
       </div>
-    </section>
+      ${owned ? `<p class="note">${S.icon('check')} Vous possédez ${S.esc(S.pagesRange(owned.pages))}.</p>` : ''}
+      <p class="note">${S.icon('tag')} Le prix s'affiche toujours avant l'achat. Ce que vous payez reste à vous.</p>
+    </section>` : ''}
 
-    ${(() => {
-      const same = S.booksBy(a.id).filter((x) => x.id !== b.id);
-      const cat = D.books.filter((x) => x.cat === b.cat && x.id !== b.id && x.author !== a.id);
-      const more = same.length ? same : cat;
-      if (!more.length) return '';
-      return `<section class="sec"><div class="sec-head"><h2 class="sec-title" data-ink-text="${same.length ? `Du même [[auteur]]` : `Dans la même [[catégorie]]`}"></h2></div><div class="grid">${more.slice(0, 4).map((x) => S.bookCard(x)).join('')}</div></section>`;
-    })()}
+    ${voisins.length ? `<section class="lv-panneau" id="lp-similaires" role="tabpanel" aria-labelledby="lo-similaires" hidden>
+      <div class="grid">${voisins.slice(0, 8).map((x) => S.bookCard(x)).join('')}</div>
+    </section>` : ''}
   </div>`;
+
+  const ongl = [...document.querySelectorAll('[data-lo]')];
+  const montrer = (k) => {
+    ongl.forEach((t) => { const on = t.dataset.lo === k; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; document.getElementById('lp-' + t.dataset.lo).hidden = !on; });
+  };
+  ongl.forEach((t, i) => {
+    t.addEventListener('click', () => montrer(t.dataset.lo));
+    t.addEventListener('keydown', (e) => { const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!d) return; e.preventDefault(); const x = ongl[(i + d + ongl.length) % ongl.length]; montrer(x.dataset.lo); x.focus(); });
+  });
 
   const fb = $('#follow');
   const syncF = () => {
     const on = S.isFollowed(b.id);
-    fb.innerHTML = `${S.icon(on ? 'check' : 'heart')} ${on ? 'Suivi' : 'Suivre ce livre'}`;
+    fb.innerHTML = S.icon(on ? 'check' : 'plus');
     fb.setAttribute('aria-pressed', String(on));
+    fb.setAttribute('aria-label', on ? 'Vous suivez ce livre (ne plus suivre)' : 'Suivre ce livre');
+    fb.title = on ? 'Suivi' : 'Suivre ce livre';
   };
   fb.addEventListener('click', async () => {
     fb.disabled = true;
@@ -139,5 +142,5 @@ window.SOZO_PRET.then(() => {
   const ba = $('#buyAll');
   if (ba) ba.addEventListener('click', () => S.buy.recap(b, allOpt));
 
-  S.inkAll(); S.tilt(); S.reveals(); S.footer();
+  S.reveals(); S.footer();
 }).catch(window.SOZO_ERREUR);
