@@ -1,7 +1,7 @@
 /* Sōzō — page d'un auteur : portrait entouré à la plume, livres, calendrier. */
 window.SOZO_PRET.then(() => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
-  S.shell('decouvrir');
+  S.shell('explorer');
   const main = $('#main');
   const id = S.q('id') || '';
   if (!D.authors[id]) {

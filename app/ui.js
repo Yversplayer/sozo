@@ -177,6 +177,8 @@ window.SOZO = (() => {
         if (n) cloche.insertAdjacentHTML('beforeend', `<span class="dot dot--abs">${n > 99 ? '99+' : n}</span>`);
       }
       if (lien) { lien.querySelectorAll('.dot').forEach((x) => x.remove()); if (n) lien.insertAdjacentHTML('beforeend', `<span class="dot" aria-label="${n} nouveauté${n > 1 ? 's' : ''}">${n > 99 ? '99+' : n}</span>`); }
+      const pastille = document.querySelector('.nav [data-nav="notifications"] .nav-dot');
+      if (pastille) { pastille.hidden = !n; pastille.textContent = n > 99 ? '99+' : String(n); pastille.setAttribute('aria-label', `${n} non lue${n > 1 ? 's' : ''}`); }
     }).catch(() => {});
   }
   /* Appareil déjà autorisé : on rappelle au serveur son abonnement une fois
@@ -197,22 +199,98 @@ window.SOZO = (() => {
     return `${nav} · ${os}`;
   }
 
-  /* ─── couverture : photo + typographie (livres fictifs) ─── */
+  /* ─── couverture : photo + typographie ───
+     19/10/2026 : l'auteur peut tout choisir (b.apparence.couv, validée par le
+     serveur) et envoyer sa propre image (b.image = empreinte). Sans réglage,
+     le rendu d'origine est inchangé (la landing en dépend). Les valeurs
+     viennent d'un AUTRE auteur : elles sont revérifiées ici avant d'entrer
+     dans un attribut style (couleur #RRGGBB, entiers bornés, listes fermées). */
+  const POLICES = {
+    cormorant: "'Cormorant Garamond', Georgia, serif", inter: "'Inter', system-ui, sans-serif",
+    georgia: "Georgia, 'Times New Roman', serif", didone: "Didot, 'Bodoni 72', 'Bodoni MT', Georgia, serif",
+    moderne: "'Avenir Next', 'Segoe UI', system-ui, sans-serif", machine: "'Courier New', Courier, monospace",
+    manuscrite: "'Snell Roundhand', 'Segoe Script', 'Apple Chancery', 'Brush Script MT', cursive"
+  };
+  const NOMS_POLICES = { cormorant: 'Cormorant (serif élégante)', inter: 'Inter (sans serif)', georgia: 'Georgia (classique)', didone: 'Didone (contrastée)', moderne: 'Moderne', machine: 'Machine à écrire', manuscrite: 'Manuscrite' };
+  const coul = (v, d) => (/^#[0-9a-f]{6}$/i.test(v || '') ? v : d);
+  const ent = (v, a, z, d) => (Number.isInteger(v) && v >= a && v <= z ? v : d);
+  const couvUrl = (b) => b.image && b.id ? `/api/livres/${encodeURIComponent(b.id)}/couverture?v=${encodeURIComponent(b.image)}` : null;
+  const OVAL = '<svg class="cv-oval" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50,6 C88,4 98,22 97,50 C96,82 76,96 49,95 C16,94 3,76 4,48 C5,18 20,7 50,6 Z"/></svg>';
   function cover(b, opts = {}) {
     const a = author(b.author);
+    const c = (b.apparence && b.apparence.couv) || null;
+    if (opts.imageUrl && !b.image) b = { ...b, image: 'apercu' };
     const st = b.cover.style;
-    return `<div class="cv cv--${st}${opts.d3 === false ? '' : ' cv3d'}${opts.cls ? ' ' + opts.cls : ''}" style="--cv:url('${img(b.cover.img, !opts.big)}')">
+    const tail = `${b.demo ? '<span class="cv-exemple">Exemple</span>' : ''}`;
+    const cls = `cv${opts.d3 === false ? '' : ' cv3d'}${opts.cls ? ' ' + opts.cls : ''}`;
+    if (!c && !b.image) {
+      return `<div class="${cls} cv--${st}" style="--cv:url('${img(b.cover.img, !opts.big)}')">
       <div class="cv-face">
         <span class="cv-photo" aria-hidden="true"></span>
         <span class="cv-author">${esc(a.name)}</span>
         <span class="cv-title">${esc(b.title)}</span>
         <span class="cv-cat">${esc(b.cat)}</span>
-        ${b.demo ? '<span class="cv-exemple">Exemple</span>' : ''}
-        ${st === 'd' ? '<svg class="cv-oval" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50,6 C88,4 98,22 97,50 C96,82 76,96 49,95 C16,94 3,76 4,48 C5,18 20,7 50,6 Z"/></svg>' : ''}
+        ${tail}
+        ${st === 'd' ? OVAL : ''}
+      </div>
+      <span class="cv-spine" aria-hidden="true"></span><span class="cv-edge" aria-hidden="true"></span>
+    </div>`;
+    }
+    const k = c || {};
+    const fond = k.fond || (b.image ? 'image' : 'photo');
+    const url = fond === 'image' ? (opts.imageUrl || couvUrl(b)) : null;   // imageUrl : aperçu d'une image pas encore envoyée
+    const photo = fond === 'photo' || (fond === 'image' && !url);
+    const v = [];
+    if (url) v.push(`--cv:url('${url}')`);
+    else if (photo) v.push(`--cv:url('${img(b.cover.img, !opts.big)}')`);
+    if (fond === 'uni') v.push(`--cv-fond:${coul(k.couleur1, '#241C1D')}`);
+    if (fond === 'degrade') v.push(`--cv-fond:linear-gradient(${ent(k.angle, 0, 360, 160)}deg, ${coul(k.couleur1, '#241C1D')}, ${coul(k.couleur2, '#6B0F1A')})`);
+    v.push(`--cv-x:${ent(k.cadrage_x, 0, 100, 50)}%`, `--cv-y:${ent(k.cadrage_y, 0, 100, 50)}%`, `--cv-zoom:${ent(k.zoom, 100, 300, 100) / 100}`);
+    if (k.voile != null) v.push(`--cv-voile:${ent(k.voile, 0, 90, 35) / 100}`, `--cv-voile-c:${coul(k.voile_couleur, '#0C0909')}`);
+    v.push(`--cv-police:${POLICES[k.police_titre] || POLICES.cormorant}`, `--cv-taille:${ent(k.taille_titre, 50, 240, 100) / 100}`, `--cv-graisse:${[300, 400, 500, 600, 700, 800].includes(k.graisse) ? k.graisse : 600}`,
+      `--cv-esp:${ent(k.espacement, -5, 40, k.capitales ? 10 : -2) / 100}em`, `--cv-titre-c:${coul(k.couleur_titre, '#F8F5EB')}`, `--cv-texte-c:${coul(k.couleur_texte, k.couleur_titre ? coul(k.couleur_titre, '#F8F5EB') : '#F8F5EB')}`,
+      `--cv-orn:${coul(k.couleur_ornement, '#D4AF37')}`);
+    const al = { gauche: 'start', centre: 'center', droite: 'end' }[k.alignement] || 'start';
+    const pos = { haut: 'haut', milieu: 'milieu', bas: 'bas' }[k.position] || 'bas';
+    const orn = ['ovale', 'bandeau', 'cadre', 'filet', 'coins'].includes(k.ornement) ? k.ornement : 'aucun';
+    const seule = k.image_seule === true && !!url;
+    const voile = k.voile != null ? ' cv-voile' : '';
+    return `<div class="${cls} cv--perso cv-pos-${pos} cv-al-${al} cv-orn-${orn}${k.capitales ? ' cv-caps' : ''}${k.italique ? ' cv-ital' : ''}${seule ? ' cv-seule' : ''}${voile}${url || photo ? ' cv-a-photo' : ''}" style="${esc(v.join(';'))}">
+      <div class="cv-face"${fond === 'uni' || fond === 'degrade' ? ' data-fond' : ''}>
+        <span class="cv-photo" aria-hidden="true"></span>
+        ${seule ? `<span class="sr">${esc(b.title)} — ${esc(a.name)}</span>` : `
+        <span class="cv-author"${k.afficher_auteur === false ? ' hidden' : ''}>${esc(a.name)}</span>
+        <span class="cv-bloc"><span class="cv-title">${esc(b.title)}</span>${k.sous_titre ? `<span class="cv-sous">${esc(k.sous_titre)}</span>` : ''}${orn === 'filet' ? '<i class="cv-filet" aria-hidden="true"></i>' : ''}</span>
+        <span class="cv-cat"${k.afficher_categorie === false ? ' hidden' : ''}>${esc(b.cat)}</span>`}
+        ${orn === 'ovale' && !seule ? OVAL : ''}${orn === 'coins' && !seule ? '<i class="cv-coin" aria-hidden="true"></i><i class="cv-coin" aria-hidden="true"></i><i class="cv-coin" aria-hidden="true"></i><i class="cv-coin" aria-hidden="true"></i>' : ''}
+        ${tail}
       </div>
       <span class="cv-spine" aria-hidden="true"></span><span class="cv-edge" aria-hidden="true"></span>
     </div>`;
   }
+
+  /* ─── mise en page intérieure choisie par l'auteur (b.apparence.page) ───
+     Partagée par la liseuse et par l'aperçu de l'atelier : ce que l'auteur
+     règle est exactement ce que le lecteur verra. Une ligne « *** » devient
+     le séparateur choisi. Tout le texte passe par esc() (ou par la Bible
+     intégrée, qui échappe elle-même). */
+  const SEPARATEURS = { etoiles: '⁂', fleuron: '❦', croix: '✝', trait: '———' };
+  const mise = {
+    style(pg = {}) {
+      const v = [`--pg-police:${POLICES[pg.police] || POLICES.cormorant}`, `--pg-interligne:${(Number.isInteger(pg.interligne) && pg.interligne >= 130 && pg.interligne <= 230 ? pg.interligne : 170) / 100}`];
+      if (/^#[0-9a-f]{6}$/i.test(pg.accent || '')) v.push(`--pg-accent:${pg.accent}`);
+      return v.join(';');
+    },
+    classes(pg = {}) {
+      return `pg-al-${pg.alignement === 'justifie' ? 'justifie' : 'gauche'} pg-lt-${['aucune', 'simple', 'ornee'].includes(pg.lettrine) ? pg.lettrine : 'simple'} pg-ch-${['capitales', 'italique'].includes(pg.titre_chapitre) ? pg.titre_chapitre : 'classique'}`;
+    },
+    paragraphes(texte, pg = {}, ligne) {
+      const sep = SEPARATEURS[pg.separateur];
+      const f = ligne || ((t) => (window.SOZO && SOZO.bible ? SOZO.bible.linkify(t) : esc(t)) || '&nbsp;');
+      return String(texte || '').split('\n').map((t) => /^\s*(\*\s*){3}\s*$/.test(t)
+        ? `<p class="pg-sep" role="separator">${sep ? esc(sep) : '&nbsp;'}</p>` : `<p>${f(t)}</p>`).join('');
+    }
+  };
 
   function bookCard(b, opts = {}) {
     const a = author(b.author), st = stats(b), pf = priceFrom(b);
@@ -322,56 +400,170 @@ window.SOZO = (() => {
     clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('is-on'), 3200);
   }
 
-  /* ─── coquille : barre du haut, bandeau démo, barre d'onglets mobile ─── */
+  /* ─── coquille : barre latérale (ordinateur), barre du bas (téléphone) ───
+     19/10/2026, demande du propriétaire : « une slide bar comme pour Klassio,
+     mais sur un téléphone une barre horizontale », et l'outillage AUTEUR à
+     portée de quelques clics — on développe d'abord pour les auteurs.
+     · ordinateur : une barre d'icônes à gauche, qui se déplie au survol, au
+       clavier (focus) ou avec le bouton menu (épinglée, retenue sur l'appareil) ;
+     · téléphone : cinq onglets en bas, « Écrire » au centre ;
+     · aria-expanded dit toujours la vérité ; le mouvement réduit coupe l'animation. */
   const sess = () => (window.SozoAuth && SozoAuth.session) || {};
   const initials = () => { const n = (sess().name || '?').trim().split(/\s+/); return ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase(); };
+  const ALIAS = { decouvrir: 'accueil', suivis: 'bibliotheque', studio: 'atelier' };
+  const NAV = {
+    ecrire: [
+      ['atelier', 'studio.html', 'Mon atelier', 'feather'],
+      ['nouveau', 'studio.html?action=nouveau', 'Nouveau livre', 'plus'],
+      ['ecrire', 'studio.html?action=ecrire', 'Écrire une page', 'pen'],
+      ['importer', 'studio.html?action=importer', 'Importer un manuscrit', 'upload']
+    ],
+    lire: [
+      ['accueil', 'decouvrir.html', 'Accueil', 'home'],
+      ['explorer', 'explorer.html', 'Explorer', 'grid'],
+      ['bibliotheque', 'suivis.html', 'Bibliothèque', 'library'],
+      ['bible', 'bible.html', 'La Bible', 'book']
+    ],
+    moi: [
+      ['notifications', 'suivis.html#notifications', 'Notifications', 'bell'],
+      ['compte', 'compte.html', 'Mon compte', 'user']
+    ]
+  };
+  const ONGLETS = [['accueil', 'decouvrir.html', 'Accueil', 'home'], ['explorer', 'explorer.html', 'Explorer', 'grid'],
+    ['atelier', 'studio.html', 'Écrire', 'feather'], ['bibliotheque', 'suivis.html', 'Biblio.', 'library'], ['bible', 'bible.html', 'Bible', 'book']];
+  const ouvertGarde = () => { try { return localStorage.getItem('sozo-nav-ouverte') === '1'; } catch (e) { return false; } };
   function shell(active) {
+    active = ALIAS[active] || active;
     const n = unread();
-    const links = [
-      ['decouvrir', 'decouvrir.html', 'Découvrir', 'home'],
-      ['suivis', 'suivis.html', 'Mes suivis', 'heart'],
-      ['bible', 'bible.html', 'Bible', 'book'],
-      ['studio', 'studio.html', 'Studio auteur', 'pen']
-    ];
+    const lien = ([k, h, l, ic]) => `<a class="nav-a${active === k ? ' is-active' : ''}" href="${h}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}">${icon(ic)}<span class="nav-l">${l}</span>${k === 'notifications' ? '<span class="nav-dot" hidden></span>' : ''}</a>`;
+    document.body.classList.add('a-nav');
+    const nav = document.createElement('aside');
+    nav.className = 'nav'; nav.id = 'sozoNav'; nav.setAttribute('aria-label', 'Navigation principale');
+    nav.innerHTML = `<div class="nav-in">
+        <div class="nav-tete">
+          <button class="nav-menu" type="button" id="navMenu" aria-controls="sozoNav" aria-expanded="false" aria-label="Déplier le menu">${icon('sliders')}</button>
+          <a class="nav-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${window.SOZO_LOGO || 'Sōzō'}</a>
+        </div>
+        <p class="nav-sec"><span>Écrire</span></p>
+        ${NAV.ecrire.map(lien).join('')}
+        <p class="nav-sec"><span>Lire</span></p>
+        ${NAV.lire.map(lien).join('')}
+        <div class="nav-bas">
+          ${NAV.moi.map(lien).join('')}
+          <button class="nav-a" type="button" data-visite>${icon('spark')}<span class="nav-l">Visite guidée</span></button>
+        </div>
+      </div>`;
+    document.body.prepend(nav);
     const head = document.createElement('header');
     head.className = 'top';
     head.innerHTML = `
       <div class="top-in">
-        <a class="top-logo" href="${root}index.html" aria-label="Sōzō — accueil">${window.SOZO_LOGO || 'Sōzō'}</a>
-        <nav class="top-nav" aria-label="Navigation">
-          ${links.map(([k, h, l]) => `<a class="top-link${active === k ? ' is-active' : ''}" href="${h}"${active === k ? ' aria-current="page"' : ''}>${l}${k === 'suivis' && n ? `<span class="dot" aria-label="${n} nouveauté${n > 1 ? 's' : ''}">${n}</span>` : ''}</a>`).join('')}
-        </nav>
+        <a class="top-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${window.SOZO_LOGO || 'Sōzō'}</a>
+        <a class="top-cherche" href="explorer.html#q">${icon('search')}<span>Rechercher un livre, un auteur, un thème…</span></a>
         <div class="top-tools">
-          <a class="icon-btn" href="decouvrir.html#catalogue" aria-label="Rechercher un livre">${icon('search')}</a>
+          <a class="btn btn--sm top-ecrire" href="studio.html?action=ecrire">${icon('pen')} Écrire</a>
+          <a class="icon-btn top-loupe" href="explorer.html#q" aria-label="Rechercher un livre">${icon('search')}</a>
           <a class="icon-btn" href="suivis.html#notifications" aria-label="Notifications${n ? ` : ${n} nouvelle${n > 1 ? 's' : ''}` : ''}">${icon('bell')}${n ? `<span class="dot dot--abs">${n}</span>` : ''}</a>
           <div class="acct">
             <button class="avatar" type="button" id="acctBtn" aria-haspopup="true" aria-expanded="false" aria-controls="acctMenu" aria-label="Mon compte">${esc(initials())}</button>
             <div class="acct-menu" id="acctMenu" hidden>
               <p class="acct-name">${esc(sess().name || 'Mon compte')}</p>
               <p class="acct-mail">${esc(sess().email || '')}</p>
-              <p class="mono ash">${sess().role === 'auteur' ? 'Lecteur et auteur' : 'Lecteur'}${sess().email_verifie ? '' : ' · e-mail à confirmer'}</p>
+              <p class="mono ash">${sess().role === 'auteur' ? 'Auteur et lecteur' : 'Lecteur'}${sess().email_verifie ? '' : ' · e-mail à confirmer'}</p>
               <a href="compte.html">${icon('user')} Mon compte</a>
-              <a href="suivis.html">${icon('heart')} Mes suivis</a>
-              <a href="studio.html">${icon('pen')} Mon studio</a>
+              <a href="studio.html">${icon('feather')} Mon atelier</a>
+              <a href="suivis.html">${icon('library')} Ma bibliothèque</a>
+              <button type="button" data-visite>${icon('spark')} Visite guidée</button>
               <button type="button" id="logout">${icon('left')} Se déconnecter</button>
             </div>
           </div>
         </div>
       </div>`;
-    document.body.prepend(head);
+    nav.after(head);
     const tabs = document.createElement('nav');
     tabs.className = 'tabs'; tabs.setAttribute('aria-label', 'Navigation');
-    tabs.innerHTML = links.map(([k, h, l, ic]) => `<a href="${h}" class="${active === k ? 'is-active' : ''}"${active === k ? ' aria-current="page"' : ''}>${icon(ic)}<span>${l.replace(' auteur', '')}</span></a>`).join('');
+    tabs.innerHTML = ONGLETS.map(([k, h, l, ic]) => `<a href="${h}" class="${active === k ? 'is-active' : ''}${k === 'atelier' ? ' tabs-ecrire' : ''}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}">${icon(ic)}<span>${l}</span></a>`).join('');
     document.body.appendChild(tabs);
+
+    /* barre latérale : épinglée (bouton), ou dépliée le temps du survol / du clavier */
+    const menu = nav.querySelector('#navMenu');
+    const etat = () => {
+      const ouvert = nav.classList.contains('is-epinglee') || nav.classList.contains('is-survol');
+      menu.setAttribute('aria-expanded', String(ouvert));
+      menu.setAttribute('aria-label', nav.classList.contains('is-epinglee') ? 'Replier le menu' : 'Déplier le menu');
+    };
+    if (ouvertGarde()) { nav.classList.add('is-epinglee'); document.body.classList.add('nav-epinglee'); }
+    menu.addEventListener('click', () => {
+      const v = !nav.classList.contains('is-epinglee');
+      nav.classList.toggle('is-epinglee', v); nav.classList.remove('is-survol');
+      document.body.classList.toggle('nav-epinglee', v);
+      try { localStorage.setItem('sozo-nav-ouverte', v ? '1' : '0'); } catch (e) {}
+      etat();
+    });
+    let tSortie;
+    if (matchMedia('(hover: hover)').matches) {
+      nav.addEventListener('pointerenter', () => { clearTimeout(tSortie); nav.classList.add('is-survol'); etat(); });
+      nav.addEventListener('pointerleave', () => { tSortie = setTimeout(() => { nav.classList.remove('is-survol'); etat(); }, 180); });
+    }
+    nav.addEventListener('focusin', () => { nav.classList.add('is-survol'); etat(); });
+    nav.addEventListener('focusout', (e) => { if (!nav.contains(e.relatedTarget)) { nav.classList.remove('is-survol'); etat(); } });
+    nav.addEventListener('keydown', (e) => { if (e.key === 'Escape') { nav.classList.remove('is-survol'); etat(); menu.focus(); } });
+    etat();
+
     const ab = head.querySelector('#acctBtn'), am = head.querySelector('#acctMenu');
     const closeMenu = () => { am.hidden = true; ab.setAttribute('aria-expanded', 'false'); };
     ab.addEventListener('click', (e) => { e.stopPropagation(); am.hidden = !am.hidden; ab.setAttribute('aria-expanded', String(!am.hidden)); });
     document.addEventListener('click', (e) => { if (!e.target.closest('.acct')) closeMenu(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
     head.querySelector('#logout').addEventListener('click', () => SozoAuth.close());
+    document.addEventListener('click', (e) => { if (e.target.closest('[data-visite]')) { closeMenu(); visite(); } });
     majCloche(); synchroAppareil();
     const onScroll = () => head.classList.toggle('is-scrolled', scrollY > 8);
     addEventListener('scroll', onScroll, { passive: true }); onScroll();
+  }
+
+  /* ─── visite guidée : quatre bulles posées sur la vraie navigation ───
+     Pour la personne qui arrive et « ne comprend pas ce qu'elle doit faire »
+     (retour du propriétaire, 19/10/2026). Toujours rejouable (menu du compte). */
+  function visite() {
+    const tel = matchMedia('(max-width: 899px)').matches;
+    const cible = (k) => document.querySelector(tel ? `.tabs [data-nav="${k}"]` : `.nav [data-nav="${k}"]`) || document.querySelector(`[data-nav="${k}"]`);
+    const ETAPES = [
+      ['atelier', 'Écrire votre livre', 'Votre atelier : créez un livre, écrivez page par page ou importez un manuscrit (Word, PDF, EPUB), dessinez votre couverture, puis publiez — gratuitement ou contre paiement.'],
+      ['accueil', 'L’accueil', 'Ce qui paraît, ce que vous lisez, et vos premiers pas : Sōzō vous indique toujours la prochaine étape.'],
+      ['explorer', 'Explorer', 'Tout le catalogue, par catégorie, avec une recherche par titre, auteur ou thème.'],
+      ['bibliotheque', 'Votre bibliothèque', 'Les livres que vous suivez, votre progression, vos passages épinglés et vos notifications.']
+    ];
+    let i = 0;
+    const bulle = document.createElement('div');
+    bulle.className = 'visite'; bulle.setAttribute('role', 'dialog'); bulle.setAttribute('aria-modal', 'false'); bulle.setAttribute('aria-labelledby', 'visiteT');
+    document.body.appendChild(bulle);
+    const nav = document.querySelector('.nav');
+    const fin = () => { bulle.remove(); document.querySelectorAll('.is-visite').forEach((x) => x.classList.remove('is-visite')); if (nav) nav.classList.remove('is-survol'); try { localStorage.setItem('sozo-visite-vue', '1'); } catch (e) {} };
+    const montrer = () => {
+      const [k, t, d] = ETAPES[i], el = cible(k);
+      document.querySelectorAll('.is-visite').forEach((x) => x.classList.remove('is-visite'));
+      if (nav && !tel) nav.classList.add('is-survol');
+      bulle.innerHTML = `<p class="mono">Étape ${i + 1} sur ${ETAPES.length}</p><h2 id="visiteT">${esc(t)}</h2><p>${esc(d)}</p>
+        <div class="visite-acts"><button type="button" class="btn btn--ghost btn--sm" data-v="fin">Passer</button>
+        ${i ? '<button type="button" class="btn btn--ghost btn--sm" data-v="prec">Précédent</button>' : ''}
+        <button type="button" class="btn btn--accent btn--sm" data-v="suiv">${i < ETAPES.length - 1 ? 'Suivant' : 'C’est parti'}</button></div>`;
+      if (el) {
+        el.classList.add('is-visite');
+        const r = el.getBoundingClientRect();
+        if (tel) { bulle.style.left = '12px'; bulle.style.right = '12px'; bulle.style.top = ''; bulle.style.bottom = (innerHeight - r.top + 14) + 'px'; }
+        // le menu se déplie à 256 px : la bulle se pose à sa droite
+        else { bulle.style.left = (Math.max(r.right, nav ? 256 : 0) + 18) + 'px'; bulle.style.top = Math.max(12, Math.min(innerHeight - 260, r.top - 20)) + 'px'; bulle.style.right = ''; bulle.style.bottom = ''; }
+      }
+      bulle.querySelector('[data-v="suiv"]').focus();
+    };
+    bulle.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-v]'); if (!b) return;
+      if (b.dataset.v === 'fin' || (b.dataset.v === 'suiv' && i === ETAPES.length - 1)) return fin();
+      i += b.dataset.v === 'suiv' ? 1 : -1; montrer();
+    });
+    bulle.addEventListener('keydown', (e) => { if (e.key === 'Escape') fin(); });
+    setTimeout(montrer, nav && !tel ? 60 : 0);
   }
 
   function footer() {
@@ -379,8 +571,8 @@ window.SOZO = (() => {
     f.className = 'foot';
     f.innerHTML = `<div class="foot-in">
       <div class="foot-brand">${window.SOZO_LOGO || ''}<p>Publier et lire, à son rythme. Gratuit, payant ou mixte : l'auteur décide, le lecteur sait.</p><p class="foot-tag">Heal your heart · Grown your faith · Glow your spirit</p></div>
-      <div><p class="mono ash">LIRE</p><a href="decouvrir.html">Découvrir</a><a href="decouvrir.html#catalogue">Catalogue</a><a href="suivis.html">Mes suivis</a></div>
-      <div><p class="mono ash">ÉCRIRE</p><a href="studio.html">Studio auteur</a><a href="studio.html?tab=import">Importer un manuscrit</a><a href="studio.html#revenus">Revenus</a></div>
+      <div><p class="mono ash">LIRE</p><a href="decouvrir.html">Accueil</a><a href="explorer.html">Explorer le catalogue</a><a href="suivis.html">Ma bibliothèque</a></div>
+      <div><p class="mono ash">ÉCRIRE</p><a href="studio.html">Mon atelier</a><a href="studio.html?action=ecrire">Écrire une page</a><a href="studio.html?action=importer">Importer un manuscrit</a><a href="studio.html#revenus">Revenus</a></div>
       <div><p class="mono ash">Sōzō</p><a href="compte.html">Mon compte</a><a href="bible.html">La Bible intégrée</a><a href="${root}index.html">La plateforme</a><a href="${root}index.html#pages">Gratuit, payant, programmé</a></div>
     </div>
     <p class="foot-legal mono ash">© 2026 Sōzō — PLUS QU’UNE APPLICATION, UN CHEMIN · PHOTOS LIBRES (CC0)</p>`;
@@ -412,5 +604,5 @@ window.SOZO = (() => {
 
   return { D, leger, esc, icon, img, money, dateLong, dateShort, dayLong, relDays, parse, now, book, author, booksBy, status, access, readable,
            visiblePages, stats, accessLabel, priceFrom, chapterOf, pagesRange, follows, isFollowed, toggleFollow, notifications, markSeen,
-           unread, majCloche, libelleAppareil, sess, cover, bookCard, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced };
+           unread, majCloche, libelleAppareil, sess, cover, bookCard, visite, POLICES, NOMS_POLICES, couvUrl, mise, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced };
 })();

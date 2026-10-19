@@ -53,8 +53,8 @@
           <label class="cx-field"><span>Mot de passe <small>8 caractères au moins</small></span><span class="cx-pw"><input type="password" name="pw" autocomplete="new-password" required minlength="8"><button type="button" class="cx-eye" aria-label="Afficher le mot de passe" aria-pressed="false">${S.icon('eye')}</button></span>
             <span class="cx-meter" aria-hidden="true"><i></i></span></label>
           <fieldset class="cx-role"><legend>Je viens sur Sōzō pour…</legend>
-            <label><input type="radio" name="role" value="lecteur" checked><span>${S.icon('book')}<b>Lire</b><small>Découvrir, suivre, acheter des pages</small></span></label>
-            <label><input type="radio" name="role" value="auteur"><span>${S.icon('feather')}<b>Lire et publier</b><small>Ouvrir mon studio d’auteur</small></span></label>
+            <label><input type="radio" name="role" value="auteur" checked><span>${S.icon('feather')}<b>Écrire et publier</b><small>Mon atelier d’auteur (je peux aussi lire)</small></span></label>
+            <label><input type="radio" name="role" value="lecteur"><span>${S.icon('book')}<b>Lire seulement</b><small>Découvrir, suivre, acheter des pages</small></span></label>
           </fieldset>
           <label class="cx-check"><input type="checkbox" name="cgu" required><span>J’accepte les conditions d’utilisation et la politique de confidentialité <small>(textes à rédiger avant le lancement)</small>.</span></label>
           <p class="cx-err" role="alert"></p>
@@ -158,6 +158,9 @@
       return fail(f, r.d.erreur || 'La demande a échoué.', champ);
     }
     SozoAuth.garder(r.d.moi);
+    // Nouveau compte : on accueille et on guide (19/10/2026 — une personne qui
+    // a reçu le lien « ne comprenait pas ce qu'elle devait faire »)
+    if (url === '/api/comptes' && suite === 'decouvrir.html') { location.replace(r.d.moi && r.d.moi.role === 'auteur' ? 'studio.html?bienvenue=1' : 'decouvrir.html?bienvenue=1'); return; }
     location.replace(suite);
   }
   $('#fIn').addEventListener('submit', (e) => {

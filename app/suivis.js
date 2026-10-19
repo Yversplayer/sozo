@@ -1,12 +1,18 @@
-/* Sōzō — mes suivis : notifications (venues du serveur : parutions,
-   paiements, ventes, sécurité…) + livres suivis et progression. */
+/* Sōzō — ma bibliothèque (19/10/2026, ex-« Mes suivis ») : trois onglets.
+   En cours (livres suivis, progression, prochaines parutions), Épingles
+   (passages gardés, sur tous les appareils), Notifications (venues du serveur :
+   parutions, paiements, ventes, sécurité…). */
 window.SOZO_PRET.then(async () => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
   S.shell('suivis');
   const ICONES = { parution: 'book', paiement: 'tag', vente: 'star', reversement: 'send', plume: 'feather', moderation: 'shield', securite: 'lock', test: 'bell' };
-  let notifs = [];
+  let notifs = [], epingles = null;
   const charger = async () => { const r = await window.SOZO_API('GET', '/api/notifications'); notifs = r.ok ? r.d.liste : null; };
-  await charger();
+  const chargerEpingles = async () => { const r = await window.SOZO_API('GET', '/api/epingles'); epingles = r.ok ? r.d.epingles : null; };
+  await Promise.all([charger(), chargerEpingles()]);
+  const ONGLETS = [['livres', 'En cours', 'book'], ['epingles', 'Épingles', 'tag'], ['notifications', 'Notifications', 'bell']];
+  let onglet = (location.hash || '').slice(1);
+  if (!ONGLETS.some(([k]) => k === onglet)) onglet = 'livres';
   const main = $('#main');
 
   function render() {
@@ -16,12 +22,23 @@ window.SOZO_PRET.then(async () => {
     upcoming.sort((x, y) => S.parse(x.st.next.date) - S.parse(y.st.next.date));
     const ago = (iso) => { const d = -S.relDays(iso); return d <= 0 ? "aujourd'hui" : d === 1 ? 'hier' : `il y a ${d} jours`; };
 
+    const nonLues = notifs ? notifs.filter((x) => !x.lu_le).length : 0;
     main.innerHTML = `<div class="wrap">
       <section class="sec" style="padding-top:44px">
         <p class="kicker">Mon espace lecteur</p>
-        <h1 class="sec-title" style="font-size:clamp(36px,4.6vw,62px)" data-ink-text="Mes [[suivis]]"></h1>
+        <h1 class="sec-title" style="font-size:clamp(36px,4.6vw,62px)" data-ink-text="Ma [[bibliothèque]]"></h1>
+        <div class="bi-onglets" role="tablist" aria-label="Ma bibliothèque">${ONGLETS.map(([k, l, ic]) => `<button type="button" role="tab" id="bi-${k}" aria-controls="biPanel" aria-selected="${onglet === k}" tabindex="${onglet === k ? 0 : -1}" data-bi="${k}">${S.icon(ic)} ${l}${k === 'notifications' && nonLues ? ` <span class="dot">${nonLues}</span>` : ''}${k === 'epingles' && epingles && epingles.length ? ` <span class="bi-n">${epingles.length}</span>` : ''}</button>`).join('')}</div>
       </section>
-      <section class="sec" id="notifications" style="padding-top:34px">
+      <div id="biPanel" role="tabpanel" aria-labelledby="bi-${onglet}">
+      <section class="sec" id="epingles" style="padding-top:28px"${onglet === 'epingles' ? '' : ' hidden'}>
+        ${epingles === null ? `<p class="warn">${S.icon('x')}<span>Épingles indisponibles pour le moment.</span></p>`
+          : epingles.length ? (() => { const par = {}; epingles.forEach((e) => (par[e.livre] = par[e.livre] || { titre: e.titre, l: [] }).l.push(e)); return Object.entries(par).map(([slug, g]) => `<div class="panel bi-pins">
+              <h2>${S.esc(g.titre)}</h2>
+              ${g.l.map((e) => `<div class="bi-pin"><blockquote>« ${S.esc(e.extrait)} »</blockquote><div class="row-acts"><a class="btn btn--ghost btn--sm" href="lire.html?id=${encodeURIComponent(slug)}&p=${e.n}">Page ${e.n} ${S.icon('right')}</a><button class="btn btn--ghost btn--sm" type="button" data-desep="${e.id}">Retirer</button></div></div>`).join('')}
+            </div>`).join(''); })()
+          : `<div class="empty"><strong>Aucune épingle pour l’instant</strong>Dans la liseuse, sélectionnez une phrase qui vous parle, puis touchez « Épingler ». Elle vous attendra ici, sur tous vos appareils.</div>`}
+      </section>
+      <section class="sec" id="notifications" style="padding-top:28px"${onglet === 'notifications' ? '' : ' hidden'}>
         <div class="cols">
           <div class="panel">
             <div class="sec-head" style="margin-bottom:10px"><h2 style="margin:0">Notifications</h2>
@@ -41,7 +58,7 @@ window.SOZO_PRET.then(async () => {
           </div>
         </div>
       </section>
-      <section class="sec" id="livres" style="padding-top:40px">
+      <section class="sec" id="livres" style="padding-top:28px"${onglet === 'livres' ? '' : ' hidden'}>
         <div class="sec-head"><h2 class="sec-title" data-ink-text="Livres [[suivis]]"></h2><span class="mono ash">${fol.length} livre${fol.length > 1 ? 's' : ''}</span></div>
         ${fol.length ? `<div class="follow-list">${fol.map((b) => {
           const st = S.stats(b), vis = S.visiblePages(b), pub = vis.filter((p) => S.access(b, p.n) !== 'soon');
@@ -56,9 +73,21 @@ window.SOZO_PRET.then(async () => {
               <button class="btn btn--ghost btn--sm" type="button" data-unf="${b.id}">Ne plus suivre</button></div>
           </div>`;
         }).join('')}</div>`
-        : `<div class="empty"><strong>Vous ne suivez aucun livre</strong>Suivez un livre pour voir ses nouvelles pages ici.<br><br><a class="btn" href="decouvrir.html#catalogue">Parcourir le catalogue</a></div>`}
+        : `<div class="empty"><strong>Vous ne suivez aucun livre</strong>Suivez un livre pour voir ses nouvelles pages ici.<br><br><a class="btn" href="explorer.html">Parcourir le catalogue</a></div>`}
       </section>
+      </div>
     </div>`;
+    const tabs = [...document.querySelectorAll('[data-bi]')];
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => { onglet = t.dataset.bi; history.replaceState(null, '', '#' + onglet); render(); document.getElementById('bi-' + onglet).focus(); });
+      t.addEventListener('keydown', (e) => { const k = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!k) return; e.preventDefault(); onglet = tabs[(i + k + tabs.length) % tabs.length].dataset.bi; history.replaceState(null, '', '#' + onglet); render(); document.getElementById('bi-' + onglet).focus(); });
+    });
+    document.querySelectorAll('[data-desep]').forEach((x) => x.addEventListener('click', async () => {
+      x.disabled = true;
+      const r = await window.SOZO_API('DELETE', `/api/epingles/${+x.dataset.desep}`);
+      if (!r.ok) { x.disabled = false; S.toast(r.d.erreur || 'Retrait impossible.'); return; }
+      epingles = epingles.filter((e) => e.id !== +x.dataset.desep); render();
+    }));
     document.querySelectorAll('[data-unf]').forEach((x) => x.addEventListener('click', async () => { x.disabled = true; if (!(await S.toggleFollow(x.dataset.unf))) S.toast('Vous ne suivez plus ce livre.'); render(); }));
     const m = $('#markAll');
     if (m) m.addEventListener('click', async () => { m.disabled = true; const r = await window.SOZO_API('POST', '/api/notifications/lues', {}); if (!r.ok) { m.disabled = false; S.toast(r.d.erreur || 'Action impossible.'); return; } await charger(); render(); S.majCloche(); });
@@ -67,6 +96,8 @@ window.SOZO_PRET.then(async () => {
     document.querySelectorAll('[data-nid]').forEach((a) => a.addEventListener('click', () => { window.SOZO_API('POST', '/api/notifications/lues', { ids: [+a.dataset.nid] }, { keepalive: true }); }));
     S.inkAll();
   }
+  // La cloche ou le menu mènent à suivis.html#notifications : on change d'onglet sans recharger
+  addEventListener('hashchange', () => { const k = location.hash.slice(1); if (ONGLETS.some(([x]) => x === k) && k !== onglet) { onglet = k; render(); } });
   render();
   S.footer();
 }).catch(window.SOZO_ERREUR);

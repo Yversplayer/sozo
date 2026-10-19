@@ -1,7 +1,7 @@
 /* Sōzō — fiche d'un livre : couverture 3D, état de chaque page, prix, calendrier. */
 window.SOZO_PRET.then(() => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
-  S.shell('decouvrir');
+  S.shell('explorer');
   const main = $('#main');
   const b = S.book(S.q('id') || '');
   if (!b) {
