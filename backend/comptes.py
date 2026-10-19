@@ -27,7 +27,7 @@ def _moi(user):
     return {"id": user["id"], "nom": user["nom"], "email": user["email"], "role": user["role"],
             "email_verifie": bool(user["email_verifie_at"]),
             # Thème choisi dans Mon compte : il suit la personne d'un appareil à l'autre
-            "theme": "clair" if user.get("theme") == "clair" else "nocturne"}
+            "theme": "nocturne" if user.get("theme") == "nocturne" else "clair"}   # 19/10/2026 : le BLANC par défaut (demande du propriétaire)
 
 
 def _trop(action_cles):

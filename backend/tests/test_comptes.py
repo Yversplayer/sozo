@@ -138,23 +138,26 @@ class Connexion(Base):
 
 
 class Theme(Base):
-    """Demande du propriétaire (17/10/2026) : nocturne par défaut, clair au
-    choix dans Mon compte ; le choix suit la personne (lecteur comme auteur)."""
+    """Demande du propriétaire : nocturne par défaut (17/10/2026), puis le
+    BLANC par défaut (19/10/2026 : « je veux que la base soit le blanc ») ;
+    nocturne au choix dans Mon compte ; le choix suit la personne."""
 
-    def test_nocturne_par_defaut_puis_clair_au_choix(self):
+    def test_clair_par_defaut_puis_nocturne_au_choix(self):
         c = self.app.test_client()
         self.inscrire(c)
+        self.assertEqual(c.get("/api/moi").get_json()["moi"]["theme"], "clair")
+        self.assertEqual(c.patch("/api/compte", json={"theme": "nocturne"}, headers=self.csrf(c)).status_code, 200)
         self.assertEqual(c.get("/api/moi").get_json()["moi"]["theme"], "nocturne")
+        self.assertEqual(c.get("/api/compte").get_json()["compte"]["theme"], "nocturne")
         self.assertEqual(c.patch("/api/compte", json={"theme": "clair"}, headers=self.csrf(c)).status_code, 200)
         self.assertEqual(c.get("/api/moi").get_json()["moi"]["theme"], "clair")
-        self.assertEqual(c.get("/api/compte").get_json()["compte"]["theme"], "clair")
         self.assertEqual(c.patch("/api/compte", json={"theme": "rose"}, headers=self.csrf(c)).status_code, 400)
 
     def test_meme_reglage_pour_un_auteur(self):
         c = self.app.test_client()
         self.inscrire(c, role="auteur")
-        self.assertEqual(c.patch("/api/compte", json={"theme": "clair"}, headers=self.csrf(c)).status_code, 200)
-        self.assertEqual(c.get("/api/moi").get_json()["moi"]["theme"], "clair")
+        self.assertEqual(c.patch("/api/compte", json={"theme": "nocturne"}, headers=self.csrf(c)).status_code, 200)
+        self.assertEqual(c.get("/api/moi").get_json()["moi"]["theme"], "nocturne")
 
 
 class RelaisSeulement(TestBase):

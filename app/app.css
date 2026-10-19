@@ -1142,3 +1142,92 @@ html[data-theme="dark"] .ed-ctx del { color: #FF8A7A; } html[data-theme="dark"] 
 .ad-choix input { width: 18px; height: 18px; accent-color: var(--gold-line); }
 .cx-field[hidden] { display: none; }
 dialog .cx-field select { height: 46px; width: 100%; border: 1px solid var(--line); border-radius: var(--r); padding: 0 12px; background: var(--paper); color: var(--ink); font: inherit; font-size: 15px; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DESIGN v2 (19/10/2026) — « aussi léger qu'une app Apple », base BLANCHE
+   Retour du propriétaire : « ça ressemble trop à un truc IA ». On retire le
+   décor (ovales d'encre, capitales espacées dorées, volumes 3D, aplats
+   sombres) au profit de blanc, de gris très doux, de titres nets en
+   sans-serif ; le serif reste pour ce qui SE LIT (textes, titres de livres).
+   Composants pensés pour passer ensuite à une app native (onglets, cartes,
+   listes, barre du bas).
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --ink-rgb: 28, 28, 30;
+  --bone: #FFFFFF;
+  --paper: #FFFFFF;
+  --surface: #F5F5F7;
+  --surface-2: #EDEDF0;
+  --ink: #1C1C1E;
+  --ash: #6E6E73;
+  --line: rgba(0, 0, 0, .08);
+  --forest: #1C1C1E;
+  --shadow: 0 10px 30px -18px rgba(0, 0, 0, .28);
+  --ombre-couv: 0 10px 22px -12px rgba(0, 0, 0, .45);
+  --r: 12px;
+  --rail: 72px;
+}
+html[data-theme="dark"] {
+  --ink-rgb: 242, 242, 247;
+  --bone: #000000;
+  --paper: #1C1C1E;
+  --surface: #1C1C1E;
+  --surface-2: #2C2C2E;
+  --ink: #F2F2F7;
+  --ash: #A1A1A6;
+  --line: rgba(255, 255, 255, .1);
+  --forest: #1C1C1E;
+  --shadow: 0 10px 30px -18px rgba(0, 0, 0, .9);
+}
+body { font-size: 16px; letter-spacing: -0.01em; }
+h1, h2, h3, .sec-title, .ac-titre, .at-title, .ed-head h1, .md-title, .panel h2, .bk-hero h1 { font-family: var(--sans); font-weight: 700; letter-spacing: -0.025em; }
+.sec-title { font-size: clamp(22px, 2.4vw, 30px); }
+.sec-head { margin-bottom: 16px; align-items: center; }
+.kicker { font: 500 13px/1.3 var(--sans); letter-spacing: 0; text-transform: none; color: var(--ash); margin-bottom: 6px; }
+.mono { font-family: var(--sans); text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; }
+/* plus d'encre animée ni d'ovales : le texte s'affiche net, tout de suite */
+.ink .ink-c { color: inherit !important; transition: none !important; }
+.ink-o-svg, .cv-oval, .seal svg, .au-ph svg { display: none !important; }
+/* boutons : pastilles, casse normale */
+.btn { border-radius: 999px; text-transform: none; letter-spacing: -0.01em; font: 600 15px/1 var(--sans); min-height: 44px; padding: 0 20px; }
+.btn--sm { min-height: 34px; font-size: 13.5px; padding: 0 14px; }
+.btn:hover { transform: none; box-shadow: none; filter: brightness(.96); }
+.btn--ghost { border-color: var(--line); background: var(--surface); }
+html[data-theme="dark"] .btn--ghost { background: var(--surface-2); }
+.chip { border-radius: 999px; background: var(--surface); border-color: transparent; font-size: 14px; font-weight: 500; min-height: 34px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bone); border-color: var(--ink); }
+.badge { text-transform: none; letter-spacing: 0; font-weight: 600; font-size: 12px; border-radius: 6px; padding: 3px 8px; }
+/* surfaces */
+.panel { border: 0; background: var(--surface); border-radius: 16px; }
+.empty { border: 0; background: var(--surface); border-radius: 16px; }
+.top { background: color-mix(in srgb, var(--bone) 88%, transparent); }
+.top.is-scrolled { box-shadow: 0 1px 0 var(--line); }
+.top-cherche { background: var(--surface); border-color: transparent; }
+.nav { background: var(--bone) !important; }
+.nav-sec { font-size: 11px; letter-spacing: .06em; }
+.nav-a.is-active { background: var(--surface); }
+.nav-a.is-active::before { display: none; }
+/* couvertures : à plat, coins arrondis, ombre douce (plus de volume 3D) */
+.cv3d, .bc .cv3d, .bc:hover .cv3d { transform: none !important; }
+.cv-spine, .cv-edge { display: none; }
+.cv-face { border-radius: 8px; }
+.cv3d .cv-face, .cv .cv-face { box-shadow: var(--ombre-couv); }
+.cv::before { display: none; }
+.cv-title { font-family: var(--serif); }
+/* carte livre : couverture, titre, auteur — comme une librairie d'app */
+.bc { padding: 0; background: none; border: 0; gap: 4px; }
+.bc:hover { transform: none; box-shadow: none; }
+.bc .cv { margin: 0 0 8px; }
+.bc-title { font: 600 15px/1.25 var(--sans); letter-spacing: -0.01em; }
+.bc-author { font-size: 13.5px; }
+.bc-meta { order: 3; justify-content: flex-start; }
+.bc-meta .mono { display: none; }
+.bc-foot { border-top: 0; padding-top: 0; font-size: 12.5px; }
+.grid { gap: 22px 18px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+/* pied de page clair */
+.foot { background: var(--surface); color: var(--ink); --logo-ink: var(--ink); --logo-bg: var(--surface); padding: 40px 0 24px; margin-top: 64px; }
+.foot .mono.ash, .foot-legal { color: var(--ash) !important; }
+.foot-legal { border-top-color: var(--line); }
+.foot-in div > a:hover { color: var(--ink); }
+.foot-tag { display: none; }
+@media (max-width: 760px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; } }

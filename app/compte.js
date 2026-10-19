@@ -62,8 +62,8 @@ window.SOZO_PRET.then(() => {
           <section class="panel" id="apparence" aria-labelledby="hTheme">
             <h2 id="hTheme">Apparence</h2>
             <div class="cp-theme" role="radiogroup" aria-labelledby="hTheme">
-              ${[['nocturne', 'Nocturne', 'par défaut'], ['clair', 'Clair', 'fond crème']].map(([v, l, s]) => `<label class="cp-theme-opt">
-                <input type="radio" name="theme" value="${v}"${(u.theme === 'clair' ? 'clair' : 'nocturne') === v ? ' checked' : ''}>
+              ${[['clair', 'Clair', 'par défaut'], ['nocturne', 'Nocturne', 'fond sombre']].map(([v, l, s]) => `<label class="cp-theme-opt">
+                <input type="radio" name="theme" value="${v}"${(u.theme === 'nocturne' ? 'nocturne' : 'clair') === v ? ' checked' : ''}>
                 <span class="cp-theme-sw cp-theme-sw--${v}" aria-hidden="true"><i></i><i></i></span>
                 <span><strong>${l}</strong><small>${s}</small></span></label>`).join('')}
             </div>
