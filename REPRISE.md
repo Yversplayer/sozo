@@ -1,4 +1,4 @@
-# REPRISE — Sōzō (état au 18/10/2026)
+# REPRISE — Sōzō (état au 19/10/2026)
 
 À lire en entier avant de toucher au code. Puis lire `README.md` (lancement, tests, garanties, architecture).
 
@@ -32,15 +32,30 @@ Ajouts du 17-18/10/2026 (déployés, commit b29e2e5) :
 
 ## ⏭ Où on s'est arrêté — À FAIRE EN PREMIER
 
+0. **Refonte du 19/10/2026 (retours du propriétaire après son test), PAS ENCORE DÉPLOYÉE** — voir §7. À faire : pousser, Manual Deploy de Render (le serveur a changé : migration v8, nouvelles routes), puis faire tester par le propriétaire. Pour activer la relecture IA : `ANTHROPIC_API_KEY` sur Render (sans elle, le bouton dit honnêtement « pas encore activée »).
+
 1. **Catalogue en ligne : décision A (18/10/2026), « des livres de religion, d'inspiration, de Dieu et de foi, dans le christianisme ».** **Chargé EN LIGNE le 19/10/2026** (Render redéployé avant, sur 05b1cab ; chargement ~7 min depuis Kinshasa). Vérifié en ligne : 14 livres / 12 auteurs au catalogue, tous `demo` ; page gratuite servie ; achat d'une page payante refusé (400 « Ce livre est un exemple : il ne se vend pas. »).
    - `backend/tools/demo_catalogue.py` écrit `demo.json` : 12 auteurs et 14 livres chrétiens INVENTÉS (méditations, prière, poésie de louange, romans, jeunesse, essai, biographie de Paul…). Les versets sont lus dans la Bible LSG 1910 intégrée, jamais recopiés à la main. Nawezi N. n'y est plus : auteur réel, il publie ses vrais livres lui-même ;
    - étiquette « Exemple » sur chaque couverture et sur la fiche (`ui.js` `cv-exemple`, `livre.js`) ; une page payante d'un livre d'exemple l'explique au lieu de proposer l'achat (`lire.js`) ;
    - **un livre d'exemple ne se vend pas** : refus du serveur (`argent._calculer`), test `test_livre_d_exemple_jamais_vendu`, vu tomber sans le correctif ;
    - `demo.py --en-ligne --projet <ref>` : adresse collée au clavier, puis taper EXEMPLE.
    Pour recommencer ailleurs : pousser, Manual Deploy de Render (le refus de vente doit être en ligne AVANT les livres), puis `demo.py --en-ligne`. La base de développement locale garde l'ancien catalogue (les comptes d'essai y ont des achats) : pour voir le nouveau, charger une base neuve (`SOZO_DB_PATH=…`).
-   Les tuiles « Polar » et « Manga » de Découvrir resteront vides avec ce catalogue (apparence : à soumettre au propriétaire).
+   Tuiles vides : réglé le 19/10 — Explorer n'affiche que les catégories qui ont des livres, avec leur nombre.
 2. **« Accès à toutes les fonctionnalités »** : seuls les achats (pages, Plume) sont fermés, faute de numéros Mobile Money. Question posée : (1) il donne ses numéros → `SOZO_PAIEMENT_NUMEROS` sur Render, il achète puis confirme lui-même dans l'admin ; ou (2) ajouter dans l'admin « offrir Plume / offrir un livre » (avec audit).
 3. Le propriétaire teste le logiciel ce week-end : traiter ses retours en priorité.
+
+## 7. Refonte du 19/10/2026 — ce qui a changé (retours du propriétaire)
+
+Commits `563625a` (serveur) puis la refonte des écrans. Suites : 168 tests SQLite (+13), PostgreSQL vert.
+- **Couleurs** (`app/app.css` `:root`, `atelier.css`, `plume.css`) : `--forest` neutre, nocturne `#121011`, bordeaux en accent (`--wine`).
+- **Navigation** (`ui.js` `shell`) : barre latérale à gauche sur ordinateur (icônes, dépliée au survol, au clavier ou épinglée par le bouton menu ; `aria-expanded` exact ; mouvement réduit = sans animation) ; barre du bas à 5 onglets sur téléphone, « Écrire » doré au centre. Sections : Écrire (atelier, nouveau livre, écrire une page, importer) puis Lire (accueil, Explorer, bibliothèque, Bible). Raccourcis : `studio.html?action=nouveau|ecrire|importer|couverture|mise|publier`.
+- **Se repérer** : inscription → auteur par défaut → `studio.html?bienvenue=1` (3 gestes) ; lecteur → `decouvrir.html?bienvenue=1`. Visite guidée (`SOZO.visite`, 4 bulles sur le vrai menu, rejouable). Accueil refait (`decouvrir.js`) : salutation, portes Écrire/Lire, « Premiers pas » cochés d'après les VRAIES données, vos livres, reprendre la lecture, à la une, nouveautés, paraît bientôt. Catalogue déplacé dans **Explorer** (`explorer.html`). « Mes suivis » → **Ma bibliothèque** (onglets En cours / Épingles / Notifications).
+- **Personnalisation du livre** (`studio.js` `dessinerCouverture`, `miseEnPage`) : modèles + fond (photo, image ENVOYÉE, couleur, dégradé), cadrage, zoom, voile, police, taille, épaisseur, capitales, italique, espacement, alignement, position, couleurs, sous-titre, ornements, « image seule ». Mise en page intérieure : police, interligne, alignement, lettrine, séparateur (« *** »), titre de chapitre, accent. Serveur : `books.apparence` (JSON reconstruit clé par clé, couleurs `#RRGGBB` seulement), table `couvertures` (en base : le disque Render est effacé), image reconnue par sa SIGNATURE (JPEG/PNG/WebP, jamais SVG), servie par `/api/livres/<slug>/couverture` à qui peut voir le livre. L'image est réduite sur l'appareil (1 200 × 1 800, JPEG) avant l'envoi.
+- **Atelier** : bande « Que voulez-vous faire ? » ; Pages en **pages entières** par défaut (`/api/studio/livres/<slug>/textes`, 24 par appel, chargées en descendant), tableau toujours disponible.
+- **Liseuse** (`lire.js`) : défilement page à page (et glisser du doigt), « Glisser ⇆ » (une page par écran), « Continu ⇅ » (comme un document) ; mode concentration (touche F, paragraphe lu éclairé) ; épingles (sélection → « Épingler » ; `/api/epingles`, un extrait n'est accepté que s'il figure dans une page LISIBLE, 300 signes sur une page achetée) ; page payante = page floutée de MOTS DE REMPLISSAGE + cadenas (le vrai texte n'est jamais envoyé) ; mise en page de l'auteur (désactivable par le lecteur).
+- **Correcteur** (`app/langue/correcteur.js`) : mesuré sur 40 pages justes des livres d'exemple, **224 fausses remarques → 4** (répétitions de style). Apostrophes droites et espaces fines : harmonisées sans être signalées (bouton « Harmoniser la typographie ») ; « ne » explétif, « ni… ne », « aucun… ne », « ne savent » ; majuscule après un point seulement ; noms propres et 3 523 noms bibliques (`noms-bibliques.txt`, tirés de la Bible intégrée) ; répétition = 3 fois en 50 mots.
+- **Relecture par l'IA** (`backend/ia_correcteur.py`, bouton dans l'éditeur) : Claude (`claude-opus-5-5` par défaut, `SOZO_IA_MODELE` pour changer), à la demande de l'auteur et après son accord (le texte part chez Anthropic). Chaque proposition est vérifiée dans le texte par le serveur ; rien ne change sans un clic « Appliquer ». Plafond `SOZO_IA_PLAFOND_JOUR` (40). **Inactive sans `ANTHROPIC_API_KEY`** — coût estimé ~0,02 $ par page relue.
+- **Landing** : boutons mis en avant (or ; « Ouvrir le studio » en bordeaux), rien d'autre.
 
 ## 1. Le projet
 - **Sōzō** : plateforme de lecture et de publication page par page, pour un ami du propriétaire (l'auteur Nawezi N., « Nard »). Les livres sont gratuits, payants ou mixtes, avec parutions programmées, Bible intégrée (LSG 1910), correcteur du français, atelier d'auteur, paiement Mobile Money et administration.
@@ -54,7 +69,9 @@ Ajouts du 17-18/10/2026 (déployés, commit b29e2e5) :
 
 ## 2. Décisions du propriétaire (ne pas rouvrir)
 - **Identité visuelle** : bordeaux #6B0F1A, blanc cassé #F8F5EB, or #D4AF37. Logo « Sōzō » en serif avec une plume dorée. Devise « Heal your heart · Grown your faith · Glow your spirit » (le « Grown » est probablement une faute de frappe : il reste tel quel, signalé). « Plus qu'une application, un chemin. »
-- **La landing (`index.html`, `styles.css`, `sozo.css`, `sozo.js`, `content.js`, `app.js`) est FIGÉE.** On n'y touche pas.
+- **La landing (`index.html`, `styles.css`, `sozo.css`, `sozo.js`, `content.js`, `app.js`) est FIGÉE.** On n'y touche pas. Seule exception, demandée le 19/10 : les liens d'action sont devenus de vrais boutons (bloc « BOUTONS MIS EN AVANT » en fin de `sozo.css`).
+- **Une fois connecté, le rouge est discret (19/10)** : « trop de rouge ». Fonds crème (clair) ou noir chaud (nocturne) ; le bordeaux reste un accent (boutons, badges payants, filet du menu actif). La page de connexion garde son bordeaux.
+- **On développe d'abord pour les AUTEURS (19/10)** : « Écrire » vient en premier partout (menu, barre du bas au centre, inscription), l'outillage auteur à un ou deux clics.
 - **Le recueil « Sōzō » de Nawezi N. est PERSONNEL** : jamais dans le catalogue, jamais cité.
 - Il faut un compte pour entrer dans le logiciel. Les livres de la landing servent de vitrine.
 - Web d'abord (SaaS), pas d'application native pour l'instant.
@@ -68,7 +85,7 @@ Ajouts du 17-18/10/2026 (déployés, commit b29e2e5) :
 - Tarifs proposés, **non confirmés par le propriétaire** : commission de 15 % (10 % avec Plume), Plume à 4,99 $ pour 30 jours, reversement minimum de 1 $.
 
 ## 3. Ce qui fonctionne (testé)
-**Tests** : 155 sur SQLite (7 réservés à PostgreSQL y sont sautés) et 155 sur PostgreSQL (RLS active), tous verts au 18/10/2026. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
+**Tests** : 168 sur SQLite (7 réservés à PostgreSQL y sont sautés) et 168 sur PostgreSQL (RLS active), tous verts au 19/10/2026. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
 ```bash
 cd /Users/macbookpro/sozo && backend_venv/bin/python -m unittest discover -s backend/tests -t backend
 cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py

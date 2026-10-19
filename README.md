@@ -72,6 +72,12 @@ Les deux suites doivent être vertes. Chaque garde-fou a été **vu tomber** qua
   - Un code frais (moins de 10 min) est exigé pour rembourser, verser de l'argent ou désactiver un compte.
   - Journal d'audit inaltérable.
 
+- **Personnalisation (19/10/2026).**
+  - L'apparence d'un livre est reconstruite clé par clé par le serveur : une couleur est `#RRGGBB` et rien d'autre (jamais `url(…)`).
+  - Une couverture envoyée est reconnue par sa signature (JPEG, PNG, WebP ; un SVG est refusé) et n'est servie qu'à qui peut voir le livre.
+- **Épingles.** Un passage n'est épinglé que s'il figure dans une page que la personne peut lire (300 signes au plus sur une page achetée).
+- **Relecture par l'IA.** À la demande de l'auteur, sur une page de SON livre ; chaque proposition est vérifiée dans le texte ; plafond par jour ; rien ne part sans `ANTHROPIC_API_KEY`.
+
 ## Messages, notifications, tâches
 
 - **E-mails** (`mailer.py`, `envois.py`, `gabarits.py`) :
