@@ -28,9 +28,11 @@ window.SOZO_PRET.then(() => {
   const STYLES = { a: 'Classique', b: 'Capitales', c: 'Bandeau', d: 'Médaillon' };
 
   let at = null, livre = null, onglet = S.q('tab') || 'pages', filtre = 'all', dejaRendu = false;
+  const ACTION = S.q('action'), BIENVENUE = S.q('bienvenue');   // lus AVANT que l'adresse soit réécrite par urlEtat()
+  let vue = (() => { try { return localStorage.getItem('sozo-vue-pages') || 'entieres'; } catch (e) { return 'entieres'; } })();   // pages entières par défaut (demande du 19/10)
 
   /* Une couverture du studio, dessinée comme celles du catalogue */
-  const couv = (b, opts) => { D.authors.moi = { name: at.nom }; return S.cover({ author: 'moi', cover: { img: b.couverture, style: b.style || 'a' }, title: b.titre, cat: b.categorie }, opts); };
+  const couv = (b, opts) => { D.authors.moi = { name: at.nom }; return S.cover({ id: b.id, author: 'moi', cover: { img: b.couverture, style: b.style || 'a' }, title: b.titre, cat: b.categorie, apparence: b.apparence, image: b.image }, opts); };
   const erreur = (r) => S.toast(r.d.erreur || 'Le serveur a refusé l’opération.');
   function attente(btn, on) { if (!btn) return; btn.disabled = on; btn.setAttribute('aria-busy', String(on)); }
   function urlEtat() {
@@ -39,6 +41,20 @@ window.SOZO_PRET.then(() => {
     history.replaceState(null, '', `studio.html${p.toString() ? '?' + p : ''}${location.hash}`);
   }
 
+  /* Les raccourcis (barre latérale, bande « Que voulez-vous faire ? ») */
+  function action(k) {
+    if (k === 'nouveau') { if (at.role === 'auteur') nouveauLivre(); else ouEcrire(); return; }
+    if (k === 'ecrire') { ouEcrire(); return; }
+    if (at.role !== 'auteur') { ouEcrire(); return; }
+    if (!livre) { if (k === 'importer') nouveauLivre(); return; }
+    if (k === 'couverture') { dessinerCouverture(); return; }
+    if (k === 'mise') { miseEnPage(); return; }
+    if (k === 'importer' || k === 'publier') {
+      onglet = k === 'importer' ? 'import' : 'pages'; if (k === 'publier') filtre = 'draft';
+      rendre(true); $('#livre').scrollIntoView({ behavior: S.reduced ? 'auto' : 'smooth', block: 'start' });
+      if (k === 'publier') S.toast('Cochez des brouillons (vue « Tableau ») ou cliquez « Publier » sous une page.');
+    }
+  }
   async function charger() {
     const r = await API('GET', '/api/studio');
     if (!r.ok) throw new Error('studio ' + r.status);
@@ -99,7 +115,14 @@ window.SOZO_PRET.then(() => {
       ${carte('Livres', at.livres.length, 'library', at.livres.some((b) => b.statut === 'retire') ? 'Dont au moins un retiré par la modération' : 'Sur votre étagère')}
       ${carte('Pages sorties', pages, 'book', 'Publiées ou programmées')}
       ${carte('Plume', at.plume.actif ? 'Active' : 'Non', 'feather', at.plume.actif ? `Jusqu’au ${S.dateLong(at.plume.fin)}` : `${S.money(at.plume.prix)} pour 30 jours`)}
-    </div></div>`}
+    </div></div>
+    <div class="wrap"><nav class="at-actions" aria-label="Que voulez-vous faire ?">
+      <p class="kicker">Que voulez-vous faire ?</p>
+      <div class="at-actions-l">
+        ${[['ecrire', 'pen', 'Écrire une page', 'Reprendre ou commencer'], ['nouveau', 'plus', 'Nouveau livre', 'Titre, catégorie, prix'], ['importer', 'upload', 'Importer', 'Word, PDF ou EPUB'],
+           ['couverture', 'edit', 'Ma couverture', 'Image, couleurs, police'], ['mise', 'type', 'Mise en page', 'Police, lettrine, ornements'], ['publier', 'send', 'Publier', 'Programmer ou publier']]
+          .map(([k, ic, l, d]) => `<button type="button" class="at-act" data-act="${k}"${!at.livres.length && !['nouveau', 'ecrire', 'importer'].includes(k) ? ' disabled title="Créez d’abord un livre"' : ''}><span class="at-act-ic">${S.icon(ic)}</span><strong>${l}</strong><small>${d}</small></button>`).join('')}
+      </div></nav></div>`}
     ${!lecteur && at.plume.actif && (new Date(at.plume.fin) - Date.now()) < 5 * 864e5 ? `<div class="wrap"><p class="warn at-rappel">${S.icon('feather')}<span><strong>Plume se termine le ${S.esc(S.dateLong(at.plume.fin))}.</strong> Ensuite, vos pages publiées redeviennent verrouillées et la commission repasse au taux normal ; vos versions et vos ventes restent acquises. <button class="btn btn--sm" type="button" data-prolonger>Prolonger de 30 jours</button></span></p></div>` : ''}`;
   }
   const carte = (l, v, ic, sous, accent) => `<div class="at-card${accent ? ' at-card--or' : ''}" data-tilt><span class="at-card-ic">${S.icon(ic)}</span><strong>${S.esc(String(v))}</strong><span class="at-card-l">${S.esc(l)}</span><small>${S.esc(sous)}</small><i class="at-glare" aria-hidden="true"></i></div>`;
@@ -135,6 +158,43 @@ window.SOZO_PRET.then(() => {
     </section>`;
   }
 
+  /* ─── Pages entières : chaque page comme une feuille, texte complet ───
+     Le texte arrive par lots de 24 (/textes) au fur et à mesure qu'on descend. */
+  const textes = {};
+  const stylePage = (b) => S.mise.style((b.apparence && b.apparence.page) || {});
+  const pagesStyle = () => (livre.apparence && livre.apparence.page) || {};
+  function feuille(x, chapitre) {
+    const pub = x.statut === 'published', st = ETAT[x.statut], t = textes[x.n];
+    return `<article class="at-feuille is-${x.statut}" data-feuille="${x.n}">
+      <header><strong>Page ${x.n}</strong><span class="badge badge--${st[1]}">${st[0]}</span>${x.acces === 'paid' ? `<span class="badge badge--paid">${S.icon('lock')} Payante</span>` : ''}<small>${S.esc(chapitre)}</small></header>
+      <div class="at-feuille-t">${t == null ? `<p class="ash"><span class="spin" style="display:inline-block;vertical-align:-3px"></span> Chargement…</p>` : t.trim() ? S.mise.paragraphes(t, pagesStyle(), (l) => S.esc(l) || '&nbsp;') : '<p class="ash">Page vide.</p>'}</div>
+      <footer><span class="ash">${x.mots} mot${x.mots > 1 ? 's' : ''}${x.publie_le ? ` · ${S.esc(S.dateLong(x.publie_le))}` : ''}</span>
+        <span class="row-acts">${pub ? `<a class="btn btn--ghost btn--sm" href="ecrire.html?id=${enc(livre.id)}&p=${x.n}" data-corriger="${x.n}">${S.icon('edit')} Corriger</a>` : `<a class="btn btn--ghost btn--sm" href="ecrire.html?id=${enc(livre.id)}&p=${x.n}">${S.icon('edit')} Écrire</a><button class="btn btn--sm" type="button" data-publier="${x.n}">Publier</button>`}</span></footer>
+    </article>`;
+  }
+  async function chargerTextes() {
+    const zone = $('#feuilles'); if (!zone) return;
+    const manquantes = $$('[data-feuille]', zone).map((el) => +el.dataset.feuille).filter((n) => textes[n] == null);
+    if (!manquantes.length) return;
+    const io = new IntersectionObserver(async (es) => {
+      for (const e of es) {
+        if (!e.isIntersecting) continue;
+        const n = +e.target.dataset.feuille;
+        if (textes[n] != null || e.target.dataset.charge) continue;
+        const de = n, a = Math.min(n + 23, Math.max(...livre.pages.map((p) => p.n)));
+        $$('[data-feuille]', zone).forEach((el) => { const k = +el.dataset.feuille; if (k >= de && k <= a) el.dataset.charge = '1'; });
+        const r = await API('GET', `/api/studio/livres/${enc(livre.id)}/textes?de=${de}&a=${a}`);
+        if (!r.ok) { e.target.querySelector('.at-feuille-t').innerHTML = `<p class="ash">${S.esc(r.d.erreur || 'Texte indisponible.')}</p>`; continue; }
+        r.d.pages.forEach((pg) => {
+          textes[pg.n] = pg.contenu;
+          const el = zone.querySelector(`[data-feuille="${pg.n}"] .at-feuille-t`);
+          if (el) el.innerHTML = pg.contenu.trim() ? S.mise.paragraphes(pg.contenu, pagesStyle(), (l) => S.esc(l) || '&nbsp;') : '<p class="ash">Page vide.</p>';
+        });
+      }
+    }, { rootMargin: '600px 0px' });
+    $$('[data-feuille]', zone).forEach((el) => { if (textes[+el.dataset.feuille] == null) io.observe(el); });
+  }
+
   /* ─── Pages ─── */
   function panPages() {
     const p = livre.pages, c = (s) => p.filter((x) => x.statut === s).length;
@@ -145,7 +205,13 @@ window.SOZO_PRET.then(() => {
     // Seule la queue de brouillons (après la dernière page sortie) se réordonne : les droits suivent les numéros
     const derniereSortie = Math.max(0, ...p.filter((x) => x.statut !== 'draft').map((x) => x.n));
     const queue = p.filter((x) => x.n > derniereSortie).map((x) => x.n);
-    return `<div class="tbl-tools" role="group" aria-label="Filtrer les pages">${[['all', `Toutes (${p.length})`], ['published', `Publiées (${c('published')})`], ['scheduled', `Programmées (${c('scheduled')})`], ['draft', `Brouillons (${c('draft')})`]].map(([k, l]) => `<button class="chip" type="button" data-filtre="${k}" aria-pressed="${filtre === k}">${l}</button>`).join('')}</div>
+    const bascule = `<div class="seg-c at-vue" role="group" aria-label="Affichage des pages"><button type="button" data-vue="entieres" aria-pressed="${vue === 'entieres'}">Pages entières</button><button type="button" data-vue="tableau" aria-pressed="${vue === 'tableau'}">Tableau</button></div>`;
+    if (vue === 'entieres') {
+      return `<div class="tbl-tools at-tools" role="group" aria-label="Filtrer les pages">${[['all', `Toutes (${p.length})`], ['published', `Publiées (${c('published')})`], ['scheduled', `Programmées (${c('scheduled')})`], ['draft', `Brouillons (${c('draft')})`]].map(([k, l]) => `<button class="chip" type="button" data-filtre="${k}" aria-pressed="${filtre === k}">${l}</button>`).join('')}${bascule}</div>
+        <div class="at-feuilles rd-text ${S.mise.classes(pagesStyle())}" id="feuilles" style="${S.esc(stylePage(livre))}">${liste.map((x) => feuille(x, chap(x.n))).join('') || `<div class="empty">Aucune page dans ce filtre.</div>`}</div>
+        <p class="local-note">${S.icon('eyeOff')} Les brouillons ne sont visibles que par vous. Une page publiée garde son accès, son prix et sa date ; son texte se corrige avec Plume.</p>`;
+    }
+    return `<div class="tbl-tools" role="group" aria-label="Filtrer les pages">${bascule}${[['all', `Toutes (${p.length})`], ['published', `Publiées (${c('published')})`], ['scheduled', `Programmées (${c('scheduled')})`], ['draft', `Brouillons (${c('draft')})`]].map(([k, l]) => `<button class="chip" type="button" data-filtre="${k}" aria-pressed="${filtre === k}">${l}</button>`).join('')}</div>
       <div class="bulk" id="bulk" role="group" aria-label="Actions sur la sélection">
         <strong id="selCount"></strong>
         ${livre.acces !== 'free' ? `<button class="btn btn--sm" type="button" data-lot="gratuit">Gratuit</button><button class="btn btn--sm" type="button" data-lot="payant">Payant</button>` : ''}
@@ -300,13 +366,13 @@ window.SOZO_PRET.then(() => {
         <button class="btn btn--accent" type="submit">Enregistrer</button>
       </form>
       <div class="at-reg-side">
-        <form class="panel at-form" id="formCouv">
-          <h3 class="at-h3">La couverture</h3>
-          <div class="at-couv-prev" id="couvPrev">${couv(livre)}</div>
-          <label class="cx-field">Style<select name="style">${Object.entries(STYLES).map(([k, l]) => `<option value="${k}"${livre.style === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
-          ${galerie('couverture', livre.couverture, null)}
-          <button class="btn" type="submit">Changer la couverture</button>
-        </form>
+        <div class="panel at-form">
+          <h3 class="at-h3">La couverture et les pages</h3>
+          <div class="at-couv-prev">${couv(livre)}</div>
+          <button class="btn btn--accent" type="button" data-act="couverture">${S.icon('edit')} Dessiner ma couverture</button>
+          <button class="btn btn--ghost" type="button" data-act="mise">${S.icon('type')} Mise en page des pages</button>
+          <label class="cx-field">Présentation du texte<select id="formatLivre"><option value="texte"${livre.format !== 'vers' ? ' selected' : ''}>Prose (paragraphes)</option><option value="vers"${livre.format === 'vers' ? ' selected' : ''}>Vers (poésie, cantiques)</option></select></label>
+        </div>
         <form class="panel at-form" id="formChap">
           <h3 class="at-h3">Les chapitres</h3>
           <div id="chaps">${(livre.chapitres.length ? livre.chapitres : [{ titre: '', page_de: 1, page_a: Math.max(1, livre.pages.length) }]).map(ligneChap).join('')}</div>
@@ -451,6 +517,221 @@ window.SOZO_PRET.then(() => {
     f.addEventListener('input', maj); f.addEventListener('change', maj);
   }
 
+  /* ═══════════ DESSINER SA COUVERTURE (19/10/2026) ═══════════
+     « Un niveau de personnalisation incroyable… lui laisser le libre arbitre » :
+     des modèles pour partir, puis tout se règle. L'aperçu suit chaque geste ;
+     rien n'est enregistré avant « Enregistrer », et seulement si le serveur
+     l'accepte (image reconnue par son contenu, valeurs sur liste fermée). */
+  const MODELES = {
+    classique: { fond: 'photo', police_titre: 'cormorant', position: 'bas', alignement: 'gauche', ornement: 'aucun', voile: 45, voile_couleur: '#0C0909' },
+    capitales: { fond: 'photo', police_titre: 'inter', capitales: true, espacement: 14, taille_titre: 70, graisse: 500, position: 'milieu', alignement: 'centre', ornement: 'filet', voile: 50, voile_couleur: '#0C0909' },
+    bandeau: { fond: 'photo', police_titre: 'cormorant', position: 'bas', ornement: 'bandeau', couleur_ornement: '#6B0F1A', voile: 25, voile_couleur: '#0C0909' },
+    medaillon: { fond: 'uni', couleur1: '#F3EBDD', couleur_titre: '#2A1014', couleur_texte: '#2A1014', police_titre: 'cormorant', graisse: 400, position: 'haut', ornement: 'ovale', couleur_ornement: '#C29B2E' },
+    nuit: { fond: 'degrade', couleur1: '#0F0D0E', couleur2: '#3A2A12', angle: 160, couleur_titre: '#E9CD72', police_titre: 'didone', position: 'milieu', alignement: 'centre', ornement: 'cadre', couleur_ornement: '#D4AF37' },
+    parchemin: { fond: 'uni', couleur1: '#EFE4CC', couleur_titre: '#3B2A1A', couleur_texte: '#5A4430', police_titre: 'georgia', italique: true, position: 'milieu', alignement: 'centre', ornement: 'coins', couleur_ornement: '#8C6B2A' },
+    minimal: { fond: 'uni', couleur1: '#FFFFFF', couleur_titre: '#111111', couleur_texte: '#555555', police_titre: 'moderne', graisse: 700, position: 'haut', alignement: 'gauche', ornement: 'aucun', afficher_categorie: false },
+    image: { fond: 'image', image_seule: true }
+  };
+  const NOMS_MODELES = { classique: 'Classique', capitales: 'Capitales', bandeau: 'Bandeau', medaillon: 'Médaillon', nuit: 'Nuit dorée', parchemin: 'Parchemin', minimal: 'Minimal', image: 'Mon image seule' };
+
+  /* Réduit l'image sur l'appareil avant l'envoi : 1 200 × 1 800 au plus, en
+     JPEG. Une photo de téléphone (4 à 8 Mo) part en ~250 Ko — Kinshasa, 3G. */
+  function reduireImage(fichier) {
+    return new Promise((ok, ko) => {
+      if (!/^image\/(jpeg|png|webp)$/.test(fichier.type)) return ko(new Error('Choisissez une image JPEG, PNG ou WebP.'));
+      const lecteur = new FileReader();
+      lecteur.onerror = () => ko(new Error('Image illisible.'));
+      lecteur.onload = () => {
+        const im = new Image();
+        im.onerror = () => ko(new Error('Image illisible.'));
+        im.onload = () => {
+          const k = Math.min(1, 1200 / im.width, 1800 / im.height);
+          const cv = document.createElement('canvas');
+          cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k);
+          cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+          let q = 0.86, url = cv.toDataURL('image/jpeg', q);
+          while (url.length > 2.6e6 && q > 0.5) { q -= 0.1; url = cv.toDataURL('image/jpeg', q); }
+          ok(url);
+        };
+        im.src = lecteur.result;
+      };
+      lecteur.readAsDataURL(fichier);
+    });
+  }
+
+  function dessinerCouverture() {
+    const depart = (livre.apparence && livre.apparence.couv) || {};
+    let c = { ...depart }, nouvelleImage = null, retirerImage = false;
+    if (!c.fond) c.fond = livre.image ? 'image' : 'photo';
+    const champ = (k, l, html) => `<label class="dz-f"><span>${l}</span>${html}</label>`;
+    const coul = (k, d) => `<input type="color" data-k="${k}" value="${S.esc(c[k] || d)}">`;
+    const plage = (k, a, z, d, pas = 1) => `<input type="range" data-k="${k}" min="${a}" max="${z}" step="${pas}" value="${c[k] != null ? c[k] : d}" data-num>`;
+    const seg = (k, opts, d) => `<div class="seg-c dz-seg" role="group">${opts.map(([v, l]) => `<button type="button" data-seg="${k}" data-v="${v}" aria-pressed="${(c[k] || d) === v}">${l}</button>`).join('')}</div>`;
+    const coche = (k, l, d) => `<label class="dz-coche"><input type="checkbox" data-k="${k}"${(c[k] != null ? c[k] : d) ? ' checked' : ''}> ${l}</label>`;
+    const m = S.modal({ title: 'Dessiner ma couverture', body: `<div class="dz">
+      <div class="dz-apercu"><div class="dz-cv" id="dzCv"></div><p class="note">${S.icon('eye')} Aperçu exact de ce que verront les lecteurs.</p></div>
+      <div class="dz-reglages">
+        <p class="mono ash">Partir d’un modèle</p>
+        <div class="dz-modeles">${Object.entries(NOMS_MODELES).map(([k, l]) => `<button type="button" class="chip" data-modele="${k}">${l}</button>`).join('')}</div>
+        <details class="dz-sec" open><summary>Le fond</summary>
+          ${seg('fond', [['photo', 'Photo'], ['image', 'Mon image'], ['uni', 'Couleur'], ['degrade', 'Dégradé']], 'photo')}
+          <div data-si="image"><label class="drop dz-drop">${S.icon('upload')}<strong>Choisir une image</strong><br>Photo, dessin ou couverture déjà faite (JPEG, PNG, WebP). Elle est réduite sur votre appareil avant l’envoi.<input type="file" id="dzFichier" class="sr" accept="image/jpeg,image/png,image/webp"></label>
+            <p class="cx-err" id="dzErrImg" role="alert"></p>
+            ${livre.image ? `<button type="button" class="btn btn--ghost btn--sm" id="dzRetirer">${S.icon('x')} Retirer mon image</button>` : ''}
+            ${coche('image_seule', 'Image seule : ma couverture est déjà complète (sans texte ajouté)', false)}</div>
+          <div data-si="photo">${galerie('dzPhoto', livre.couverture, null)}</div>
+          <div data-si="uni degrade" class="dz-ligne">${champ('couleur1', 'Couleur', coul('couleur1', '#241C1D'))}<span data-si="degrade">${champ('couleur2', 'Seconde couleur', coul('couleur2', '#6B0F1A'))}${champ('angle', 'Angle', plage('angle', 0, 360, 160, 5))}</span></div>
+          <div data-si="photo image">${champ('cadrage_x', 'Cadrage horizontal', plage('cadrage_x', 0, 100, 50))}${champ('cadrage_y', 'Cadrage vertical', plage('cadrage_y', 0, 100, 50))}${champ('zoom', 'Zoom', plage('zoom', 100, 300, 100, 5))}
+            <div class="dz-ligne">${champ('voile', 'Voile sur l’image', plage('voile', 0, 90, 35))}${champ('voile_couleur', 'Couleur du voile', coul('voile_couleur', '#0C0909'))}</div></div>
+        </details>
+        <details class="dz-sec" open><summary>Le titre</summary>
+          ${champ('police_titre', 'Police', `<select data-k="police_titre">${Object.entries(S.NOMS_POLICES).map(([k, l]) => `<option value="${k}"${(c.police_titre || 'cormorant') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
+          <div class="dz-ligne">${champ('taille_titre', 'Taille', plage('taille_titre', 50, 240, 100, 5))}${champ('graisse', 'Épaisseur', `<select data-k="graisse" data-num>${[300, 400, 500, 600, 700, 800].map((g) => `<option${(c.graisse || 600) === g ? ' selected' : ''}>${g}</option>`).join('')}</select>`)}</div>
+          ${champ('espacement', 'Espacement des lettres', plage('espacement', -5, 40, 0))}
+          <div class="dz-coches">${coche('capitales', 'Capitales', false)}${coche('italique', 'Italique', false)}</div>
+          <p class="dz-l">Alignement</p>${seg('alignement', [['gauche', 'Gauche'], ['centre', 'Centre'], ['droite', 'Droite']], 'gauche')}
+          <p class="dz-l">Place du titre</p>${seg('position', [['haut', 'En haut'], ['milieu', 'Au milieu'], ['bas', 'En bas']], 'bas')}
+          <div class="dz-ligne">${champ('couleur_titre', 'Couleur du titre', coul('couleur_titre', '#F8F5EB'))}${champ('couleur_texte', 'Couleur de l’auteur', coul('couleur_texte', '#F8F5EB'))}</div>
+          <label class="dz-f"><span>Sous-titre <small class="ash">facultatif</small></span><input type="text" data-k="sous_titre" maxlength="80" value="${S.esc(c.sous_titre || '')}" placeholder="Ex. : Méditations pour chaque matin"></label>
+          <div class="dz-coches">${coche('afficher_auteur', 'Afficher mon nom', true)}${coche('afficher_categorie', 'Afficher la catégorie', true)}</div>
+        </details>
+        <details class="dz-sec"><summary>Les ornements</summary>
+          ${seg('ornement', [['aucun', 'Aucun'], ['ovale', 'Ovale'], ['bandeau', 'Bandeau'], ['cadre', 'Cadre'], ['filet', 'Filet'], ['coins', 'Coins']], 'aucun')}
+          ${champ('couleur_ornement', 'Couleur de l’ornement', coul('couleur_ornement', '#D4AF37'))}
+        </details>
+        <p class="cx-err" id="dzErr" role="alert"></p>
+      </div></div>`,
+      actions: [{ label: 'Annuler' }, { label: 'Enregistrer la couverture', primary: true, onClick: async (close) => {
+        const btn = m.el.querySelector('.md-actions .btn--accent'); attente(btn, true);
+        const err = $('#dzErr', m.el); err.textContent = '';
+        if (nouvelleImage) {
+          const r = await API('PUT', `/api/studio/livres/${enc(livre.id)}/couverture`, { image: nouvelleImage });
+          if (!r.ok) { attente(btn, false); err.textContent = r.d.erreur || 'Image refusée.'; return; }
+        } else if (retirerImage) {
+          const r = await API('DELETE', `/api/studio/livres/${enc(livre.id)}/couverture`);
+          if (!r.ok) { attente(btn, false); err.textContent = r.d.erreur || 'Retrait refusé.'; return; }
+        }
+        const corps = { apparence: { couv: nettoyer(c), page: (livre.apparence && livre.apparence.page) || {} } };
+        const photo = m.el.querySelector('input[name="dzPhoto"]:checked');
+        if (photo && photo.value !== livre.couverture) corps.couverture = photo.value;
+        const r = await API('PATCH', `/api/studio/livres/${enc(livre.id)}`, corps);
+        attente(btn, false);
+        if (!r.ok) { err.textContent = r.d.erreur || 'Réglages refusés.'; return; }
+        close(); S.toast('Votre couverture est enregistrée.'); await relireLivre();
+      } }] });
+    const md = m.el.querySelector('.md'); md.classList.add('md--xl');
+    const nettoyer = (o) => { const x = {}; Object.entries(o).forEach(([k, v]) => { if (v !== '' && v != null) x[k] = v; }); if (x.fond !== 'image') delete x.image_seule; return x; };
+    const peindre = () => {
+      const photo = m.el.querySelector('input[name="dzPhoto"]:checked');
+      const b = { ...livre, couverture: photo ? photo.value : livre.couverture, apparence: { couv: nettoyer(c) }, image: retirerImage ? null : livre.image };
+      $('#dzCv', m.el).innerHTML = couv(b, { big: true, d3: false, imageUrl: nouvelleImage || undefined });
+      $$('[data-si]', m.el).forEach((el) => { el.hidden = !el.dataset.si.split(' ').includes(c.fond); });
+      $$('[data-seg]', m.el).forEach((bt) => bt.setAttribute('aria-pressed', String((c[bt.dataset.seg] || { fond: 'photo', alignement: 'gauche', position: 'bas', ornement: 'aucun' }[bt.dataset.seg]) === bt.dataset.v)));
+    };
+    const relire = () => {
+      $$('[data-k]', m.el).forEach((el) => {
+        const v = el.type === 'checkbox' ? el.checked : el.value;
+        if (el.type === 'checkbox' || el.type === 'text' || el.type === 'color' || el.tagName === 'SELECT' || el.type === 'range') c[el.dataset.k] = el.dataset.num != null || el.type === 'range' ? +v : v;
+      });
+      c.couleur1 = c.couleur1 || '#241C1D';
+      peindre();
+    };
+    m.el.addEventListener('input', (e) => { if (e.target.closest('[data-k], input[name="dzPhoto"]')) relire(); });
+    m.el.addEventListener('change', (e) => { if (e.target.closest('[data-k], input[name="dzPhoto"]')) relire(); });
+    m.el.addEventListener('click', (e) => {
+      const sg = e.target.closest('[data-seg]');
+      if (sg) { c[sg.dataset.seg] = sg.dataset.v; peindre(); return; }
+      const mo = e.target.closest('[data-modele]');
+      if (mo) {
+        c = { ...MODELES[mo.dataset.modele] };
+        if (c.fond === 'image' && !livre.image && !nouvelleImage) { $('#dzErrImg', m.el).textContent = 'Choisissez d’abord votre image ci-dessous.'; }
+        // les champs reprennent les valeurs du modèle
+        $$('[data-k]', m.el).forEach((el) => { const k = el.dataset.k, v = c[k]; if (el.type === 'checkbox') el.checked = v != null ? v : ['afficher_auteur', 'afficher_categorie'].includes(k); else if (v != null) el.value = v; else if (el.type === 'text') el.value = ''; });
+        peindre(); return;
+      }
+      if (e.target.closest('#dzRetirer')) { retirerImage = true; nouvelleImage = null; if (c.fond === 'image') c.fond = 'photo'; e.target.closest('#dzRetirer').remove(); peindre(); }
+    });
+    $('#dzFichier', m.el).addEventListener('change', async (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      const err = $('#dzErrImg', m.el); err.textContent = 'Préparation de l’image…';
+      try { nouvelleImage = await reduireImage(f); retirerImage = false; c.fond = 'image'; err.textContent = ''; peindre(); }
+      catch (x) { err.textContent = x.message; }
+    });
+    peindre();
+    requestAnimationFrame(() => { md.scrollTop = 0; });
+  }
+
+  /* ═══════════ MISE EN PAGE INTÉRIEURE ═══════════ */
+  async function miseEnPage() {
+    let pg = { ...((livre.apparence && livre.apparence.page) || {}) };
+    const premiere = livre.pages[0];
+    let exemple = 'Il y a des chemins qui ne se voient pas, mais qui nous trouvent quand même.\nLa lumière ne s’impose pas : elle attend qu’on ouvre la fenêtre.';
+    if (premiere) { const r = await API('GET', `/api/studio/livres/${enc(livre.id)}/textes?de=${premiere.n}&a=${premiere.n}`); if (r.ok && r.d.pages[0] && r.d.pages[0].contenu.trim()) exemple = r.d.pages[0].contenu.slice(0, 900); }
+    const seg = (k, opts, d) => `<div class="seg-c dz-seg" role="group">${opts.map(([v, l]) => `<button type="button" data-seg="${k}" data-v="${v}" aria-pressed="${(pg[k] || d) === v}">${l}</button>`).join('')}</div>`;
+    const m = S.modal({ title: 'Mise en page de vos pages', body: `<div class="dz dz--page">
+      <div class="dz-apercu"><div class="mp-page" id="mpPage"></div><p class="note">${S.icon('eye')} Vos lecteurs voient vos pages ainsi ; chacun peut encore agrandir le texte ou changer d’ambiance.</p></div>
+      <div class="dz-reglages">
+        <label class="dz-f"><span>Police du texte</span><select data-k="police">${Object.entries(S.NOMS_POLICES).map(([k, l]) => `<option value="${k}"${(pg.police || 'cormorant') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+        <label class="dz-f"><span>Interligne</span><input type="range" data-k="interligne" min="130" max="230" step="5" value="${pg.interligne || 170}"></label>
+        <p class="dz-l">Alignement</p>${seg('alignement', [['gauche', 'À gauche'], ['justifie', 'Justifié']], 'gauche')}
+        <p class="dz-l">Lettrine (première lettre)</p>${seg('lettrine', [['aucune', 'Aucune'], ['simple', 'Simple'], ['ornee', 'Ornée']], 'simple')}
+        <p class="dz-l">Séparateur entre parties</p>${seg('separateur', [['aucun', 'Aucun'], ['etoiles', '⁂'], ['fleuron', '❦'], ['croix', '✝'], ['trait', '—']], 'aucun')}
+        <p class="dz-l">Titre de chapitre</p>${seg('titre_chapitre', [['classique', 'Classique'], ['capitales', 'Capitales'], ['italique', 'Italique']], 'classique')}
+        <label class="dz-f"><span>Couleur d’accent</span><input type="color" data-k="accent" value="${S.esc(pg.accent || '#806020')}"></label>
+        <p class="note">${S.icon('feather')} Astuce : une ligne qui ne contient que « *** » devient le séparateur choisi.</p>
+        <p class="cx-err" id="mpErr" role="alert"></p>
+      </div></div>`,
+      actions: [{ label: 'Annuler' }, { label: 'Enregistrer la mise en page', primary: true, onClick: async (close) => {
+        const btn = m.el.querySelector('.md-actions .btn--accent'); attente(btn, true);
+        const r = await API('PATCH', `/api/studio/livres/${enc(livre.id)}`, { apparence: { couv: (livre.apparence && livre.apparence.couv) || {}, page: pg } });
+        attente(btn, false);
+        if (!r.ok) { $('#mpErr', m.el).textContent = r.d.erreur || 'Réglages refusés.'; return; }
+        close(); S.toast('Mise en page enregistrée.'); await relireLivre();
+      } }] });
+    m.el.querySelector('.md').classList.add('md--xl');
+    const peindre = () => {
+      const el = $('#mpPage', m.el);
+      el.setAttribute('style', stylePage({ apparence: { page: pg } }));
+      el.className = `mp-page rd-text ${S.mise.classes(pg)}`;
+      el.innerHTML = `<p class="rd-chap">Chapitre I</p>` + S.mise.paragraphes(exemple + '\n***\nEt la suite continue après le séparateur.', pg);
+      $$('[data-seg]', m.el).forEach((bt) => bt.setAttribute('aria-pressed', String((pg[bt.dataset.seg] || { alignement: 'gauche', lettrine: 'simple', separateur: 'aucun', titre_chapitre: 'classique' }[bt.dataset.seg]) === bt.dataset.v)));
+    };
+    m.el.addEventListener('input', (e) => { const el = e.target.closest('[data-k]'); if (!el) return; pg[el.dataset.k] = el.type === 'range' ? +el.value : el.value; peindre(); });
+    m.el.addEventListener('click', (e) => { const sg = e.target.closest('[data-seg]'); if (sg) { pg[sg.dataset.seg] = sg.dataset.v; peindre(); } });
+    peindre();
+  }
+
+  /* ═══════════ ÉCRIRE : choisir où, en un clic ═══════════ */
+  function ouEcrire() {
+    if (at.role !== 'auteur') { $('#devenir') && $('#devenir').focus(); S.toast('Ouvrez d’abord votre atelier d’auteur : un clic, et vous pouvez écrire.'); return; }
+    if (!at.livres.length) { nouveauLivre(); return; }
+    const m = S.modal({ title: 'Où voulez-vous écrire ?', body: `<div class="oe">${at.livres.map((b) => `<div class="oe-l">
+        <span class="oe-cv">${couv(b, { d3: false })}</span>
+        <div><strong>${S.esc(b.titre)}</strong><small class="ash">${b.total} page${b.total > 1 ? 's' : ''} · ${b.brouillons} brouillon${b.brouillons > 1 ? 's' : ''}</small>
+          <div class="row-acts"><button type="button" class="btn btn--accent btn--sm" data-oe-nouv="${S.esc(b.id)}">${S.icon('plus')} Nouvelle page</button>
+          ${b.total ? `<a class="btn btn--ghost btn--sm" href="ecrire.html?id=${enc(b.id)}&p=${b.total}">Reprendre la page ${b.total}</a>` : ''}</div></div></div>`).join('')}
+      <button type="button" class="btn btn--ghost" data-oe-livre>${S.icon('plus')} Commencer un nouveau livre</button></div>` });
+    m.el.addEventListener('click', async (e) => {
+      const nv = e.target.closest('[data-oe-nouv]');
+      if (nv) { attente(nv, true); const r = await API('POST', `/api/studio/livres/${enc(nv.dataset.oeNouv)}/pages`, {}); if (!r.ok) { attente(nv, false); erreur(r); return; } location.href = `ecrire.html?id=${enc(nv.dataset.oeNouv)}&p=${r.d.n}`; }
+      if (e.target.closest('[data-oe-livre]')) { m.close(); nouveauLivre(); }
+    });
+  }
+
+  function bienvenue() {
+    const auteur = at.role === 'auteur';
+    S.modal({ title: auteur ? 'Bienvenue dans votre atelier' : 'Bienvenue sur Sōzō', body: `<div class="bv">
+      <p>${auteur ? 'Ici, vous écrivez et vous publiez. Trois gestes suffisent pour commencer :' : 'Lisez, suivez vos auteurs, gardez vos passages. Et si vous écrivez, votre atelier vous attend :'}</p>
+      <ol class="bv-l">
+        <li><span>1</span><div><strong>Créez votre livre</strong><small>Titre, catégorie, gratuit ou payant. Rien n’est publié tant que vous ne le décidez pas.</small></div></li>
+        <li><span>2</span><div><strong>Écrivez ou importez</strong><small>Page par page dans l’éditeur (avec correcteur), ou depuis un fichier Word, PDF ou EPUB.</small></div></li>
+        <li><span>3</span><div><strong>Habillez-le, puis publiez</strong><small>Votre couverture, votre mise en page, puis vous publiez ou programmez chaque page.</small></div></li>
+      </ol></div>`,
+      actions: [{ label: 'Visite guidée', onClick: (close) => { close(); S.visite(); } },
+        auteur ? { label: 'Créer mon premier livre', primary: true, onClick: (close) => { close(); nouveauLivre(); } }
+          : { label: 'Ouvrir mon atelier d’auteur', primary: true, onClick: (close) => { close(); $('#devenir') && $('#devenir').click(); } }] });
+  }
+
   /* ═══════════ RENDU ET LIENS ═══════════ */
   function rendre(garderDefilement) {
     const y = scrollY;
@@ -494,6 +775,7 @@ window.SOZO_PRET.then(() => {
       location.reload();
     });
     $$('#nouveau, [data-nouveau]').forEach((b) => b.addEventListener('click', nouveauLivre));
+    $$('[data-act]').forEach((b) => b.addEventListener('click', () => action(b.dataset.act)));
     const perso = $('#perso'); if (perso) perso.addEventListener('click', personnaliser);
     $$('[data-prolonger]').forEach((b) => b.addEventListener('click', () => S.buy.plume(at.plume.prix, at.plume)));
     $$('[data-livre]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); filtre = 'all'; ouvrirLivre(a.dataset.livre); }));
@@ -518,6 +800,8 @@ window.SOZO_PRET.then(() => {
     });
 
     if (onglet === 'pages') {
+      $$('[data-vue]').forEach((b) => b.addEventListener('click', () => { vue = b.dataset.vue; try { localStorage.setItem('sozo-vue-pages', vue); } catch (e) {} rendre(true); }));
+      if (vue === 'entieres') chargerTextes();
       $$('[data-filtre]').forEach((b) => b.addEventListener('click', () => { filtre = b.dataset.filtre; rendre(true); }));
       $$('[data-sel]').forEach((c) => c.addEventListener('change', syncSel));
       const tout = $('#toutSel');
@@ -569,15 +853,13 @@ window.SOZO_PRET.then(() => {
         if (!r.ok) { err.textContent = r.d.erreur || 'Modification refusée.'; return; }
         S.toast('Réglages enregistrés.'); await relireLivre();
       });
-      const fc = $('#formCouv');
-      fc.addEventListener('change', () => { $('#couvPrev').innerHTML = couv({ ...livre, couverture: fc.elements.couverture.value, style: fc.elements.style.value }); });
-      fc.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = fc.querySelector('[type=submit]'); attente(btn, true);
-        const r = await API('PATCH', `/api/studio/livres/${enc(livre.id)}`, { couverture: fc.elements.couverture.value, style: fc.elements.style.value });
-        attente(btn, false);
+      const fmt = $('#formatLivre');
+      fmt.addEventListener('change', async () => {
+        fmt.disabled = true;
+        const r = await API('PATCH', `/api/studio/livres/${enc(livre.id)}`, { format: fmt.value });
+        fmt.disabled = false;
         if (!r.ok) { erreur(r); return; }
-        S.toast('Nouvelle couverture enregistrée.'); await relireLivre();
+        S.toast(fmt.value === 'vers' ? 'Vos pages seront présentées en vers.' : 'Vos pages seront présentées en paragraphes.'); await relireLivre();
       });
       const fch = $('#formChap');
       $('#ajChap').addEventListener('click', () => {
@@ -600,6 +882,8 @@ window.SOZO_PRET.then(() => {
 
   charger().then(() => {
     S.footer();
+    if (ACTION) action(ACTION);
+    else if (BIENVENUE) bienvenue();
     if (location.hash) { const el = document.querySelector(location.hash); if (el) el.scrollIntoView(); }
   }).catch(window.SOZO_ERREUR);
 }).catch(window.SOZO_ERREUR);
