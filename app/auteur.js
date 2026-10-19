@@ -31,7 +31,7 @@ window.SOZO_PRET.then(() => {
       <div>
         <p class="kicker">Auteur · ${S.esc(a.city)} · sur Sōzō depuis ${S.esc(a.since)}</p>
         <h1 data-ink-text="${S.esc(a.name)}"></h1>
-        <div class="au-stats"><span><b>${books.length}</b> livre${books.length > 1 ? 's' : ''}</span><span><b>${pubs}</b> pages publiées</span><span><b>${a.followers.toLocaleString(window.SOZO_LOCALE || 'fr-FR')}</b> lecteurs (fictifs)</span></div>
+        <div class="au-stats"><span><b>${books.length}</b> livre${books.length > 1 ? 's' : ''}</span><span><b>${pubs}</b> pages publiées</span><span><b>${a.followers.toLocaleString('fr-FR')}</b> lecteur${a.followers > 1 ? 's' : ''}</span></div>
       </div>
       <button class="btn" type="button" id="followAll"></button>
     </div>

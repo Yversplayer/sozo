@@ -17,35 +17,29 @@ window.SOZO_PRET.then(() => {
 
   main.innerHTML = `<div class="wrap ex">
     <section class="ex-tete">
-      <p class="kicker">Explorer</p>
-      <h1 class="sec-title" data-ink-text="Trouvez votre [[prochaine lecture]]"></h1>
-      <label class="search"><span class="sr">Rechercher un titre, un auteur, un thème</span>${S.icon('search')}
+      <h1 class="ex-titre">Explorer</h1>
+      <label class="search ex-cherche"><span class="sr">Rechercher un titre, un auteur, un thème</span>${S.icon('search')}
         <input type="search" id="q" placeholder="Rechercher un titre, un auteur, un thème…" autocomplete="off"></label>
+      ${cats.length ? `<div class="ex-cats" role="group" aria-label="Catégories"><button class="chip ex-cat" type="button" data-cat="" aria-pressed="true">Tout <small>${books.length}</small></button>${cats.map((c) => `<button class="chip ex-cat" type="button" data-cat="${S.esc(c)}" aria-pressed="false">${S.esc(c)} <small>${compte[c]}</small></button>`).join('')}</div>` : ''}
     </section>
-    ${cats.length ? `<section class="sec ex-sec" aria-label="Catégories"><div class="cats cats--ex">${cats.map((c, i) => `
-      <button class="cat rv" style="--d:${i % 6}" type="button" data-cat="${S.esc(c)}" aria-pressed="false">
-        <img src="${S.img(PHOTO[c] || 'lib-vieux-livres', true)}" alt="" loading="lazy"><span class="cat-ic">${S.icon(ICONE[c] || 'book')}</span><strong>${S.esc(c)}</strong><small>${compte[c]} livre${compte[c] > 1 ? 's' : ''}</small></button>`).join('')}
-    </div></section>` : ''}
-    <section class="sec ex-sec" id="catalogue">
-      <div class="filters" role="group" aria-label="Filtres">
-        <span class="mono ash">Accès</span>
-        ${[['', 'Tous'], ['free', 'Gratuit'], ['paid', 'Payant'], ['mixed', 'Mixte']].map(([v, l]) => `<button class="chip" type="button" data-access="${v}" aria-pressed="${v === '' ? 'true' : 'false'}">${l}</button>`).join('')}
-        <span class="sep" aria-hidden="true"></span>
-        <span class="mono ash">Parution</span>
-        ${[['', 'Toutes'], ['live', 'En cours'], ['done', 'Complet']].map(([v, l]) => `<button class="chip" type="button" data-run="${v}" aria-pressed="${v === '' ? 'true' : 'false'}">${l}</button>`).join('')}
+    <section class="ex-sec" id="catalogue">
+      <div class="ex-barre">
+        <div class="ex-filtres" role="group" aria-label="Filtres">
+          ${[['', 'Tous'], ['free', 'Gratuits'], ['paid', 'Payants'], ['mixed', 'Mixtes']].map(([v, l]) => `<button class="ex-f" type="button" data-access="${v}" aria-pressed="${v === '' ? 'true' : 'false'}">${l}</button>`).join('')}
+          <span class="sep" aria-hidden="true"></span>
+          ${[['', 'Toutes parutions'], ['live', 'En cours'], ['done', 'Complets']].map(([v, l]) => `<button class="ex-f" type="button" data-run="${v}" aria-pressed="${v === '' ? 'true' : 'false'}">${l}</button>`).join('')}
+        </div>
         <label class="sr" for="sort">Trier</label>
-        <select id="sort"><option value="new">Dernières parutions</option><option value="title">Titre A → Z</option><option value="price">Prix croissant</option></select>
+        <select id="sort" class="ex-tri"><option value="new">Récents</option><option value="title">Titre A → Z</option><option value="price">Prix croissant</option></select>
       </div>
       <p class="results-meta" id="meta" aria-live="polite"></p>
       <div class="grid" id="grid"></div>
     </section>
-    <section class="sec">
-      <div class="sec-head"><div><p class="kicker">Ils écrivent sur Sōzō</p><h2 class="sec-title" data-ink-text="Les [[auteurs]]"></h2></div></div>
-      <div class="authors">${Object.keys(D.authors).length ? '' : `<div class="empty" style="grid-column:1/-1"><strong>Aucun auteur pour l’instant</strong>Le vôtre peut être le premier nom ici. <a href="studio.html">Ouvrir mon atelier</a></div>`}${Object.entries(D.authors).map(([id, a], i) => `
-        <a class="au rv" style="--d:${i % 6}" href="auteur.html?id=${encodeURIComponent(id)}">
-          <span class="au-ph"><img src="${S.img(a.photo, true)}" alt="" loading="lazy"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M58,5 C84,8 98,28 96,54 C94,82 72,97 46,95 C20,93 3,74 5,47 C7,22 26,4 52,4 C64,4 72,7 78,12"/></svg></span>
-          <strong>${S.esc(a.name)}</strong><span>${S.esc(a.city)} · ${S.booksBy(id).length} livre${S.booksBy(id).length > 1 ? 's' : ''}</span></a>`).join('')}</div>
-    </section>
+    ${Object.keys(D.authors).length ? `<section class="ex-sec">
+      <div class="sec-head"><h2 class="sec-title">Les auteurs</h2></div>
+      <div class="ex-auteurs">${Object.entries(D.authors).map(([id, a]) => `
+        <a class="ex-au" href="auteur.html?id=${encodeURIComponent(id)}"><img src="${S.img(a.photo, true)}" alt="" loading="lazy"><strong>${S.esc(a.name)}</strong><small>${S.booksBy(id).length} livre${S.booksBy(id).length > 1 ? 's' : ''}</small></a>`).join('')}</div>
+    </section>` : ''}
   </div>`;
 
   /* ─── recherche + filtres, côté client ─── */
@@ -71,7 +65,7 @@ window.SOZO_PRET.then(() => {
       : !books.length ? `<div class="empty" style="grid-column:1/-1"><strong>Aucun livre publié pour l’instant</strong>Les livres apparaîtront ici dès leur première page publiée.<br><br><a class="btn btn--ghost btn--sm" href="studio.html">Publier mon livre</a></div>`
       : `<div class="empty" style="grid-column:1/-1"><strong>Aucun livre ne correspond</strong>Essayez un autre mot, ou retirez un filtre.<br><br><button class="btn btn--ghost btn--sm" type="button" id="reset">Tout afficher</button></div>`;
     const r = $('#reset'); if (r) r.addEventListener('click', reset);
-    $$('.cat').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.cat === state.cat)));
+    $$('.ex-cat').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.cat === state.cat)));
   }
   function reset() {
     Object.assign(state, { q: '', access: '', run: '', cat: '' }); $('#q').value = '';
@@ -83,9 +77,8 @@ window.SOZO_PRET.then(() => {
   $('#sort').addEventListener('change', (e) => { state.sort = e.target.value; render(); });
   $$('[data-access]').forEach((c) => c.addEventListener('click', () => { state.access = c.dataset.access; $$('[data-access]').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); render(); }));
   $$('[data-run]').forEach((c) => c.addEventListener('click', () => { state.run = c.dataset.run; $$('[data-run]').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); render(); }));
-  $$('.cat').forEach((c) => c.addEventListener('click', () => {
-    state.cat = state.cat === c.dataset.cat ? '' : c.dataset.cat; render();
-    $('#catalogue').scrollIntoView({ behavior: S.reduced ? 'auto' : 'smooth', block: 'start' });
+  $$('.ex-cat').forEach((c) => c.addEventListener('click', () => {
+    state.cat = c.dataset.cat; render();
   }));
   render();
   S.inkAll(); S.prepAll(); S.reveals(); S.footer();

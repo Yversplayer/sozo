@@ -441,3 +441,51 @@ html[data-theme="dark"] .at-feuille { background: #1F1B1C; color: #EDE6DC; borde
 .nv-m small { font-size: 12.5px; color: var(--ash); }
 [data-nv-image][hidden], [data-nv-photo][hidden] { display: none; }
 @media (max-width: 560px) { .nt-livre { grid-template-columns: 56px 1fr; } .nt-nouv { grid-column: 1 / -1; } }
+
+/* ═══════════ ATELIER v2 (19/10/2026) — plus léger, sans poussière ni volumes ═══════════ */
+.at-in { min-height: 0; padding-top: 34px; padding-bottom: 64px; }
+.at-title { font-family: var(--sans); font-weight: 700; letter-spacing: -0.03em; font-size: clamp(32px, 4.2vw, 52px); line-height: 1.05; }
+.at-kicker { letter-spacing: 0; text-transform: none; font-size: 13.5px; font-weight: 600; }
+.at-quote { font-size: 17px; }
+.at-dust { display: none; }
+.at-shelf { transform: none !important; }
+.at-book { transform: none; }
+.at-book:hover, .at-book:focus-visible { transform: translateY(-6px); }
+.at-stats { margin-top: -36px; gap: 10px; }
+.at-card { border: 0; border-radius: 16px; background: var(--surface); padding: 16px; box-shadow: none; }
+.at-card strong { font-family: var(--sans); font-weight: 700; letter-spacing: -0.03em; font-size: clamp(24px, 2.2vw, 30px); }
+.at-card-l { color: var(--ash); letter-spacing: 0; text-transform: none; font-size: 13px; font-weight: 600; }
+.at-card-ic { background: var(--bone); color: var(--ink); }
+.at-card--or { background: var(--ink); color: var(--bone); border: 0; }
+.at-card--or .at-card-l, .at-card--or small { color: color-mix(in srgb, var(--bone) 70%, transparent); }
+.at-card--or .at-card-ic { background: rgba(255, 255, 255, .12); color: var(--gold); }
+.at-glare { display: none; }
+.at-act { border: 0; background: var(--surface); border-radius: 16px; }
+.at-act:hover:not([disabled]) { transform: none; box-shadow: none; background: var(--surface-2); }
+.at-act-ic { background: var(--bone); }
+.at-tabs { border-bottom-color: var(--line); }
+.at-tabs button::after { background: var(--ink); }
+.at-bk-t { font-family: var(--sans); font-weight: 700; letter-spacing: -0.025em; }
+html[data-theme="dark"] .at-card--or { background: #2C2C2E; }
+/* Mon compte : profil centré, sections en cartes douces */
+.cp-head { justify-items: center; text-align: center; grid-template-columns: 1fr; padding: 30px 0 22px; gap: 10px; }
+.cp-av { background: var(--surface); color: var(--ink); box-shadow: none; width: 92px; height: 92px; font-family: var(--sans); font-weight: 700; }
+.cp-head h1 { font-size: clamp(26px, 3.4vw, 34px); }
+.cp-head p { color: var(--ash); }
+/* page d'un auteur : bandeau bas, portrait rond, chiffres en ligne */
+.au-hero { height: clamp(140px, 20vw, 220px); }
+.au-hero::after { background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, .25)); }
+.au-big img { border-width: 5px; }
+.au-head h1 { font-family: var(--sans); font-weight: 700; letter-spacing: -0.03em; }
+.cp-head h1 { font-family: var(--sans); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+
+/* Vos revenus, v2 (19/10) — mêmes chiffres que le haut de l’atelier : sans empattement, cartes plates */
+.at-money div { border-radius: 14px; background: #fff; border-color: rgba(0,0,0,.06); padding: 14px 16px; }
+.at-money span { font-size: 12px; letter-spacing: 0; text-transform: none; font-weight: 500; }
+.at-money strong { font-family: var(--sans, -apple-system, system-ui, sans-serif); font-weight: 650; font-size: 24px; letter-spacing: -.01em; }
+.at-money .is-or { background: #1D1D1F; border-color: #1D1D1F; color: #fff; }
+.at-money .is-or span { color: rgba(255,255,255,.7); }
+@media (max-width: 760px) {
+  .at-money { grid-template-columns: 1fr 1fr; }
+  .at-money .is-or { grid-column: 1 / -1; order: -1; }
+}

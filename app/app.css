@@ -1376,3 +1376,35 @@ html[data-theme="dark"] .bi-etageres { background: linear-gradient(180deg, #1F1C
   .ec-titre { min-width: 90px; }
   .ec-outils .btn--sm { padding: 0 10px; }
 }
+
+/* ═══════════ EXPLORER v2 (19/10/2026) — à la Webtoon : pastilles, grille, auteurs en ronds ═══════════ */
+.ex-tete { padding: 24px 0 4px; gap: 14px; }
+.ex-titre { font-size: clamp(30px, 4vw, 40px); }
+.ex-cherche input { height: 50px; border-radius: 14px; background: var(--surface); border-color: transparent; font-size: 16px; }
+.ex-cats { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.ex-cats::-webkit-scrollbar { display: none; }
+.ex-cats .chip { white-space: nowrap; min-height: 38px; padding: 0 16px; }
+.ex-cats .chip small { color: var(--ash); font-weight: 500; margin-left: 2px; }
+.ex-cats .chip[aria-pressed="true"] small { color: inherit; opacity: .7; }
+.ex-barre { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin: 6px 0 10px; }
+.ex-filtres { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.ex-f { border: 0; background: none; padding: 6px 10px; border-radius: 8px; font: 500 14px/1 var(--sans); color: var(--ash); cursor: pointer; }
+.ex-f[aria-pressed="true"] { color: var(--ink); background: var(--surface); font-weight: 600; }
+.ex-filtres .sep { width: 1px; height: 18px; background: var(--line); margin: 0 6px; }
+.ex-tri { height: 36px; border-radius: 10px; border: 0; background: var(--surface); padding: 0 12px; font-weight: 500; }
+.ex-auteurs { display: grid; grid-auto-flow: column; grid-auto-columns: 110px; gap: 14px; overflow-x: auto; scrollbar-width: none; padding-bottom: 6px; }
+.ex-au { display: grid; justify-items: center; gap: 4px; text-align: center; }
+.ex-au img { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; margin-bottom: 6px; }
+.ex-au strong { font-size: 14px; font-weight: 600; line-height: 1.2; }
+.ex-au small { font-size: 12.5px; color: var(--ash); }
+/* page d'un auteur (v2) */
+.au-hero { height: clamp(140px, 20vw, 220px); }
+.au-hero::after { background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, .25)); }
+.au-big img { border-width: 5px; }
+.au-head h1 { font-family: var(--sans); font-weight: 700; letter-spacing: -0.03em; }
+.au-stats b { font-weight: 700; }
+.au-head { margin-top: -64px; }
+.au-head > div:nth-child(2) { padding-top: 72px; }
+.au-head > .btn { align-self: end; }
+@media (max-width: 760px) { .au-head > div:nth-child(2) { padding-top: 0; } }
+.bb > * { min-width: 0; }   /* la rangée des livres de la Bible défile, elle n’élargit plus la page */
