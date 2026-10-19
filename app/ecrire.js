@@ -62,7 +62,8 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
         <div class="ed-tools" role="toolbar" aria-label="Outils">
           <span class="mono ash" id="count"></span>
           <button class="btn btn--ghost btn--sm" type="button" id="essai"${enregistre ? ' hidden' : ''}>${S.icon('spark')} Voir le correcteur à l’œuvre</button>
-          <button class="btn btn--ghost btn--sm" type="button" id="fixTypo" disabled>${S.icon('check')} Corriger la typographie</button>
+          <button class="btn btn--ghost btn--sm" type="button" id="fixTypo" disabled>${S.icon('check')} Harmoniser la typographie</button>
+          <button class="btn btn--accent btn--sm" type="button" id="iaBtn">${S.icon('spark')} Relecture par l’IA</button>
         </div>
         <div class="ed-stack">
           <div class="ed-back" id="back" aria-hidden="true"></div>
@@ -72,6 +73,7 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
       </section>
       <aside class="ed-side" aria-label="Correction">
         <div class="panel ed-status" id="status" aria-live="polite"><span class="spin" aria-hidden="true"></span> Chargement du dictionnaire…</div>
+        <div class="panel ed-ia" id="ia" hidden aria-live="polite"></div>
         <div class="ed-sum" id="sum" role="group" aria-label="Filtrer les remarques"></div>
         <div class="ed-list" id="list"></div>
         <div class="panel ed-word" id="word" hidden></div>
@@ -97,10 +99,10 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
     back.scrollTop = ta.scrollTop;
   }
   const keyOf = (x) => `${x.rule}|${ta.value.slice(x.s, x.e)}`;
-  const visible = () => issues.filter((x) => !ignored.has(keyOf(x)) && (!filter || x.type === filter));
+  const visible = () => issues.filter((x) => x.type !== 'auto' && !ignored.has(keyOf(x)) && (!filter || x.type === filter));
 
   function list() {
-    const v = issues.filter((x) => !ignored.has(keyOf(x)));
+    const v = issues.filter((x) => x.type !== 'auto' && !ignored.has(keyOf(x)));
     const c = { orth: 0, gram: 0, typo: 0, voc: 0 };
     v.forEach((x) => { c[x.type] = (c[x.type] || 0) + 1; });
     $('#sum').innerHTML = Object.entries(TYPES).map(([k, [l]]) =>
@@ -118,7 +120,10 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
         </div>
       </article>`).join('')
       : `<div class="empty"><strong>${filter ? 'Rien dans cette catégorie' : 'Aucune faute relevée'}</strong>${filter ? '' : 'Le correcteur ne voit rien à reprendre. Relisez tout de même : aucun outil ne remplace l’œil de l’auteur.'}</div>`;
-    $('#fixTypo').disabled = !v.some((x) => x.type === 'typo' && x.sugg.length);
+    const harmo = issues.filter((x) => (x.type === 'typo' || x.type === 'auto') && x.sugg.length && !ignored.has(keyOf(x))).length;
+    $('#fixTypo').disabled = !harmo;
+    $('#fixTypo').innerHTML = `${S.icon('check')} Harmoniser la typographie${harmo ? ` (${harmo})` : ''}`;
+    $('#fixTypo').title = 'Apostrophes courbes, espaces fines avant ; : ! ?, points de suspension…';
     paint();
   }
 
@@ -142,7 +147,7 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
   });
   $('#sum').addEventListener('click', (e) => { const c = e.target.closest('[data-f]'); if (!c) return; filter = filter === c.dataset.f ? '' : c.dataset.f; list(); });
   $('#fixTypo').addEventListener('click', () => {
-    const typo = issues.filter((x) => x.type === 'typo' && x.sugg.length && !ignored.has(keyOf(x))).sort((a, z) => z.s - a.s);
+    const typo = issues.filter((x) => (x.type === 'typo' || x.type === 'auto') && x.sugg.length && !ignored.has(keyOf(x))).sort((a, z) => z.s - a.s);
     let v = ta.value, last = Infinity;
     typo.forEach((x) => { if (x.e > last) return; v = v.slice(0, x.s) + x.sugg[0] + v.slice(x.e); last = x.s; });
     ta.value = v; S.toast(`${typo.length} correction${typo.length > 1 ? 's' : ''} typographique${typo.length > 1 ? 's' : ''} appliquée${typo.length > 1 ? 's' : ''}.`);
@@ -156,7 +161,7 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
   /* ─── le correcteur (Web Worker) ─── */
   const status = (h) => { $('#status').innerHTML = h; };
   let worker;
-  try { worker = new Worker('langue/correcteur.js?v=2'); } catch (e) { status(`${S.icon('x')} Ce navigateur ne peut pas lancer le correcteur.`); }
+  try { worker = new Worker('langue/correcteur.js?v=5'); } catch (e) { status(`${S.icon('x')} Ce navigateur ne peut pas lancer le correcteur.`); }
   if (worker) {
     worker.onmessage = (ev) => {
       const d = ev.data;
@@ -170,6 +175,59 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
     worker.postMessage({ type: 'init', base: new URL('langue/', location.href).href });
   }
   const run = () => { if (ready) worker.postMessage({ type: 'check', id: ++seq, text: ta.value, personal }); };
+
+  /* ─── relecture par l'IA (Claude) : un second avis, à la demande ───
+     Le texte part vers Anthropic seulement après l'accord de l'auteur (retenu
+     sur l'appareil). Le serveur vérifie chaque proposition dans le texte ;
+     ici, rien ne change sans un clic sur « Appliquer ». */
+  const IA_OK = 'sozo-ia-accord';
+  const T_IA = { orthographe: 'Orthographe', grammaire: 'Grammaire', conjugaison: 'Conjugaison', accord: 'Accord', ponctuation: 'Ponctuation', style: 'Style' };
+  let propositions = [];
+  function peindreIA() {
+    const el = $('#ia');
+    el.hidden = false;
+    el.innerHTML = `<div class="ed-ia-h"><strong>${S.icon('spark')} Relecture par l’IA</strong><button class="icon-btn" type="button" data-ia-fermer aria-label="Fermer">${S.icon('x')}</button></div>`
+      + (propositions.length ? propositions.map((p, i) => `<article class="ed-item ed-item--ia">
+          <p class="mono">${T_IA[p.type] || 'Remarque'}</p>
+          <p class="ed-ctx"><del>${S.esc(p.extrait)}</del> → <ins>${S.esc(p.correction)}</ins></p>
+          <p>${S.esc(p.explication)}</p>
+          <div class="ed-acts"><button type="button" class="btn btn--sm" data-ia-app="${i}">Appliquer</button><button type="button" class="btn btn--ghost btn--sm" data-ia-ign="${i}">Ignorer</button></div></article>`).join('')
+        : `<p class="ash">L’IA ne relève aucune faute sur cette page. Relisez tout de même : rien ne remplace votre œil.</p>`);
+  }
+  async function relectureIA() {
+    if (!ta.value.trim()) { S.toast('La page est vide : rien à relire.'); return; }
+    let accord = false; try { accord = localStorage.getItem(IA_OK) === '1'; } catch (e) {}
+    if (!accord) {
+      S.modal({ title: 'Relecture par l’IA', body: `<p>Le texte de cette page va être envoyé à <strong>Anthropic (Claude)</strong>, le temps d’être relu. L’IA ne publie rien et n’enregistre rien : elle propose des corrections, et c’est vous qui décidez de chacune.</p><p class="note">${S.icon('shield')} Le correcteur de l’éditeur, lui, fonctionne sur votre appareil sans rien envoyer.</p>`,
+        actions: [{ label: 'Annuler' }, { label: 'J’accepte, relire la page', primary: true, onClick: (close) => { close(); try { localStorage.setItem(IA_OK, '1'); } catch (e) {} relectureIA(); } }] });
+      return;
+    }
+    const btn = $('#iaBtn'), el = $('#ia');
+    btn.disabled = true; btn.setAttribute('aria-busy', 'true');
+    el.hidden = false; el.innerHTML = `<p><span class="spin" style="display:inline-block;vertical-align:-3px"></span> L’IA relit la page… (quelques secondes)</p>`;
+    const r = await window.SOZO_API('POST', `${URL_PAGE}/relecture`, { texte: ta.value });
+    btn.disabled = false; btn.removeAttribute('aria-busy');
+    if (!r.ok) {
+      el.innerHTML = `<div class="ed-ia-h"><strong>${S.icon('spark')} Relecture par l’IA</strong><button class="icon-btn" type="button" data-ia-fermer aria-label="Fermer">${S.icon('x')}</button></div><p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'La relecture n’a pas pu se faire.')}${r.d.code === 'ia_inactive' ? ' Le correcteur de l’éditeur reste disponible.' : ''}</span></p>`;
+      return;
+    }
+    propositions = r.d.corrections.map((p) => ({ ...p, texte: ta.value }));
+    peindreIA();
+  }
+  $('#iaBtn').addEventListener('click', relectureIA);
+  $('#ia').addEventListener('click', (e) => {
+    if (e.target.closest('[data-ia-fermer]')) { $('#ia').hidden = true; return; }
+    const ap = e.target.closest('[data-ia-app]'), ig = e.target.closest('[data-ia-ign]');
+    if (ig) { propositions.splice(+ig.dataset.iaIgn, 1); peindreIA(); return; }
+    if (!ap) return;
+    const p = propositions[+ap.dataset.iaApp];
+    // Le texte a pu bouger depuis la relecture : on cherche l'extrait au plus près de sa place d'origine
+    let at = ta.value.indexOf(p.extrait, Math.max(0, p.debut - 80));
+    if (at < 0) at = ta.value.indexOf(p.extrait);
+    if (at < 0) { S.toast('Ce passage a changé depuis la relecture : correction ignorée.'); propositions.splice(+ap.dataset.iaApp, 1); peindreIA(); return; }
+    apply({ s: at, e: at + p.extrait.length }, p.correction);
+    propositions.splice(+ap.dataset.iaApp, 1); peindreIA();
+  });
 
   /* ─── fiche du mot sélectionné : nature, lemme, synonymes, conjugaison ─── */
   function showWord(info) {

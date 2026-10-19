@@ -16,7 +16,7 @@
    perdre confiance à l'auteur.
    ═══════════════════════════════════════════════════════════ */
 'use strict';
-let LEX = null, COMBOS = [], LEMMAS = [], BYLEMMA = null, SYN = null, BASE = '';
+let LEX = null, COMBOS = [], LEMMAS = [], BYLEMMA = null, SYN = null, BASE = '', NOMS = new Set();
 
 const b36 = (s) => parseInt(s, 36);
 async function init(base) {
@@ -42,6 +42,12 @@ async function init(base) {
     LEX.set(w, line.slice(tab + 1));
     prev = w; pos = nl + 1;
   }
+  // Noms propres de la Bible (Élimélec, Orpa, Moab…) : jamais des fautes sur une
+  // plateforme chrétienne. Facultatif : sans la liste, le correcteur marche.
+  try {
+    const noms = await (await fetch(base + 'noms-bibliques.txt?v=1')).text();
+    NOMS = new Set(noms.split('\n').filter((l) => l && l[0] !== '#'));
+  } catch (e) { NOMS = new Set(); }
   postMessage({ type: 'ready', forms: LEX.size });
 }
 
@@ -163,7 +169,6 @@ const BARBA = [
   [/\bdéfinitivement\b(?= (?:oui|d’accord|vrai|mieux|plus))/gi, 'assurément', 'Anglicisme (« definitely ») : « assurément », « sans aucun doute ».'],
   [/\bimpacter\b/gi, 'avoir des conséquences sur', 'Anglicisme : « avoir des conséquences sur », « toucher », « influer sur ».'],
   [/\bsuite à\b/gi, 'à la suite de', 'Tournure administrative : « à la suite de », « après ».'],
-  [/\bpar contre\b/gi, 'en revanche', 'Admis, mais « en revanche » est plus soutenu.'],
   [/\bde manière à ce que\b/gi, 'de manière que', '« de manière que » suffit.'],
   [/\bsi j’aurais\b/gi, 'si j’avais', 'Après « si » de condition, pas de conditionnel : « si j’avais ».'],
   [/\bsi tu aurais\b/gi, 'si tu avais', 'Après « si » de condition, pas de conditionnel.'],
@@ -177,6 +182,7 @@ const AVOIR = new Set('ai as a avons avez ont avais avait avions aviez avaient e
 const ETRE = new Set('suis es est sommes êtes sont étais était étions étiez étaient fus fut fûmes fûtes furent serai seras sera serons serez seront serais serait serions seriez seraient sois soit soyons soyez soient'.split(' '));
 const ADVS = new Set('pas plus jamais bien déjà toujours trop beaucoup tout encore souvent vite mal guère point rien enfin aussi même presque'.split(' '));
 const NEG_AVANT = new Set('personne rien aucun aucune nul nulle ni jamais'.split(' '));
+const EXPLETIF = new Set('plus moins autre autrement mieux pire meilleur avant peur crainte craindre crains craint craignait éviter évite empêcher empêche'.split(' '));
 const NEGW = new Set('pas plus jamais rien guère point personne aucun aucune que qu’ ni nul nulle nullement goutte mie brin'.split(' '));
 const SUBJ = { je: '1sg', 'j’': '1sg', tu: '2sg', il: '3sg', elle: '3sg', on: '3sg', nous: '1pl', vous: '2pl', ils: '3pl', elles: '3pl' };
 const CLAUSE = new Set(['et', 'mais', 'ou', 'donc', 'car', 'que', 'qu’', 'quand', 'si', 'lorsque', 'lorsqu’', 'puis', 'comme', 'puisque', 'parce']);
@@ -198,7 +204,11 @@ function check(text, personal = []) {
   const atStart = (t) => { const i = toks.indexOf(t); for (let k = i - 1; k >= 0; k--) { if (toks[k].word) return false; if (/[.!?…«“]/.test(toks[k].w)) return true; } return true; };
   for (const t of words) {
     if (t.ent || t.elided || own.has(t.lw) || t.w.length < 2) continue;
+    if (NOMS.has(t.w) || NOMS.has(t.w.replace(/'/g, '’'))) continue;           // nom biblique
     if (/^[A-ZÀ-Ý]/.test(t.w) && !atStart(t)) continue;                       // nom propre probable
+    // En début de phrase, un mot capitalisé inconnu sans voisin proche dans le
+    // dictionnaire est presque toujours un nom propre (« Kinshasa », « Mbuyi »)
+    if (/^[A-ZÀ-Ý]/.test(t.w) && !suggest(t.w).some((x) => x.length >= t.w.length - 1)) continue;
     if (t.w.includes('-') && t.w.split('-').every((p) => !p || lookup(p))) continue;
     add(t.s, t.e, 'orth', `« ${t.w} » est inconnu du dictionnaire.`, suggest(t.w), 'orth');
   }
@@ -234,7 +244,18 @@ function check(text, personal = []) {
         if (!x.word && /[.;:!?…]/.test(x.w)) break;
         if (x.word && NEGW.has(x.w.replace(/'/g, '’').toLowerCase())) { ok = true; break; }
       }
-      if (!ok) add(t.s, t.e, 'gram', 'Négation incomplète : « ne » attend « pas », « plus », « jamais »… (tournure littéraire admise avec « savoir », « pouvoir », « oser », « cesser »).', [], 'neg');
+      // 19/10/2026 — fausses alertes relevées sur des textes justes :
+      // « plus long qu'on ne le croit », « avant qu'il ne parte » (ne explétif) ;
+      // « ni la mort ni la vie… ne pourra » ; « ils ne savent ce qu'ils font ».
+      const i0 = toks.indexOf(t), avant = [];
+      for (let k = i0 - 1; k >= 0 && avant.length < 40; k--) { const x = toks[k]; if (!x.word && /[.;!?…]/.test(x.w)) break; if (x.word) avant.push(x.w.replace(/'/g, '’').toLowerCase()); }
+      const proche = avant.slice(0, 8);
+      if (proche.some((x) => x === 'que' || x === 'qu’') && proche.some((x) => EXPLETIF.has(x))) ok = true;
+      if (avant.includes('ni') || avant.slice(0, 4).some((x) => NEG_AVANT.has(x))) ok = true;   // « Aucun évangile ne les donne »
+      let v = words[i + 1], kk = i + 1;
+      while (v && OBJ.has(v.lw) && kk < i + 4) v = words[++kk];
+      if (v && v.ent && v.ent.lemmas.some((l) => ['savoir', 'pouvoir', 'oser', 'cesser', 'bouger', 'importer'].includes(l))) ok = true;
+      if (!ok) add(t.s, t.e, 'gram', 'Négation incomplète : « ne » attend « pas », « plus », « jamais »…', [], 'neg');
     }
 
     // accord déterminant – nom en nombre
@@ -250,7 +271,7 @@ function check(text, personal = []) {
       }
     }
     // accord déterminant – nom en genre (un/une, le/la, ce/cette)
-    if ((DET_FEM[t.lw] || DET_MAS[t.lw]) && adjacent(t, n) && n.ent && all(n.ent, (c) => c.has('nom')) && !(PRONOUN_DET.has(t.lw) && has(n.ent, 'v1'))) {
+    if ((DET_FEM[t.lw] || DET_MAS[t.lw]) && adjacent(t, n) && n.ent && all(n.ent, (c) => c.has('nom')) && !(PRONOUN_DET.has(t.lw) && has(n.ent, 'v1')) && !/^[A-ZÀ-Ý]/.test(n.w)) {
       const fem = !!DET_FEM[t.lw];
       const fits = n.ent.combos.some((c) => c.has('epi') || c.has(fem ? 'fem' : 'mas') || (!c.has('mas') && !c.has('fem')));
       if (!fits) {
@@ -308,15 +329,18 @@ function check(text, personal = []) {
   /* — typographie française — */
   let m;
   const rxp = (rx, f) => { rx.lastIndex = 0; while ((m = rx.exec(text))) f(m); };
-  rxp(/(\S)([;:!?»])/g, (mm) => { if (mm[1] === ' ' || mm[1] === ' ' || /[;:!?\d]/.test(mm[1]) || (mm[2] === ':' && /\d/.test(text[mm.index + 2] || ''))) return; if (/https?$/.test(text.slice(Math.max(0, mm.index - 5), mm.index + 1))) return; add(mm.index + 1, mm.index + 2, 'typo', `Une espace fine insécable se place avant « ${mm[2]} ».`, [' ' + mm[2]], 'esp-avant'); });
-  rxp(/«(\S)/g, (mm) => add(mm.index, mm.index + 1, 'typo', 'Une espace insécable suit le guillemet ouvrant « « ».', ['« '], 'esp-guil'));
+  rxp(/(\S)([;:!?»])/g, (mm) => { if (mm[1] === ' ' || mm[1] === ' ' || /[;:!?\d]/.test(mm[1]) || (mm[2] === ':' && /\d/.test(text[mm.index + 2] || ''))) return; if (/https?$/.test(text.slice(Math.max(0, mm.index - 5), mm.index + 1))) return; add(mm.index + 1, mm.index + 2, 'auto', `Une espace fine insécable se place avant « ${mm[2]} ».`, [' ' + mm[2]], 'esp-avant'); });
+  rxp(/«(\S)/g, (mm) => add(mm.index, mm.index + 1, 'auto', 'Une espace insécable suit le guillemet ouvrant « « ».', ['« '], 'esp-guil'));
   rxp(/ +([,.])/g, (mm) => add(mm.index, mm.index + mm[0].length, 'typo', `Pas d’espace avant « ${mm[1]} ».`, [mm[1]], 'esp-virg'));
   rxp(/([,;])(?=[\p{L}])/gu, (mm) => add(mm.index, mm.index + 1, 'typo', `Une espace suit « ${mm[1]} ».`, [mm[1] + ' '], 'esp-apres'));
   rxp(/([.!?])([A-ZÀ-Ý])/g, (mm) => { if (/\b[A-Z]\.$/.test(text.slice(mm.index - 2, mm.index + 1))) return; add(mm.index, mm.index + 1, 'typo', 'Une espace suit la fin de phrase.', [mm[1] + ' '], 'esp-phrase'); });
   rxp(/ {2,}/g, (mm) => add(mm.index, mm.index + mm[0].length, 'typo', 'Espaces multiples.', [' '], 'esp-double'));
   rxp(/\.\.\./g, (mm) => add(mm.index, mm.index + 3, 'typo', 'Points de suspension : un seul caractère « … ».', ['…'], 'susp'));
-  rxp(/(\p{L})'(\p{L})/gu, (mm) => add(mm.index + 1, mm.index + 2, 'typo', 'Apostrophe typographique « ’ ».', ['’'], 'apos'));
-  rxp(/(^|[.!?…]\s+)(\p{Ll})/gu, (mm) => { const at = mm.index + mm[1].length; if (/\b(etc|cf|p|ex|av|apr|env|chap|vol)\.\s+$/i.test(text.slice(Math.max(0, at - 8), at))) return; add(at, at + 1, 'typo', 'Majuscule en début de phrase.', [mm[2].toUpperCase()], 'maj'); });
+  // L'apostrophe droite du clavier n'est PAS une faute : elle était signalée à
+  // chaque mot (des dizaines de « fautes » par page). Harmonisée sans bruit.
+  rxp(/(\p{L})'(\p{L})/gu, (mm) => add(mm.index + 1, mm.index + 2, 'auto', 'Apostrophe typographique « ’ ».', ['’'], 'apos'));
+  // Majuscule : après un point seulement — « Oh ! que ta fidélité est grande » est juste
+  rxp(/(^|[^.]\.\s+)(\p{Ll})/gu, (mm) => { const at = mm.index + mm[1].length; if (/\b(etc|cf|p|ex|av|apr|env|chap|vol)\.\s+$/i.test(text.slice(Math.max(0, at - 8), at))) return; add(at, at + 1, 'typo', 'Majuscule en début de phrase.', [mm[2].toUpperCase()], 'maj'); });
 
   /* — vocabulaire : pléonasmes, barbarismes, répétitions — */
   const lowText = text.replace(/'/g, '’').toLowerCase();
@@ -334,12 +358,15 @@ function check(text, personal = []) {
   const seen = new Map();
   words.forEach((t, k) => {
     if (!t.ent || t.w.length < 5) return;
+    if (/^[A-ZÀ-Ý]/.test(t.w)) return;   // « l’Éternel », « Seigneur » : un nom qu’on répète exprès
     if (!t.ent.combos.some((c) => c.has('nom') || c.has('adj')) || t.ent.combos.some(isVerbCombo)) return;   // les verbes reviennent naturellement
     const lem = t.ent.lemmas[0];
     if (STOP.has(lem) || t.ent.f >= 9) return;
-    const prev = seen.get(lem);
-    if (prev != null && k - prev.k <= 30) add(t.s, t.e, 'voc', `Répétition : « ${lem} » revient ${k - prev.k} mots plus loin.`, [], 'repetition:' + lem);
-    seen.set(lem, { k });
+    // trois fois en 50 mots (deux fois en 30 signalait les répétitions voulues)
+    const vus = (seen.get(lem) || []).filter((x) => k - x <= 50);
+    vus.push(k);
+    if (vus.length >= 3) add(t.s, t.e, 'voc', `Répétition : « ${t.w} » revient ${vus.length} fois en ${k - vus[0]} mots.`, [], 'repetition:' + lem);
+    seen.set(lem, vus);
   });
 
   // une remarque par endroit : la grammaire passe avant l'orthographe… sauf si le mot est inconnu
