@@ -350,6 +350,85 @@ def enregistrer(app):
         finally:
             cx.fermer()
 
+    # ── Cadeaux (19/10/2026) : offrir un livre ou Plume, sans argent ─────────
+    # Demandé par le propriétaire tant que Mobile Money n'est pas branché :
+    # tester toutes les fonctions, faire lire un livre à un relecteur, remercier
+    # quelqu'un. Ce n'est PAS une vente : ni paiement, ni reçu, ni revenu pour
+    # l'auteur, ni commission. Rôle finance + code frais, motif obligatoire,
+    # trace dans le journal d'audit, notification à la personne. Retirable.
+    @app.get("/api/admin/dons")
+    @admin_requis
+    def admin_dons():
+        cx = db.connecter()
+        try:
+            return jsonify(dons=cx.tous("""SELECT d.id, d.objet, d.debut, d.fin, d.motif, d.created_at, d.revoque_le,
+                                                  u.nom, u.email, b.titre, b.slug, a.email AS par
+                                             FROM dons d JOIN users u ON u.id = d.user_id LEFT JOIN books b ON b.id = d.book_id
+                                             JOIN admin_users a ON a.id = d.admin_id ORDER BY d.id DESC LIMIT 300"""))
+        finally:
+            cx.fermer()
+
+    @app.post("/api/admin/dons")
+    @admin_requis
+    @role_requis("finance")
+    @reauth_requise
+    def offrir():
+        d = v.corps_json(request)
+        email = v.email(d)
+        objet = v.choix(d, "objet", {"livre", "plume"})
+        motif = v.texte(d, "motif", mini=3, maxi=200)
+        cx = db.connecter()
+        try:
+            u = cx.un("SELECT id, nom FROM users WHERE email = ? AND actif = 1", (email,))
+            if not u:
+                return jsonify(erreur="Aucun compte actif avec cette adresse.", champ="email"), 404
+            m = acces.maintenant()
+            if objet == "livre":
+                slug = v.texte(d, "livre", maxi=80)
+                b = cx.un("SELECT id, titre, owner_id FROM books WHERE slug = ? AND statut = 'actif'", (slug,))
+                if not b:
+                    return jsonify(erreur="Livre introuvable (ou retiré).", champ="livre"), 404
+                if b["owner_id"] == u["id"]:
+                    raise v.Invalide("C'est son propre livre : il le lit déjà en entier.", "livre")
+                if cx.un("SELECT id FROM dons WHERE user_id = ? AND book_id = ? AND objet = 'livre' AND revoque_le IS NULL", (u["id"], b["id"])):
+                    raise v.Invalide("Ce livre lui est déjà offert.", "livre")
+                did = cx.inserer("INSERT INTO dons (user_id, objet, book_id, debut, motif, admin_id, created_at) VALUES (?, 'livre', ?, ?, ?, ?, ?)",
+                                 (u["id"], b["id"], m, motif, g.admin["id"], m))
+                notifications.emettre(cx, u["id"], "paiement", "Un livre vous est offert",
+                                      f"Sōzō vous offre « {b['titre']} » en entier, pages à venir comprises.", f"/app/livre.html?id={slug}", f"don:{did}")
+            else:
+                jours = v.entier(d, "jours", mini=1, maxi=365, requis=False) or 30
+                from datetime import datetime, timedelta, timezone
+                depart = max(m, argent.plume_actif(cx, u["id"])["fin"] or m)        # prolonge une Plume en cours
+                fin = (datetime.strptime(depart, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc) + timedelta(days=jours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                did = cx.inserer("INSERT INTO dons (user_id, objet, debut, fin, motif, admin_id, created_at) VALUES (?, 'plume', ?, ?, ?, ?, ?)",
+                                 (u["id"], depart, fin, motif, g.admin["id"], m))
+                notifications.emettre(cx, u["id"], "plume", "Plume vous est offerte",
+                                      f"Sōzō vous offre Plume pendant {jours} jours.", "/app/studio.html#revenus", f"don:{did}")
+            _trace("don." + objet, f"don:{did}", f"{email} — {motif}", cx)
+            cx.valider()
+            envois.declencher()
+            return jsonify(ok=True, id=did), 201
+        finally:
+            cx.fermer()
+
+    @app.post("/api/admin/dons/<int:did>/retirer")
+    @admin_requis
+    @role_requis("finance")
+    @reauth_requise
+    def retirer_don(did):
+        motif = v.texte(v.corps_json(request), "motif", mini=3, maxi=200)
+        cx = db.connecter()
+        try:
+            cur = cx.execute("UPDATE dons SET revoque_le = ? WHERE id = ? AND revoque_le IS NULL", (acces.maintenant(), did))
+            if cur.rowcount != 1:
+                return jsonify(erreur="Ce cadeau est déjà retiré (ou n'existe pas)."), 404
+            _trace("don.retrait", f"don:{did}", motif, cx)
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
     @app.get("/api/admin/livres")
     @admin_requis
     def admin_livres():

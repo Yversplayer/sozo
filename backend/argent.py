@@ -45,7 +45,9 @@ def _now():
 
 def plume_actif(cx, user_id, a=None):
     r = cx.un("SELECT MAX(fin) AS fin FROM subscriptions WHERE user_id = ? AND revoque_le IS NULL", (user_id,))
-    fin = r["fin"] if r else None
+    d = cx.un("SELECT MAX(fin) AS fin FROM dons WHERE user_id = ? AND objet = 'plume' AND revoque_le IS NULL", (user_id,))
+    fins = [x["fin"] for x in (r, d) if x and x["fin"]]            # Plume payée ou offerte
+    fin = max(fins) if fins else None
     return {"actif": bool(fin and fin > (a or _now())), "fin": fin, "prix": config.plume_prix_centimes() / 100}
 
 

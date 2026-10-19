@@ -151,6 +151,7 @@ class Balayage(TestBase):
         "relecture_ia": [("POST", "/api/studio/livres/{slug}/pages/1/relecture", {404}, {"texte": "Texte secret à relire."})],
         "couverture_livre": [("GET", "/api/livres/{slug_brouillon}/couverture", {404})],
         "desepingler": [("DELETE", "/api/epingles/{eid}", {404})],
+        "retirer_don": [("POST", "/api/admin/dons/1/retirer", {401}, {"motif": "essai"})],
     }
     # Routes paramétrées hors balayage, avec la raison :
     EXEMPTES = {

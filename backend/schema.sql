@@ -436,3 +436,21 @@ CREATE TABLE IF NOT EXISTS ia_usages (
   n INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (user_id, jour)
 );
+
+-- v9 (19/10/2026) : cadeaux de la plateforme. Un livre entier ou 30 jours de
+-- Plume OFFERTS par un administrateur (rôle finance, code frais), avec un
+-- motif et une trace dans le journal d'audit. Aucun argent : ni paiement, ni
+-- reçu, ni revenu pour l'auteur — ce n'est pas une vente. Retirable.
+CREATE TABLE IF NOT EXISTS dons (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  objet TEXT NOT NULL CHECK (objet IN ('livre', 'plume')),
+  book_id INTEGER REFERENCES books (id),
+  debut TEXT NOT NULL,
+  fin TEXT,
+  motif TEXT NOT NULL,
+  admin_id INTEGER NOT NULL REFERENCES admin_users (id),
+  created_at TEXT NOT NULL,
+  revoque_le TEXT
+);
+CREATE INDEX IF NOT EXISTS dons_personne ON dons (user_id, objet);

@@ -29,7 +29,9 @@ html[data-theme="dark"] .ad-refus td { color: #FF8A7A; }
 .ad-dlg form { display: grid; gap: 14px; }
 .ad-dlg h2 { font-family: var(--serif); font-weight: 500; font-size: 28px; }
 .ad-dlg #dlgB { display: grid; gap: 12px; }
-.ad-dlg textarea, .ad-dlg input:not([type="checkbox"]) { width: 100%; border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; font-weight: 400; }
+.ad-dlg textarea, .ad-dlg input:not([type="checkbox"]):not([type="radio"]) { width: 100%; border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; font-weight: 400; }
 .ad-dlg-a { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 @media (max-width: 760px) { .ad-who { display: none; } .ad-top { flex-wrap: wrap; } .ad-top .btn { margin-left: auto; } }
 .ad-test { font-size: 10.5px; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: #2E5E8C; color: #fff; }
+.ad-dlg select { width: 100%; height: 44px; border: 1px solid var(--line); border-radius: var(--r); padding: 0 10px; background: var(--paper); color: var(--ink); font: inherit; font-size: 15px; }
+.ad-dlg [hidden] { display: none !important; }

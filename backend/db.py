@@ -17,7 +17,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 8   # v8 (19/10/2026) : apparence des livres, couvertures, épingles, relectures IA
+VERSION_SCHEMA = 9   # v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
 _verrou = threading.Lock()
 
 
@@ -215,6 +215,7 @@ RLS = {
     "appareils": f"user_id = {_MOI}",
     "epingles": f"user_id = {_MOI}",
     "ia_usages": f"user_id = {_MOI}",
+    "dons": f"user_id = {_MOI}",
 }
 
 

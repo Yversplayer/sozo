@@ -146,6 +146,8 @@ def enregistrer(app):
             plages = {}
             for r in cx.tous("SELECT book_id, page_de, page_a FROM entitlements WHERE user_id = ? AND revoque_le IS NULL", (uid,)):
                 plages.setdefault(r["book_id"], []).append((r["page_de"], r["page_a"]))
+            for r in cx.tous("SELECT book_id FROM dons WHERE user_id = ? AND objet = 'livre' AND revoque_le IS NULL", (uid,)):
+                plages.setdefault(r["book_id"], []).append((1, None))        # livre offert
             # Vitrine publique (en cache court) + livres de la personne (toujours frais)
             vit = vitrine(cx)
             miens = cx.tous("SELECT * FROM books WHERE owner_id = ? ORDER BY id", (uid,))
@@ -188,6 +190,10 @@ def enregistrer(app):
             fin = r["page_a"] or nmax
             p = purchases.setdefault(slug, {"pages": [], "date": r["created_at"][:10]})
             p["pages"] = sorted(set(p["pages"]) | set(range(r["page_de"], fin + 1)))
+        for r in cx.tous("SELECT book_id, created_at FROM dons WHERE user_id = ? AND objet = 'livre' AND revoque_le IS NULL", (uid,)):
+            if r["book_id"] in par_id:
+                p = purchases.setdefault(par_id[r["book_id"]], {"pages": [], "date": r["created_at"][:10]})
+                p["pages"] = sorted(set(p["pages"]) | set(range(1, g.dernieres_pages.get(r["book_id"], 0) + 1)))
         return {"follows": follows, "progress": progress, "purchases": purchases}
 
     @app.get("/api/livres/<livre>/pages/<int:n>")

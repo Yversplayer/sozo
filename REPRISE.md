@@ -41,7 +41,7 @@ Ajouts du 17-18/10/2026 (déployés, commit b29e2e5) :
    - `demo.py --en-ligne --projet <ref>` : adresse collée au clavier, puis taper EXEMPLE.
    Pour recommencer ailleurs : pousser, Manual Deploy de Render (le refus de vente doit être en ligne AVANT les livres), puis `demo.py --en-ligne`. La base de développement locale garde l'ancien catalogue (les comptes d'essai y ont des achats) : pour voir le nouveau, charger une base neuve (`SOZO_DB_PATH=…`).
    Tuiles vides : réglé le 19/10 — Explorer n'affiche que les catégories qui ont des livres, avec leur nombre.
-2. **« Accès à toutes les fonctionnalités »** : seuls les achats (pages, Plume) sont fermés, faute de numéros Mobile Money. Question posée : (1) il donne ses numéros → `SOZO_PAIEMENT_NUMEROS` sur Render, il achète puis confirme lui-même dans l'admin ; ou (2) ajouter dans l'admin « offrir Plume / offrir un livre » (avec audit).
+2. **Paiements (19/10/2026)** : les DEUX, dans l'ordre. (a) **Fait** : l'administration « Cadeaux » offre un livre entier ou Plume (table `dons`, rôle finance + code frais, motif, audit, notification, retirable ; aucun argent : ni paiement, ni reçu, ni revenu pour l'auteur ; tests `test_dons.py`, vus tomber). (b) **Reste** : quand le propriétaire donne ses numéros Mobile Money (`SOZO_PAIEMENT_NUMEROS` sur Render), les vraies ventes s'ouvrent ; il confirme chaque paiement dans l'admin.
 3. Le propriétaire teste le logiciel ce week-end : traiter ses retours en priorité.
 
 ## 7. Refonte du 19/10/2026 — ce qui a changé (retours du propriétaire)
@@ -85,7 +85,7 @@ Commits `563625a` (serveur) puis la refonte des écrans. Suites : 168 tests SQLi
 - Tarifs proposés, **non confirmés par le propriétaire** : commission de 15 % (10 % avec Plume), Plume à 4,99 $ pour 30 jours, reversement minimum de 1 $.
 
 ## 3. Ce qui fonctionne (testé)
-**Tests** : 168 sur SQLite (7 réservés à PostgreSQL y sont sautés) et 168 sur PostgreSQL (RLS active), tous verts au 19/10/2026. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
+**Tests** : 172 sur SQLite (7 réservés à PostgreSQL y sont sautés) et 172 sur PostgreSQL (RLS active), tous verts au 19/10/2026. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
 ```bash
 cd /Users/macbookpro/sozo && backend_venv/bin/python -m unittest discover -s backend/tests -t backend
 cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py

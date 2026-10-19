@@ -53,7 +53,8 @@ def livre(cx, user, book_id):
     if b["statut"] != "actif":
         # Livre retiré : il disparaît du catalogue, MAIS celui qui en a acheté
         # des pages les garde — un droit acquis n'est jamais retiré.
-        if user and cx.un("SELECT id FROM entitlements WHERE user_id = ? AND book_id = ? AND revoque_le IS NULL LIMIT 1", (user["id"], book_id)):
+        if user and (cx.un("SELECT id FROM entitlements WHERE user_id = ? AND book_id = ? AND revoque_le IS NULL LIMIT 1", (user["id"], book_id))
+                     or cx.un("SELECT id FROM dons WHERE user_id = ? AND book_id = ? AND objet = 'livre' AND revoque_le IS NULL LIMIT 1", (user["id"], book_id))):
             return b
         return None
     if not cx.un("SELECT id FROM pages WHERE book_id = ? AND statut <> 'draft' LIMIT 1", (book_id,)):
@@ -65,8 +66,12 @@ def droits(cx, user_id, book_id):
     """Plages de pages acquises : [(de, a_ou_None), …]."""
     if not user_id:
         return []
-    return [(r["page_de"], r["page_a"]) for r in cx.tous(
+    plages = [(r["page_de"], r["page_a"]) for r in cx.tous(
         "SELECT page_de, page_a FROM entitlements WHERE user_id = ? AND book_id = ? AND revoque_le IS NULL", (user_id, book_id))]
+    # Un livre OFFERT par la plateforme (table dons) : tout le livre, pages futures comprises
+    if cx.un("SELECT id FROM dons WHERE user_id = ? AND book_id = ? AND objet = 'livre' AND revoque_le IS NULL LIMIT 1", (user_id, book_id)):
+        plages.append((1, None))
+    return plages
 
 
 def couverte(plages, n):

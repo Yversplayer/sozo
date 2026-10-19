@@ -1135,3 +1135,10 @@ html[data-theme="dark"] .ed-ctx del { color: #FF8A7A; } html[data-theme="dark"] 
 .grid > * { min-width: 0; }
 .bc-meta { flex-wrap: wrap; }
 .bc-meta .mono { white-space: normal; text-align: right; }
+/* administration : fenêtre « Offrir » */
+.ad-choix { border: 0; display: grid; gap: 8px; font-size: 15px; }
+.ad-choix legend { font-weight: 500; font-size: 14px; margin-bottom: 6px; }
+.ad-choix label { display: flex; gap: 10px; align-items: center; cursor: pointer; }
+.ad-choix input { width: 18px; height: 18px; accent-color: var(--gold-line); }
+.cx-field[hidden] { display: none; }
+dialog .cx-field select { height: 46px; width: 100%; border: 1px solid var(--line); border-radius: var(--r); padding: 0 12px; background: var(--paper); color: var(--ink); font: inherit; font-size: 15px; }

@@ -103,7 +103,7 @@
   $('#sortir').addEventListener('click', async () => { await api('DELETE', '/api/admin/sessions/courante').catch(() => {}); connexion(); });
 
   /* ─── la console ─── */
-  const ONGLETS = [['tableau', 'Tableau'], ['paiements', 'Paiements'], ['reversements', 'Reversements'], ['livres', 'Livres'], ['signalements', 'Signalements'], ['utilisateurs', 'Utilisateurs'], ['audit', 'Journal']];
+  const ONGLETS = [['tableau', 'Tableau'], ['paiements', 'Paiements'], ['reversements', 'Reversements'], ['cadeaux', 'Cadeaux'], ['livres', 'Livres'], ['signalements', 'Signalements'], ['utilisateurs', 'Utilisateurs'], ['audit', 'Journal']];
   let onglet = (location.hash || '#tableau').slice(1), compteurs = {}, roles = [];
   const peut = (r) => roles.includes(r);
   async function console_() {
@@ -211,6 +211,45 @@
       }));
       $$('[data-refus]', el).forEach((b) => b.addEventListener('click', () => demander({ titre: 'Refuser ce reversement ?', bouton: 'Refuser', corps: motif('Motif (l’auteur le verra)'),
         valider: async (f) => { const m = f.elements.motif.value.trim(); if (m.length < 3) return 'Indiquez un motif.'; const y = await api('POST', `/api/admin/reversements/${b.dataset.refus}/refuser`, { motif: m }); if (!y.ok) return y.d.erreur; toast('Reversement refusé : le montant redevient disponible pour l’auteur.'); console_(); } })));
+    },
+
+    /* Cadeaux (19/10/2026) : offrir un livre ou Plume, sans argent — rôle finance, code frais */
+    async cadeaux(el) {
+      const r = await api('GET', '/api/admin/dons');
+      if (!r.ok) { el.innerHTML = `<p class="warn">${esc(r.d.erreur)}</p>`; return; }
+      const D = r.d.dons;
+      el.innerHTML = `${peut('finance') ? `<div class="tbl-tools"><button class="btn btn--accent" type="button" id="offrir">Offrir un livre ou Plume</button></div>` : '<p class="note">Offrir demande le rôle « finance ».</p>'}
+        <p class="note" style="margin:0 0 12px">Un cadeau ouvre la lecture (ou Plume) à UNE personne. Ce n’est pas une vente : ni paiement, ni reçu, ni revenu pour l’auteur. Chaque cadeau est inscrit au journal et se retire.</p>
+        ${D.length ? table(['Le', 'Pour', 'Cadeau', 'Motif', 'Par', 'État', ''], D.map((x) => `<tr>
+          <td>${date(x.created_at)}</td><td>${esc(x.nom)}<br><small class="ash">${esc(x.email)}</small></td>
+          <td>${x.objet === 'plume' ? `Plume jusqu’au ${date(x.fin)}` : `${esc(x.titre)} — livre entier`}</td><td class="ad-motif">${esc(x.motif)}</td><td>${esc(x.par)}</td>
+          <td>${x.revoque_le ? `Retiré le ${date(x.revoque_le)}` : 'Actif'}</td>
+          <td>${!x.revoque_le && peut('finance') ? `<button class="btn btn--sm btn--ghost" data-retdon="${x.id}">Retirer</button>` : ''}</td></tr>`)) : vide('Aucun cadeau pour l’instant.')}`;
+      const of = $('#offrir');
+      if (of) of.addEventListener('click', async () => {
+        const lv = await api('GET', '/api/admin/livres');
+        const livres = lv.ok ? lv.d.livres.filter((b) => b.statut !== 'retire') : [];
+        demander({ titre: 'Offrir', bouton: 'Offrir',
+          corps: `<label class="cx-field">E-mail du compte<input name="email" type="email" required autocomplete="off"></label>
+            <fieldset class="ad-choix"><legend>Cadeau</legend><label><input type="radio" name="objet" value="livre" checked> Un livre entier (pages à venir comprises)</label><label><input type="radio" name="objet" value="plume"> Plume</label></fieldset>
+            <label class="cx-field" data-si-livre>Livre<select name="livre">${livres.map((b) => `<option value="${esc(b.slug)}">${esc(b.titre)} — ${esc(b.auteur)}</option>`).join('')}</select></label>
+            <label class="cx-field" data-si-plume hidden>Durée en jours<input name="jours" type="number" min="1" max="365" value="30"></label>
+            ${motif('Motif (inscrit au journal)')}
+            <p class="note">Un code à 6 chiffres frais vous sera demandé.</p>`,
+          valider: async (f) => {
+            const objet = f.elements.objet.value, m = f.elements.motif.value.trim();
+            if (m.length < 3) return 'Indiquez un motif.';
+            const corps = { email: f.elements.email.value.trim(), objet, motif: m };
+            if (objet === 'livre') corps.livre = f.elements.livre.value; else corps.jours = +f.elements.jours.value || 30;
+            const y = await api('POST', '/api/admin/dons', corps);
+            if (!y.ok) return y.d.erreur || 'Cadeau refusé.';
+            toast('Cadeau offert : la personne est prévenue dans ses notifications.'); console_();
+          } });
+        const f = $('#dlgF');
+        f.addEventListener('change', () => { const pl = f.elements.objet.value === 'plume'; f.querySelector('[data-si-livre]').hidden = pl; f.querySelector('[data-si-plume]').hidden = !pl; });
+      });
+      $$('[data-retdon]', el).forEach((b) => b.addEventListener('click', () => demander({ titre: 'Retirer ce cadeau ?', bouton: 'Retirer', corps: motif('Motif (inscrit au journal)'),
+        valider: async (f) => { const m = f.elements.motif.value.trim(); if (m.length < 3) return 'Indiquez un motif.'; const y = await api('POST', `/api/admin/dons/${b.dataset.retdon}/retirer`, { motif: m }); if (!y.ok) return y.d.erreur; toast('Cadeau retiré.'); console_(); } })));
     },
 
     async livres(el) {
