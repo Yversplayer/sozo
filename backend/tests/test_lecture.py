@@ -144,6 +144,13 @@ class Balayage(TestBase):
         "moderer_livre": [("POST", "/api/admin/livres/1/retirer", {401}, {"motif": "essai"})],
         "traiter_signalement": [("POST", "/api/admin/signalements/1", {401}, {"etat": "traite"})],
         "moderer_utilisateur": [("POST", "/api/admin/utilisateurs/1/desactiver", {401}, {"motif": "essai"})],
+        # 19/10/2026 : personnalisation, pages entières, relecture IA, épingles
+        "envoyer_couverture": [("PUT", "/api/studio/livres/{slug}/couverture", {404}, {"image": "data:image/png;base64,iVBORw0KGgowMDAwMDAw"})],
+        "retirer_couverture": [("DELETE", "/api/studio/livres/{slug}/couverture", {404})],
+        "studio_textes": [("GET", "/api/studio/livres/{slug}/textes?de=1&a=3", {404})],
+        "relecture_ia": [("POST", "/api/studio/livres/{slug}/pages/1/relecture", {404}, {"texte": "Texte secret à relire."})],
+        "couverture_livre": [("GET", "/api/livres/{slug_brouillon}/couverture", {404})],
+        "desepingler": [("DELETE", "/api/epingles/{eid}", {404})],
     }
     # Routes paramétrées hors balayage, avec la raison :
     EXEMPTES = {
@@ -166,10 +173,16 @@ class Balayage(TestBase):
         try:
             aid = cx.inserer("INSERT INTO appareils (user_id, endpoint, p256dh, auth, created_at) VALUES (?, ?, ?, ?, ?)",
                              (a.id, "https://fcm.googleapis.com/fcm/send/balayage-a", "x" * 87, "y" * 22, "2026-10-16T00:00:00Z"))
+            bid = cx.un("SELECT id FROM books WHERE slug = ?", (slug,))["id"]
+            # une couverture et une épingle de A, pour vérifier que B ne les atteint pas
+            cx.execute("INSERT INTO couvertures (book_id, mime, donnees, empreinte, taille, created_at) VALUES (?, 'image/png', ?, ?, 10, ?)",
+                       (bid, "iVBORw0KGgowMDAwMDAw", "e" * 64, "2026-10-19T00:00:00Z"))
+            eid = cx.inserer("INSERT INTO epingles (user_id, book_id, n, extrait, created_at) VALUES (?, ?, 1, 'Texte secret', ?)",
+                             (a.id, bid, "2026-10-19T00:00:00Z"))
             cx.valider()
         finally:
             cx.fermer()
-        cle = {"slug": slug, "slug_brouillon": slug, "pid": pid, "rid": 1, "n": 1, "aid": aid}
+        cle = {"slug": slug, "slug_brouillon": slug, "pid": pid, "rid": 1, "n": 1, "aid": aid, "eid": eid}
         for ep, essais in self.ROUTES.items():
             for essai in essais:
                 meth, url, attendus = essai[:3]

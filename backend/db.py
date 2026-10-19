@@ -17,7 +17,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 7   # v7 (17/10/2026) : table reglages
+VERSION_SCHEMA = 8   # v8 (19/10/2026) : apparence des livres, couvertures, épingles, relectures IA
 _verrou = threading.Lock()
 
 
@@ -213,6 +213,8 @@ RLS = {
     "refunds": f"user_id = {_MOI}",
     "notifications": f"user_id = {_MOI}",
     "appareils": f"user_id = {_MOI}",
+    "epingles": f"user_id = {_MOI}",
+    "ia_usages": f"user_id = {_MOI}",
 }
 
 
@@ -312,6 +314,9 @@ def _migrer(cx):
     _ajouter_colonne(cx, "imports", "efface_le", "TEXT")
     # v6 (17/10/2026) : thème de la personne (NULL = nocturne, le défaut du propriétaire)
     _ajouter_colonne(cx, "users", "theme", "TEXT")
+    # v8 (19/10/2026) : apparence choisie par l'auteur (couverture et mise en
+    # page intérieure), en JSON validé clé par clé par studio.apparence_propre
+    _ajouter_colonne(cx, "books", "apparence", "TEXT")
     if "annoncee_le" not in _colonnes(cx, "pages"):
         _ajouter_colonne(cx, "pages", "annoncee_le", "TEXT")
         # Les pages DÉJÀ sorties sont réputées annoncées : sans cela, la première

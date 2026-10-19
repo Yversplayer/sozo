@@ -401,3 +401,38 @@ CREATE TABLE IF NOT EXISTS reglages (
   valeur TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+
+-- v8 (19/10/2026) : la couverture CRÉÉE par l'auteur (image envoyée depuis son
+-- appareil). En base et non sur disque : le disque de Render (offre gratuite)
+-- est effacé à chaque redéploiement. Reconnue par son contenu (JPEG, PNG,
+-- WebP — jamais de SVG : un SVG peut porter du script). Publique comme le
+-- livre : servie seulement si le livre est visible pour la personne.
+CREATE TABLE IF NOT EXISTS couvertures (
+  book_id INTEGER PRIMARY KEY REFERENCES books (id),
+  mime TEXT NOT NULL CHECK (mime IN ('image/jpeg', 'image/png', 'image/webp')),
+  donnees TEXT NOT NULL,
+  empreinte TEXT NOT NULL,
+  taille INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+-- Passages épinglés par un lecteur (mode lecture). Un extrait n'est accepté
+-- que s'il figure VRAIMENT dans une page que la personne a le droit de lire.
+CREATE TABLE IF NOT EXISTS epingles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  book_id INTEGER NOT NULL REFERENCES books (id),
+  n INTEGER NOT NULL,
+  extrait TEXT NOT NULL,
+  note TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS epingles_personne ON epingles (user_id, book_id);
+
+-- Relectures par l'IA, comptées par personne et par jour (plafond : coût).
+CREATE TABLE IF NOT EXISTS ia_usages (
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  jour TEXT NOT NULL,
+  n INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, jour)
+);

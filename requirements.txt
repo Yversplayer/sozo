@@ -9,3 +9,5 @@ py-vapid==1.9.6
 http_ece==1.2.1
 cryptography==48.0.1
 requests==2.32.5
+# Relecture des pages par l’IA (Claude), active seulement avec ANTHROPIC_API_KEY
+anthropic==0.125.0

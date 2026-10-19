@@ -34,6 +34,103 @@ CATEGORIES = {"Roman", "Poésie", "Polar", "Jeunesse", "Essai", "Histoire", "Foi
 AMBIANCES = {"nuit", "parchemin", "or", "aube"}
 DOSSIER_STOCKAGE = os.path.join(config.RACINE_BACKEND, "stockage", "manuscrits")
 
+# ── Apparence d'un livre (19/10/2026) ─────────────────────────────────────
+# L'auteur dessine sa couverture et la mise en page de ses pages. Tout arrive
+# du navigateur, donc de n'importe qui : chaque clé est sur liste fermée,
+# chaque valeur bornée. Une couleur est « #RRGGBB » et rien d'autre (une
+# valeur CSS libre permettrait « url(…) » vers un site tiers, ou pire).
+# Le JSON enregistré est RECONSTRUIT ici : une clé inconnue n'est jamais gardée.
+POLICES = {"cormorant", "inter", "georgia", "didone", "moderne", "machine", "manuscrite"}
+_COULEUR = re.compile(r"^#[0-9a-fA-F]{6}$")
+_COUV = {
+    "fond": ("choix", {"photo", "image", "uni", "degrade"}),
+    "couleur1": ("couleur",), "couleur2": ("couleur",), "angle": ("entier", 0, 360),
+    "cadrage_x": ("entier", 0, 100), "cadrage_y": ("entier", 0, 100), "zoom": ("entier", 100, 300),
+    "voile": ("entier", 0, 90), "voile_couleur": ("couleur",),
+    "police_titre": ("choix", POLICES), "taille_titre": ("entier", 50, 240), "graisse": ("choix", {300, 400, 500, 600, 700, 800}),
+    "capitales": ("bool",), "espacement": ("entier", -5, 40), "italique": ("bool",),
+    "alignement": ("choix", {"gauche", "centre", "droite"}), "position": ("choix", {"haut", "milieu", "bas"}),
+    "couleur_titre": ("couleur",), "couleur_texte": ("couleur",), "sous_titre": ("texte", 80),
+    "afficher_auteur": ("bool",), "afficher_categorie": ("bool",),
+    "ornement": ("choix", {"aucun", "ovale", "bandeau", "cadre", "filet", "coins"}), "couleur_ornement": ("couleur",),
+    "image_seule": ("bool",),
+}
+_PAGE = {
+    "police": ("choix", POLICES), "accent": ("couleur",),
+    "lettrine": ("choix", {"aucune", "simple", "ornee"}), "alignement": ("choix", {"gauche", "justifie"}),
+    "interligne": ("entier", 130, 230), "separateur": ("choix", {"aucun", "etoiles", "fleuron", "croix", "trait"}),
+    "titre_chapitre": ("choix", {"classique", "capitales", "italique"}),
+}
+
+
+def _valeur_apparence(champ, regle, val):
+    nature = regle[0]
+    if nature == "choix":
+        if val not in regle[1] or isinstance(val, bool):
+            raise v.Invalide(f"Valeur refusée pour « {champ} ».", champ)
+        return val
+    if nature == "couleur":
+        if not isinstance(val, str) or not _COULEUR.match(val):
+            raise v.Invalide(f"« {champ} » doit être une couleur #RRGGBB.", champ)
+        return val.upper()
+    if nature == "entier":
+        if isinstance(val, bool) or not isinstance(val, int) or not regle[1] <= val <= regle[2]:
+            raise v.Invalide(f"« {champ} » doit être un entier entre {regle[1]} et {regle[2]}.", champ)
+        return val
+    if nature == "bool":
+        if not isinstance(val, bool):
+            raise v.Invalide(f"« {champ} » doit valoir vrai ou faux.", champ)
+        return val
+    t = v.texte({champ: val}, champ, requis=False, maxi=regle[1])
+    return t or ""
+
+
+def apparence_propre(d):
+    """Rend l'apparence validée et reconstruite, ou lève Invalide."""
+    if not isinstance(d, dict) or set(d) - {"couv", "page"}:
+        raise v.Invalide("Apparence invalide.", "apparence")
+    out = {}
+    for partie, regles in (("couv", _COUV), ("page", _PAGE)):
+        bloc = d.get(partie)
+        if bloc is None:
+            continue
+        if not isinstance(bloc, dict) or len(bloc) > len(regles):
+            raise v.Invalide("Apparence invalide.", "apparence")
+        inconnues = set(bloc) - set(regles)
+        if inconnues:
+            raise v.Invalide(f"Réglage inconnu : {sorted(inconnues)[0]}.", "apparence")
+        out[partie] = {k: _valeur_apparence(k, regles[k], val) for k, val in bloc.items() if val is not None}
+    return out
+
+
+def apparence_lue(b):
+    try:
+        a = json.loads(b["apparence"]) if b["apparence"] else {}
+        return a if isinstance(a, dict) else {}
+    except (ValueError, KeyError, IndexError, TypeError):
+        return {}
+
+
+# Couverture envoyée : le type se reconnaît au CONTENU (signature), jamais au
+# nom ni au type annoncé par le navigateur. 2 Mo au plus une fois décodée : le
+# navigateur la réduit avant l'envoi (1 200 × 1 800 au plus).
+COUVERTURE_MAX = 2 * 1024 * 1024
+_SIGNATURES = ((b"\xff\xd8\xff", "image/jpeg"), (b"\x89PNG\r\n\x1a\n", "image/png"))
+
+
+def type_image(octets):
+    for sig, mime in _SIGNATURES:
+        if octets.startswith(sig):
+            return mime
+    if len(octets) > 12 and octets[:4] == b"RIFF" and octets[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
+def empreinte_couverture(cx, book_id):
+    r = cx.un("SELECT empreinte FROM couvertures WHERE book_id = ?", (book_id,))
+    return r["empreinte"][:16] if r else None
+
 
 def _images_permises():
     d = os.path.join(config.RACINE_SITE, "images")
@@ -81,6 +178,7 @@ def _detail(cx, b):
         "couverture": b["couverture"], "style": b["style"], "format": b["format"], "mode": b["mode"], "acces": b["acces"],
         "prix": {"page": b["prix_page"], "chapitre": b["prix_chapitre"], "livre": b["prix_livre"]},
         "statut": b["statut"], "retrait_motif": b["retrait_motif"], "fichier_source": b["fichier_source"],
+        "apparence": apparence_lue(b), "image": empreinte_couverture(cx, b["id"]),
         "chapitres": cx.tous("SELECT titre, page_de, page_a FROM chapters WHERE book_id = ? ORDER BY page_de", (b["id"],)),
         "pages": pages,
         "imports": [{**i, "conserve_jusqu_au": None if i["efface_le"] else manuscrits.echeance(i["created_at"])}
@@ -114,6 +212,8 @@ def enregistrer(app):
                                 FROM pages WHERE book_id = ?""", (b["id"],))
                 livres.append({"id": b["slug"], "titre": b["titre"], "categorie": b["categorie"], "couverture": b["couverture"],
                                "style": b["style"], "acces": b["acces"], "statut": b["statut"], "total": st["total"] or 0,
+                               "apparence": apparence_lue(b), "image": empreinte_couverture(cx, b["id"]),
+                               "maj": b["updated_at"],
                                "brouillons": st["brouillons"] or 0, "sorties": st["sorties"] or 0})
             gagne, verse, solde = argent.solde_auteur(cx, g.user["id"])
             return jsonify(role=u["role"], nom=u["nom"], atelier=reglages, livres=livres, solde=solde, gagne=gagne,
@@ -157,6 +257,7 @@ def enregistrer(app):
         if couv not in _images_permises():
             raise v.Invalide("Image de couverture inconnue.", "couverture")
         style = v.choix(d, "style", {"a", "b", "c", "d"}, requis=False) or "a"
+        app_ = json.dumps(apparence_propre(d["apparence"]), ensure_ascii=False) if d.get("apparence") is not None else None
         prix = {k: _prix(d, k) for k in ("prix_page", "prix_chapitre", "prix_livre")}
         if acces_ != "free" and all(x is None for x in prix.values()):
             raise v.Invalide("Un livre payant ou mixte a besoin d'au moins un prix.", "prix_page")
@@ -167,8 +268,8 @@ def enregistrer(app):
             m = acces.maintenant()
             slug = _slug(cx, titre)
             bid = cx.inserer("""INSERT INTO books (owner_id, slug, titre, categorie, description, couverture, style, format, mode, acces,
-                                prix_page, prix_chapitre, prix_livre, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                             (g.user["id"], slug, titre, cat, desc, couv, style, fmt, mode, acces_, prix["prix_page"], prix["prix_chapitre"], prix["prix_livre"], m, m))
+                                prix_page, prix_chapitre, prix_livre, apparence, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                             (g.user["id"], slug, titre, cat, desc, couv, style, fmt, mode, acces_, prix["prix_page"], prix["prix_chapitre"], prix["prix_livre"], app_, m, m))
             auditer("livre.creation", ressource=f"book:{bid}", apres=titre, cx=cx)
             cx.valider()
             catalogue.invalider_vitrine()
@@ -204,6 +305,8 @@ def enregistrer(app):
             if "mode" in d: ch["mode"] = v.choix(d, "mode", {"integral", "progressive"})
             if "acces" in d: ch["acces"] = v.choix(d, "acces", {"free", "paid", "mixed"})
             if "style" in d: ch["style"] = v.choix(d, "style", {"a", "b", "c", "d"})
+            if "format" in d: ch["format"] = v.choix(d, "format", {"texte", "vers"})
+            if "apparence" in d: ch["apparence"] = json.dumps(apparence_propre(d["apparence"] or {}), ensure_ascii=False)
             if "couverture" in d:
                 ch["couverture"] = v.texte(d, "couverture", maxi=60)
                 if ch["couverture"] not in _images_permises():
@@ -222,6 +325,115 @@ def enregistrer(app):
             return jsonify(livre=_detail(cx, _a_moi(cx, slug)))
         finally:
             cx.fermer()
+
+    @app.put("/api/studio/livres/<slug>/couverture")
+    @connectee
+    def envoyer_couverture(slug):
+        """La couverture créée par l'auteur : une image (data URI base64), dont
+        le type est reconnu par sa signature. Remplace la précédente."""
+        import base64
+        d = v.corps_json(request)
+        brut = d.get("image")
+        if not isinstance(brut, str) or not brut.startswith("data:") or "," not in brut or len(brut) > COUVERTURE_MAX * 4 // 3 + 200:
+            raise v.Invalide("Envoyez une image JPEG, PNG ou WebP de 2 Mo au plus.", "image")
+        try:
+            octets = base64.b64decode(brut.split(",", 1)[1], validate=True)
+        except (ValueError, TypeError):
+            raise v.Invalide("Image illisible.", "image")
+        mime = type_image(octets)
+        if not mime:
+            raise v.Invalide("Format refusé : JPEG, PNG ou WebP seulement.", "image")
+        if len(octets) > COUVERTURE_MAX:
+            raise v.Invalide("Image trop lourde : 2 Mo au plus.", "image")
+        cx = db.connecter()
+        try:
+            b = _a_moi(cx, slug)
+            if not b:
+                return jsonify(erreur="Introuvable."), 404
+            m = acces.maintenant()
+            emp = hashlib.sha256(octets).hexdigest()
+            cx.execute("DELETE FROM couvertures WHERE book_id = ?", (b["id"],))
+            cx.execute("INSERT INTO couvertures (book_id, mime, donnees, empreinte, taille, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                       (b["id"], mime, base64.b64encode(octets).decode(), emp, len(octets), m))
+            cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (m, b["id"]))
+            auditer("livre.couverture", ressource=f"book:{b['id']}", apres=f"{mime} {len(octets)} o", cx=cx)
+            cx.valider()
+            catalogue.invalider_vitrine()
+            return jsonify(image=emp[:16])
+        finally:
+            cx.fermer()
+
+    @app.delete("/api/studio/livres/<slug>/couverture")
+    @connectee
+    def retirer_couverture(slug):
+        cx = db.connecter()
+        try:
+            b = _a_moi(cx, slug)
+            if not b:
+                return jsonify(erreur="Introuvable."), 404
+            cx.execute("DELETE FROM couvertures WHERE book_id = ?", (b["id"],))
+            cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (acces.maintenant(), b["id"]))
+            cx.valider()
+            catalogue.invalider_vitrine()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    @app.get("/api/studio/livres/<slug>/textes")
+    @connectee
+    def studio_textes(slug):
+        """L'atelier montre les pages ENTIÈRES (demande du propriétaire,
+        19/10/2026), par lots : 24 pages au plus par appel, pour qu'un livre
+        de 2 000 pages ne parte pas d'un bloc sur une connexion lente."""
+        bornes = {k: request.args.get(k, type=int) for k in ("de", "a")}
+        de = v.entier(bornes, "de", mini=1, maxi=100000)
+        a = v.entier(bornes, "a", mini=1, maxi=100000)
+        if a < de or a - de >= 24:
+            raise v.Invalide("24 pages au plus par demande.", "a")
+        cx = db.connecter()
+        try:
+            b = _a_moi(cx, slug)
+            if not b:
+                return jsonify(erreur="Introuvable."), 404
+            t = acces.maintenant()
+            pages = []
+            for p in cx.tous("SELECT * FROM pages WHERE book_id = ? AND n BETWEEN ? AND ? ORDER BY n", (b["id"], de, a)):
+                txt, ver = acces.contenu_courant(cx, p["id"])
+                pages.append({"n": p["n"], "contenu": txt, "version": ver, "statut": acces.statut_effectif(p, t), "acces": p["acces"]})
+            return jsonify(pages=pages)
+        finally:
+            cx.fermer()
+
+    @app.post("/api/studio/livres/<slug>/pages/<int:n>/relecture")
+    @connectee
+    def relecture_ia(slug, n):
+        """Second avis de l'IA sur le texte EN COURS dans l'éditeur (pas
+        forcément enregistré) d'une page de SON livre. Ne modifie rien."""
+        import ia_correcteur
+        d = v.corps_json(request)
+        texte = v.texte(d, "texte", mini=1, maxi=ia_correcteur.TEXTE_MAX, multiligne=True)
+        cx = db.connecter()
+        try:
+            b = _a_moi(cx, slug)
+            if not b or not cx.un("SELECT id FROM pages WHERE book_id = ? AND n = ?", (b["id"], n)):
+                return jsonify(erreur="Introuvable."), 404
+            if not ia_correcteur.active():
+                return jsonify(erreur="La relecture par l’IA n’est pas encore activée sur ce serveur.", code="ia_inactive"), 503
+            jour = acces.maintenant()[:10]
+            cx.execute("""INSERT INTO ia_usages (user_id, jour, n) VALUES (?, ?, 1)
+                          ON CONFLICT (user_id, jour) DO UPDATE SET n = ia_usages.n + 1""", (g.user["id"], jour))
+            deja = cx.un("SELECT n FROM ia_usages WHERE user_id = ? AND jour = ?", (g.user["id"], jour))["n"]
+            if deja > ia_correcteur.plafond_jour():
+                cx.annuler()
+                return jsonify(erreur=f"Vous avez utilisé vos {ia_correcteur.plafond_jour()} relectures du jour. Le correcteur de l’éditeur reste disponible.", code="ia_plafond"), 429
+            cx.valider()            # compté AVANT l'appel : une panne ne rend pas le quota infini
+        finally:
+            cx.fermer()
+        try:
+            corrections = ia_correcteur.relire(texte)
+        except ia_correcteur.Indisponible as e:
+            return jsonify(erreur=str(e), code="ia_indisponible"), 503
+        return jsonify(corrections=corrections, restant=max(0, ia_correcteur.plafond_jour() - deja))
 
     @app.put("/api/studio/livres/<slug>/chapitres")
     @connectee

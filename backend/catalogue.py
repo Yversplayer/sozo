@@ -7,6 +7,7 @@ import argent
 import config
 import db
 import security
+import studio
 import validation as v
 from app import auditer, connectee
 
@@ -19,7 +20,17 @@ def _dollars(c):
     return None if c is None else c / 100
 
 
-def serialiser_livre(cx, b, user, plages=None, a=None, toutes_pages=None, chapitres=None):
+def images_des(cx, ids):
+    """Empreinte de la couverture envoyée, pour chaque livre qui en a une —
+    UNE requête pour tout le catalogue."""
+    ids = list(ids)
+    if not ids:
+        return {}
+    return {r["book_id"]: r["empreinte"][:16] for r in cx.tous(
+        f"SELECT book_id, empreinte FROM couvertures WHERE book_id IN ({','.join('?' * len(ids))})", ids)}
+
+
+def serialiser_livre(cx, b, user, plages=None, a=None, toutes_pages=None, chapitres=None, images=None):
     """Le livre tel que le voit CETTE personne : les brouillons d'autrui
     n'apparaissent pas, l'état de chaque page est calculé par acces.
     `toutes_pages` / `chapitres` : déjà lus en lot par le catalogue (sinon,
@@ -42,6 +53,8 @@ def serialiser_livre(cx, b, user, plages=None, a=None, toutes_pages=None, chapit
         "cover": {"img": b["couverture"], "style": b["style"]}, "mode": b["mode"], "access": b["acces"],
         "format": "planche" if b["format"] == "planche" else None, "verse": b["format"] == "vers",
         "desc": b["description"], "demo": bool(b["demo"]), "owner": bool(user and b["owner_id"] == user["id"]),
+        "apparence": studio.apparence_lue(b),
+        "image": (images if images is not None else images_des(cx, [b["id"]])).get(b["id"]),
         "price": None if b["acces"] == "free" else {"page": _dollars(b["prix_page"]), "chapter": _dollars(b["prix_chapitre"]), "all": _dollars(b["prix_livre"])},
         "chapters": [{"t": c["titre"], "from": c["page_de"], "to": c["page_a"]}
                      for c in chapitres],
@@ -149,7 +162,8 @@ def enregistrer(app):
             par_id = {b["id"]: b for b in vit["livres"]}
             par_id.update({b["id"]: b for b in miens})
             livres = [par_id[k] for k in sorted(par_id)]
-            books = [serialiser_livre(cx, b, g.user, plages.get(b["id"], []), a, pages_par.get(b["id"], []), chap_par.get(b["id"], []))
+            images = images_des(cx, [b["id"] for b in livres])
+            books = [serialiser_livre(cx, b, g.user, plages.get(b["id"], []), a, pages_par.get(b["id"], []), chap_par.get(b["id"], []), images)
                      for b in livres]
             auteurs = dict(vit["auteurs"])
             if miens and _auteur_cle(uid) not in auteurs:
@@ -204,6 +218,94 @@ def enregistrer(app):
                 rep["contenu"] = contenu
             cx.valider()
             return jsonify(rep)
+        finally:
+            cx.fermer()
+
+    @app.get("/api/livres/<livre>/couverture")
+    @connectee
+    def couverture_livre(livre):
+        """La couverture envoyée par l'auteur, servie à qui peut VOIR le livre
+        (acces.livre) : celle d'un livre en brouillon reste privée."""
+        import base64
+        from flask import Response
+        cx = db.connecter()
+        try:
+            b0 = cx.un("SELECT id FROM books WHERE slug = ?", (livre,))
+            b = acces.livre(cx, g.user, b0["id"] if b0 else None)
+            c = b and cx.un("SELECT mime, donnees, empreinte FROM couvertures WHERE book_id = ?", (b["id"],))
+            if not c:
+                return jsonify(erreur="Introuvable."), 404
+            rep = Response(base64.b64decode(c["donnees"]), mimetype=c["mime"])
+            # L'adresse porte l'empreinte (?v=…) : une nouvelle image a une nouvelle adresse.
+            rep.headers["Cache-Control"] = "private, max-age=31536000, immutable" if request.args.get("v") == c["empreinte"][:16] else "private, no-cache"
+            rep.headers["X-Content-Type-Options"] = "nosniff"
+            rep.headers["Content-Disposition"] = "inline"
+            return rep
+        finally:
+            cx.fermer()
+
+    # ── Épingles : passages gardés par le lecteur ─────────────────────────
+    @app.get("/api/epingles")
+    @connectee
+    def epingles_lire():
+        cx = db.connecter()
+        try:
+            slug = request.args.get("livre")
+            q = """SELECT e.id, e.n, e.extrait, e.note, e.created_at, b.slug AS livre, b.titre
+                     FROM epingles e JOIN books b ON b.id = e.book_id WHERE e.user_id = ?"""
+            p = [g.user["id"]]
+            if slug:
+                q += " AND b.slug = ?"
+                p.append(slug)
+            return jsonify(epingles=cx.tous(q + " ORDER BY e.id DESC LIMIT 500", p))
+        finally:
+            cx.fermer()
+
+    @app.post("/api/epingles")
+    @connectee
+    def epingler():
+        """Un passage n'est épinglé que s'il figure MOT POUR MOT dans une page
+        que la personne a le droit de lire : on ne garde pas un texte qu'on n'a
+        pas lu (ni une page payante non achetée, ni une page à venir)."""
+        d = v.corps_json(request)
+        slug = v.texte(d, "livre", maxi=80)
+        n = v.entier(d, "n", mini=1, maxi=100000)
+        extrait = v.texte(d, "extrait", mini=2, maxi=600, multiligne=True)
+        note = v.texte(d, "note", requis=False, maxi=500, multiligne=True)
+        cx = db.connecter()
+        try:
+            b0 = cx.un("SELECT id FROM books WHERE slug = ?", (slug,))
+            b, p, e = acces.page_et_etat(cx, g.user, b0["id"] if b0 else None, n)
+            if e is None:
+                return jsonify(erreur="Introuvable."), 404
+            if e not in ("free", "owned", "auteur"):
+                return jsonify(erreur="Cette page n’est pas lisible pour vous : rien à épingler."), 403
+            contenu, _ = acces.contenu_courant(cx, p["id"])
+            norme = lambda t: " ".join(t.replace("'", "’").split())
+            if norme(extrait) not in norme(contenu):
+                raise v.Invalide("Ce passage ne figure pas dans la page.", "extrait")
+            # Une page achetée : une citation, pas une copie (même limite que la liseuse)
+            if e == "owned" and len(extrait) > 300:
+                raise v.Invalide("Sur une page achetée, une épingle garde 300 signes au plus.", "extrait")
+            if cx.un("SELECT COUNT(*) AS c FROM epingles WHERE user_id = ?", (g.user["id"],))["c"] >= 2000:
+                raise v.Invalide("Vous avez atteint 2 000 épingles : retirez-en d’abord quelques-unes.")
+            eid = cx.inserer("INSERT INTO epingles (user_id, book_id, n, extrait, note, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                             (g.user["id"], b["id"], n, extrait, note, acces.maintenant()))
+            cx.valider()
+            return jsonify(epingle={"id": eid, "n": n, "extrait": extrait, "note": note, "livre": slug}), 201
+        finally:
+            cx.fermer()
+
+    @app.delete("/api/epingles/<int:eid>")
+    @connectee
+    def desepingler(eid):
+        cx = db.connecter()
+        try:
+            if not cx.un("SELECT id FROM epingles WHERE id = ? AND user_id = ?", (eid, g.user["id"])):
+                return jsonify(erreur="Introuvable."), 404
+            cx.execute("DELETE FROM epingles WHERE id = ? AND user_id = ?", (eid, g.user["id"]))
+            cx.valider()
+            return jsonify(ok=True)
         finally:
             cx.fermer()
 
@@ -356,6 +458,8 @@ def enregistrer(app):
             cx.execute("UPDATE books SET statut = 'retire' WHERE owner_id = ?", (uid,))
             cx.execute("DELETE FROM follows WHERE user_id = ?", (uid,))
             cx.execute("DELETE FROM progress WHERE user_id = ?", (uid,))
+            cx.execute("DELETE FROM epingles WHERE user_id = ?", (uid,))
+            cx.execute("DELETE FROM ia_usages WHERE user_id = ?", (uid,))
             security.revoquer_toutes(cx, uid)
             auditer("compte.suppression", ressource=f"user:{uid}", cx=cx)
             cx.valider()
