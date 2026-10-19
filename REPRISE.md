@@ -32,12 +32,12 @@ Ajouts du 17-18/10/2026 (déployés, commit b29e2e5) :
 
 ## ⏭ Où on s'est arrêté — À FAIRE EN PREMIER
 
-1. **Catalogue en ligne : décision A (18/10/2026), « des livres de religion, d'inspiration, de Dieu et de foi, dans le christianisme ».** Fait dans le code, PAS ENCORE chargé en ligne :
+1. **Catalogue en ligne : décision A (18/10/2026), « des livres de religion, d'inspiration, de Dieu et de foi, dans le christianisme ».** **Chargé EN LIGNE le 19/10/2026** (Render redéployé avant, sur 05b1cab ; chargement ~7 min depuis Kinshasa). Vérifié en ligne : 14 livres / 12 auteurs au catalogue, tous `demo` ; page gratuite servie ; achat d'une page payante refusé (400 « Ce livre est un exemple : il ne se vend pas. »).
    - `backend/tools/demo_catalogue.py` écrit `demo.json` : 12 auteurs et 14 livres chrétiens INVENTÉS (méditations, prière, poésie de louange, romans, jeunesse, essai, biographie de Paul…). Les versets sont lus dans la Bible LSG 1910 intégrée, jamais recopiés à la main. Nawezi N. n'y est plus : auteur réel, il publie ses vrais livres lui-même ;
    - étiquette « Exemple » sur chaque couverture et sur la fiche (`ui.js` `cv-exemple`, `livre.js`) ; une page payante d'un livre d'exemple l'explique au lieu de proposer l'achat (`lire.js`) ;
    - **un livre d'exemple ne se vend pas** : refus du serveur (`argent._calculer`), test `test_livre_d_exemple_jamais_vendu`, vu tomber sans le correctif ;
    - `demo.py --en-ligne --projet <ref>` : adresse collée au clavier, puis taper EXEMPLE.
-   **Ordre à respecter** : pousser, faire le Manual Deploy de Render (le refus de vente doit être en ligne AVANT les livres), puis le propriétaire lance `demo.py --en-ligne`. La base de développement locale garde l'ancien catalogue (les comptes d'essai y ont des achats) : pour voir le nouveau, charger une base neuve (`SOZO_DB_PATH=…`).
+   Pour recommencer ailleurs : pousser, Manual Deploy de Render (le refus de vente doit être en ligne AVANT les livres), puis `demo.py --en-ligne`. La base de développement locale garde l'ancien catalogue (les comptes d'essai y ont des achats) : pour voir le nouveau, charger une base neuve (`SOZO_DB_PATH=…`).
    Les tuiles « Polar » et « Manga » de Découvrir resteront vides avec ce catalogue (apparence : à soumettre au propriétaire).
 2. **« Accès à toutes les fonctionnalités »** : seuls les achats (pages, Plume) sont fermés, faute de numéros Mobile Money. Question posée : (1) il donne ses numéros → `SOZO_PAIEMENT_NUMEROS` sur Render, il achète puis confirme lui-même dans l'admin ; ou (2) ajouter dans l'admin « offrir Plume / offrir un livre » (avec audit).
 3. Le propriétaire teste le logiciel ce week-end : traiter ses retours en priorité.
