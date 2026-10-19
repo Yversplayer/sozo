@@ -169,10 +169,16 @@ def _nouvelle_version(cx, page_id, contenu):
 def _detail(cx, b):
     a = acces.maintenant()
     pages = []
+    # Date de la version courante de chaque page, en UNE requête : la liste des
+    # brouillons (façon « Notes », 19/10/2026) les range par date de travail.
+    maj = {r["page_id"]: r["created_at"] for r in cx.tous(
+        """SELECT v.page_id, v.created_at FROM page_versions v JOIN pages p ON p.id = v.page_id
+           WHERE p.book_id = ? AND v.is_current = 1""", (b["id"],))}
     for p in cx.tous("SELECT * FROM pages WHERE book_id = ? ORDER BY n", (b["id"],)):
         txt, ver = acces.contenu_courant(cx, p["id"])
         pages.append({"n": p["n"], "acces": p["acces"], "statut": acces.statut_effectif(p, a), "publie_le": p["publie_le"],
-                      "source": p["source"], "version": ver, "extrait": txt[:140], "mots": len(txt.split())})
+                      "source": p["source"], "version": ver, "extrait": txt[:140], "mots": len(txt.split()),
+                      "maj": maj.get(p["id"]) or p["created_at"]})
     return {
         "id": b["slug"], "titre": b["titre"], "categorie": b["categorie"], "description": b["description"],
         "couverture": b["couverture"], "style": b["style"], "format": b["format"], "mode": b["mode"], "acces": b["acces"],
