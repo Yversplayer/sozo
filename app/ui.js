@@ -83,6 +83,7 @@ window.SOZO = (() => {
     plein: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
     machine: 'M4 8h16v9H4zM7 11h1M10 11h1M13 11h1M16 11h1M8 14h8M8 5h8v3H8z',
     croix: 'M12 3v18M7 8h10',
+    micro: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
     send: 'M4 12l16-8-6 16-2-6z',
     draft: 'M5 3h10l4 4v14H5zM9 13l2 2 4-5'
   };

@@ -48,6 +48,11 @@ Ajouts du 17-18/10/2026 (déployés, commit b29e2e5) :
 2. **Paiements (19/10/2026)** : les DEUX, dans l'ordre. (a) **Fait** : l'administration « Cadeaux » offre un livre entier ou Plume (table `dons`, rôle finance + code frais, motif, audit, notification, retirable ; aucun argent : ni paiement, ni reçu, ni revenu pour l'auteur ; tests `test_dons.py`, vus tomber). (b) **Reste** : quand le propriétaire donne ses numéros Mobile Money (`SOZO_PAIEMENT_NUMEROS` sur Render), les vraies ventes s'ouvrent ; il confirme chaque paiement dans l'admin.
 3. Le propriétaire teste le logiciel ce week-end : traiter ses retours en priorité.
 
+## 10. Backlog du 21/10/2026 — avis et dictée (« go go go, passe au backlog »)
+
+- **Avis sur les livres** (`backend/avis.py`, `test_avis.py`, schéma **v13**) : note de 1 à 5 et quelques lignes, onglet « Avis » de la fiche (`livre.js`, `livre.html#avis`). Un avis par personne et par livre ; seulement si l'on peut LIRE au moins une page (gratuite, achetée, offerte), jamais sur son livre ; charte exigée ; l'auteur est prévenu ; la modération retire et rétablit depuis l'onglet « Communauté » de la console (rien n'est détruit, un avis retiré ne se remplace ni ne s'efface). La moyenne ne compte que les avis visibles ; sous PostgreSQL, un visiteur les voit tous (RLS en lecture). Gardes vues tomber : 7 sur 8 — « pas son propre livre » est doublée par « une page lisible » (l'auteur n'a que des pages « auteur »), il reste toujours une garde.
+- **Dictée dans la Plume** (`plume.js`) : bouton micro, seulement si le navigateur sait dicter (API Web Speech). Avant la première dictée, la Plume dit que la voix peut partir chez le service du navigateur (Google pour Chrome, Apple pour Safari) — mention ajoutée à `confidentialite.html`. Ponctuation dite (« virgule », « point final », « point d'interrogation »…), « à la ligne », majuscule en début de phrase. Testée avec une reconnaissance simulée : le micro du volet de prévisualisation ne parle pas. **À essayer sur un vrai téléphone.**
+
 ## 9. Lots A à E du 21/10/2026 — compléter le logiciel (liste approuvée par le propriétaire)
 
 Le propriétaire : « la suppression d'une page, tu n'avais prévu que la création ». Liste détaillée approuvée (« Go pour tous les lots, dans l'ordre »), points à décider tranchés selon les recommandations. Commits `7b3a83e` à lot E. Suites : **235 tests, verts sous SQLite (9 réservés à PostgreSQL sautés) ET sous PostgreSQL 16**. Chaque garde-fou des lots a été vu tomber une fois neutralisé (A 20/20, B 7/7, C 9/9, D 5/5, E 10/10, correctifs RLS 9/9 sous PostgreSQL). Pas fait, par choix : dictée vocale, avis sur les livres.
@@ -114,7 +119,7 @@ Commits `563625a` (serveur) puis la refonte des écrans. Suites : 168 tests SQLi
 - Tarifs proposés, **non confirmés par le propriétaire** : commission de 15 % (10 % avec Plume), Plume à 4,99 $ pour 30 jours, reversement minimum de 1 $.
 
 ## 3. Ce qui fonctionne (testé)
-**Tests** : 235 sur SQLite (9 réservés à PostgreSQL y sont sautés) et 235 sur PostgreSQL 16 (RLS active), tous verts au 21/10/2026 après le lot E. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
+**Tests** : 238 sur SQLite (9 réservés à PostgreSQL y sont sautés) et 238 sur PostgreSQL 16 (RLS active), tous verts au 21/10/2026 (avis compris). Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
 ```bash
 cd /Users/macbookpro/sozo && backend_venv/bin/python -m unittest discover -s backend/tests -t backend
 cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py
@@ -172,7 +177,7 @@ cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py
 ## 6. Règles de travail
 - **Ne jamais affaiblir ni supprimer un test.** Tout nouveau garde-fou doit être vu échouer quand on retire son code, puis restauré.
 - **Les deux suites doivent être vertes avant de rendre la main.**
-- **Migrations additives uniquement** (`db._migrer`, `VERSION_SCHEMA = 12`). Pour toute table qui contient des données d'un utilisateur, ajouter sa règle dans `db.RLS`.
+- **Migrations additives uniquement** (`db._migrer`, `VERSION_SCHEMA = 13`). Pour toute table qui contient des données d'un utilisateur, ajouter sa règle dans `db.RLS`.
 - **Aucun faux succès à l'écran** : l'interface ne change qu'après la réponse du serveur. Tout texte venant de la base passe par `S.esc()`.
 - **Commits successifs**, avec une ligne `Co-Authored-By` en fin de message. Ne pousser que si le propriétaire le demande et une fois le dépôt créé. Vérifier l'absence de secrets avant.
 - **Fin de chaque rapport** : 🔴 BLOQUANTS / 🟠 NON-BLOQUANTS / 🟢 BACKLOG / 🚦 DÉCISION.

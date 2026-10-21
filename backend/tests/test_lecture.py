@@ -195,6 +195,11 @@ class Balayage(TestBase):
         # lot E : la modération — une session de lecteur n'ouvre rien
         "moderer_ecrit": [("POST", "/api/admin/ecrits/{ecid}/retirer", {401}, {"motif": "essai"})],
         "moderer_commentaire": [("POST", "/api/admin/commentaires/{cmid}/retirer", {401}, {"motif": "essai"})],
+        # avis : le livre d'un autre (brouillon) n'existe pas ; la modération est fermée
+        "avis_lire": [("GET", "/api/livres/{slug_brouillon}/avis", {404})],
+        "avis_donner": [("PUT", "/api/livres/{slug_brouillon}/avis", {404}, {"note": 3})],
+        "avis_retirer": [("DELETE", "/api/livres/{slug_brouillon}/avis", {404})],
+        "moderer_avis": [("POST", "/api/admin/avis/1/retirer", {401}, {"motif": "essai"})],
     }
     # Routes paramétrées hors balayage, avec la raison :
     EXEMPTES = {

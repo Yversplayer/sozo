@@ -541,3 +541,18 @@ CREATE TABLE IF NOT EXISTS signets (
   created_at TEXT NOT NULL,
   UNIQUE (user_id, book_id, n)
 );
+
+-- Backlog (21/10/2026) : avis sur les livres — une note de 1 à 5 et quelques
+-- lignes, un avis par personne et par livre ; la modération retire sans détruire.
+CREATE TABLE IF NOT EXISTS avis (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  book_id INTEGER NOT NULL REFERENCES books (id),
+  note INTEGER NOT NULL CHECK (note BETWEEN 1 AND 5),
+  texte TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  modifie_le TEXT,
+  retire_le TEXT,
+  UNIQUE (user_id, book_id)
+);
+CREATE INDEX IF NOT EXISTS avis_livre ON avis (book_id, id);

@@ -17,7 +17,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 12   # v12 (21/10/2026) : charte de la communauté ; v11 (21/10/2026) : corbeille et retrait des livres, réponses, e-mail ; v10 : écrits ; v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
+VERSION_SCHEMA = 13   # v13 (21/10/2026) : avis sur les livres ; v12 (21/10/2026) : charte de la communauté ; v11 (21/10/2026) : corbeille et retrait des livres, réponses, e-mail ; v10 : écrits ; v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
 _verrou = threading.Lock()
 
 
@@ -230,6 +230,8 @@ RLS = {
     # Lot D
     "versets": f"user_id = {_MOI}",
     "signets": f"user_id = {_MOI}",
+    # Backlog : un avis visible se lit par tous ; on n'écrit que le sien
+    "avis": (f"user_id = {_MOI} OR retire_le IS NULL", f"user_id = {_MOI}"),
 }
 
 

@@ -154,6 +154,7 @@ window.SOZO_PLUME = (() => {
   const PAPIERS = { ivoire: 'Ivoire', blanc: 'Blanc', sepia: 'Sépia', nuit: 'Nuit' };
   const SPECIAUX = [['« ', 'Guillemet ouvrant'], [' »', 'Guillemet fermant'], ['“', 'Guillemet anglais ouvrant'], ['”', 'Guillemet anglais fermant'], ['—', 'Tiret cadratin'], ['–', 'Tiret demi-cadratin'],
     ['…', 'Points de suspension'], ['’', 'Apostrophe'], ['✝', 'Croix'], ['❦', 'Fleuron'], ['⁂', 'Astérisme'], ['·', 'Point médian']];
+  const DICTEE = window.SpeechRecognition || window.webkitSpeechRecognition || null;
   const garde = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } };
   const poser = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
@@ -191,7 +192,7 @@ window.SOZO_PLUME = (() => {
       <div class="pl-g"><label class="sr" for="plStyle">Style du paragraphe</label>
         <select class="pl-sel" id="plStyle" data-pl-style><option value="p">Paragraphe</option><option value="h3">Titre</option><option value="h4">Sous-titre</option><option value="blockquote">Citation</option></select>
         ${bouton('bold', 'gras', 'Gras', cmd('B'))}${bouton('italic', 'italique', 'Italique', cmd('I'))}${bouton('puces', 'puces', 'Liste à puces')}${bouton('numeros', 'numeros', 'Liste numérotée')}</div>
-      <div class="pl-g">${bouton('sep', 'separateur', 'Séparateur')}${bouton('verset', 'croix', 'Insérer un verset')}
+      <div class="pl-g">${bouton('sep', 'separateur', 'Séparateur')}${bouton('verset', 'croix', 'Insérer un verset')}${DICTEE ? `<button type="button" class="pl-b" data-pl="dicter" aria-pressed="false" title="Dicter" aria-label="Dicter">${ic('micro')}</button>` : ''}
         <div class="pl-menu"><button type="button" class="pl-b pl-b--t" data-pl-menu="car" aria-expanded="false" aria-haspopup="true" title="Caractères spéciaux">« »</button>
           <div class="pl-pop" data-pop="car" hidden>${SPECIAUX.map(([c, l]) => `<button type="button" class="pl-car" data-car="${esc(c)}" title="${esc(l)}">${esc(c.trim())}</button>`).join('')}</div></div></div>
       <div class="pl-g pl-g--page"><label class="sr" for="plPolice">Police</label>
@@ -294,6 +295,64 @@ window.SOZO_PLUME = (() => {
       if (!active || active.verrou) { s.toast(active && active.verrou ? 'Cette feuille est en lecture seule.' : 'Cliquez d’abord dans le texte.'); return false; }
       return true;
     };
+    /* ─── dictée (backlog, 21/10/2026) ───
+       La reconnaissance vocale est celle du NAVIGATEUR (API Web Speech) :
+       Sōzō n'entend rien et ne garde aucun son. Mais le navigateur, lui,
+       envoie souvent la voix à son service (Google pour Chrome, Apple pour
+       Safari) : on le dit avant la première dictée, et on attend l'accord.
+       Le bouton n'apparaît que si le navigateur sait dicter. Seul le texte
+       reconnu entre dans la feuille, par insertText : il passe par la même
+       saisie que le clavier (annuler, enregistrement, correcteur). */
+    let reco = null;
+    const PONCTUATION = [[/\s*\bpoint d['’]interrogation\b/gi, ' ?'], [/\s*\bpoint d['’]exclamation\b/gi, ' !'], [/\s*\bpoints de suspension\b/gi, '…'],
+      [/\s*\bvirgule\b/gi, ','], [/\s*\bdeux[- ]points\b/gi, ' :'], [/\s*\bpoint[- ]virgule\b/gi, ' ;'], [/\s*\bpoint final\b/gi, '.']];
+    function dicter(b) {
+      if (reco) { reco.stop(); return; }
+      if (!exiger()) return;
+      if (garde('sozo-pl-dictee-ok', '0') !== '1') {
+        s.modal({ title: 'Dicter votre texte', body: `<p>Parlez : la Plume écrit ce que vous dites, là où se trouve le curseur.</p>
+          <p class="note">La reconnaissance de la voix est faite par votre navigateur, pas par Sōzō. Selon le navigateur, votre voix peut être envoyée à son service (Google pour Chrome, Apple pour Safari). Sōzō ne reçoit et ne garde aucun son.</p>
+          <p>Dites « virgule », « point final », « point d’interrogation », « à la ligne »…</p>`,
+          actions: [{ label: 'Annuler' }, { label: 'Commencer la dictée', primary: true, onClick: (close) => { poser('sozo-pl-dictee-ok', '1'); close(); dicter(b); } }] });
+        return;
+      }
+      reco = new DICTEE();
+      reco.lang = 'fr-FR'; reco.continuous = true; reco.interimResults = false;
+      reco.onresult = (e) => {
+        if (!active || active.verrou) return;
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (!e.results[i].isFinal) continue;
+          let t = e.results[i][0].transcript.trim();
+          if (!t) continue;
+          if (document.activeElement !== active.el) rendreSel();
+          // (pas de \b ici : en JavaScript, « à » n'est pas une lettre pour \b)
+          const morceaux = t.split(/(?:^|\s+)(?:à la ligne|nouveau paragraphe)(?=\s|$)\s*/i);
+          morceaux.forEach((m, j) => {
+            if (j) exec('insertParagraph');
+            PONCTUATION.forEach(([re, r]) => { m = m.replace(re, r); });
+            m = m.trim();
+            if (!m) return;
+            const sel = getSelection(), n = sel.anchorNode, o = sel.anchorOffset;
+            const avant = n && n.nodeType === 3 ? n.nodeValue.slice(0, o) : '';
+            // une majuscule en début de paragraphe ou après une fin de phrase
+            if (!avant.trim() || /[.!?…]\s*$/.test(avant)) m = m.charAt(0).toLocaleUpperCase('fr') + m.slice(1);
+            exec('insertText', (avant && !/\s$/.test(avant) && !/^[,.…;:!?]/.test(m) ? ' ' : '') + m);
+          });
+          garderSel();
+        }
+      };
+      const fin = () => { reco = null; b.setAttribute('aria-pressed', 'false'); b.classList.remove('pl-b--rec'); };
+      reco.onend = fin;
+      reco.onerror = (e) => {
+        s.toast({ 'not-allowed': 'Le micro est refusé : autorisez-le dans les réglages du navigateur.', 'service-not-allowed': 'Ce navigateur n’autorise pas la dictée ici.',
+          network: 'La dictée a besoin d’Internet : la connexion est coupée.', 'no-speech': 'Je n’ai rien entendu : la dictée s’arrête.',
+          'audio-capture': 'Aucun micro trouvé sur cet appareil.' }[e.error] || 'La dictée s’est arrêtée.');
+      };
+      try { reco.start(); } catch (er) { fin(); s.toast('La dictée n’a pas pu démarrer.'); return; }
+      b.setAttribute('aria-pressed', 'true'); b.classList.add('pl-b--rec');
+      s.toast('Parlez : la Plume écrit. Touchez de nouveau le micro pour arrêter.');
+    }
+
     function exec(c, v) { document.execCommand(c, false, v); carteActive = null; if (opts.surSaisie && active) opts.surSaisie(active); etatBarre(); }
     function style(tag) {
       if (!exiger()) return;
@@ -320,6 +379,7 @@ window.SOZO_PLUME = (() => {
       if (k === 'puces' || k === 'numeros') { if (!exiger()) return; rendreSel(); exec(k === 'puces' ? 'insertUnorderedList' : 'insertOrderedList'); return; }
       if (k === 'sep') { if (!exiger()) return; rendreSel(); exec('insertHTML', '<hr class="pl-sep"><p><br></p>'); return; }
       if (k === 'verset') { if (!exiger()) return; verset(); return; }
+      if (k === 'dicter') { dicter(b); return; }
       if (k === 'moins' || k === 'plus') { taille = Math.max(15, Math.min(28, taille + (k === 'plus' ? 1 : -1))); poser('sozo-pl-taille', String(taille)); peindreDoc(); return; }
       if (k === 'chercher') { chercher(); return; }
       if (k === 'idee') { inspiration(); return; }

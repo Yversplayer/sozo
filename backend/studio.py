@@ -1031,7 +1031,7 @@ def enregistrer(app):
         try:
             manuscrits._effacer(cg, cg.tous("SELECT id, empreinte, nature FROM imports WHERE book_id = ? AND efface_le IS NULL", (bid,)))
             cg.execute("DELETE FROM page_versions WHERE page_id IN (SELECT id FROM pages WHERE book_id = ?)", (bid,))
-            for t in ("pages", "chapters", "imports", "follows", "progress", "signalements", "couvertures", "epingles", "signets"):
+            for t in ("pages", "chapters", "imports", "follows", "progress", "signalements", "couvertures", "epingles", "signets", "avis"):
                 cg.execute(f"DELETE FROM {t} WHERE book_id = ?", (bid,))      # noms de tables : liste fermée ci-dessus
             cg.execute("DELETE FROM books WHERE id = ? AND owner_id = ? AND corbeille_le IS NOT NULL", (bid, g.user["id"]))
             auditer("livre.efface", ressource=f"book:{bid}", avant=b["titre"][:100], cx=cg)

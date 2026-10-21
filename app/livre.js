@@ -41,7 +41,7 @@ window.SOZO_PRET.then(() => {
   const pagesLues = firstReadable ? `lire.html?id=${encodeURIComponent(b.id)}&p=${prog && visible.some((p) => p.n === prog) ? prog : firstReadable.n}` : `lire.html?id=${encodeURIComponent(b.id)}&p=${visible[0] ? visible[0].n : 1}`;
   const same = S.booksBy(a.id).filter((x) => x.id !== b.id);
   const voisins = same.length ? same : D.books.filter((x) => x.cat === b.cat && x.id !== b.id && x.author !== a.id);
-  const ONGLETS = [['propos', 'À propos'], ['sommaire', 'Sommaire'], ...(b.price ? [['prix', 'Prix']] : []), ...(voisins.length ? [['similaires', same.length ? 'Du même auteur' : 'Similaires']] : [])];
+  const ONGLETS = [['propos', 'À propos'], ['sommaire', 'Sommaire'], ['avis', 'Avis'], ...(b.price ? [['prix', 'Prix']] : []), ...(voisins.length ? [['similaires', same.length ? 'Du même auteur' : 'Similaires']] : [])];
   const derniere = Math.max(0, ...b.pages.filter((p) => S.status(p) === 'published' && p.date).map((p) => +S.parse(p.date)));
   main.innerHTML = `<div class="lv">
     <header class="lv-tete">
@@ -101,6 +101,10 @@ window.SOZO_PRET.then(() => {
           }).join('')}</div></details>`;
       }).join('') || `<div class="pl">${visible.map((p) => { const [t, k, sub] = label(p.n); return `<a class="pl-row" href="lire.html?id=${encodeURIComponent(b.id)}&p=${p.n}"><span class="mono">Page ${p.n}</span><span>${S.esc(sub)}</span><span class="badge badge--${k}">${S.esc(t)}</span></a>`; }).join('')}</div>`}
       ${st.draft ? `<p class="note">${S.icon('eyeOff')} L'auteur prépare d'autres pages : elles n'apparaîtront qu'une fois programmées.</p>` : ''}
+    </section>
+
+    <section class="lv-panneau" id="lp-avis" role="tabpanel" aria-labelledby="lo-avis" hidden>
+      <div id="avisZone" aria-busy="true"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>
     </section>
 
     ${b.price ? `<section class="lv-panneau" id="lp-prix" role="tabpanel" aria-labelledby="lo-prix" hidden>
@@ -166,5 +170,48 @@ window.SOZO_PRET.then(() => {
       } }] });
     setTimeout(() => m.el.querySelector('#sigMotif').focus(), 50);
   });
+  /* Avis (21/10/2026) : une note de 1 à 5 et quelques lignes. Le serveur
+     décide qui peut noter (une page lue, pas son livre, la charte) ; l'écran
+     n'affiche que ce qu'il renvoie — jamais un avis ni une moyenne inventés. */
+  const etoiles = (n) => `<span class="av-etoiles" aria-label="${n} sur 5">${'★'.repeat(n)}<span aria-hidden="true" class="av-vide">${'★'.repeat(5 - n)}</span></span>`;
+  async function avis() {
+    const z = $('#avisZone');
+    const r = await window.SOZO_API('GET', `/api/livres/${encodeURIComponent(b.id)}/avis`);
+    z.removeAttribute('aria-busy');
+    if (!r.ok) { z.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'Les avis n’ont pas pu se charger.')}</span></p>`; return; }
+    const d = r.d, res = d.resume, mien = d.mien;
+    z.innerHTML = `
+      <div class="av-resume">${res.nombre ? `<strong>${String(res.moyenne).replace('.', ',')}</strong>${etoiles(Math.round(res.moyenne))}<span class="ash">${res.nombre} avis</span>` : '<span class="ash">Aucun avis pour l’instant.</span>'}</div>
+      ${mien && mien.retire_le ? '<p class="note">Votre avis a été retiré par la modération.</p>' : d.peut ? `<form class="av-form" id="avisForm">
+        <fieldset class="av-choix"><legend>${mien ? 'Votre avis' : 'Donner votre avis'}</legend>
+          ${[1, 2, 3, 4, 5].map((n) => `<label><input type="radio" name="note" value="${n}"${mien && mien.note === n ? ' checked' : ''}><span aria-hidden="true">★</span><span class="sr-only">${n} sur 5</span></label>`).join('')}
+        </fieldset>
+        <label class="cx-field">Quelques mots <small>facultatif</small><textarea name="texte" rows="3" maxlength="1000">${mien ? S.esc(mien.texte) : ''}</textarea></label>
+        <p class="cx-err" id="avisErr" role="alert"></p>
+        <div class="av-acts"><button class="btn btn--accent" type="submit">${mien ? 'Mettre à jour' : 'Publier mon avis'}</button>${mien ? '<button class="btn btn--ghost" type="button" id="avisRetirer">Retirer mon avis</button>' : ''}</div>
+      </form>` : b.owner ? '' : '<p class="note">Lisez au moins une page de ce livre pour donner votre avis.</p>'}
+      <ul class="av-liste">${d.avis.map((a) => `<li><p class="av-tete"><a href="auteur.html?id=${encodeURIComponent(a.auteur.id)}">${S.esc(a.auteur.nom)}</a> ${etoiles(a.note)} <span class="ash">${S.esc(S.dateShort(a.le))}</span></p>${a.texte ? `<p>${S.esc(a.texte)}</p>` : ''}</li>`).join('')}</ul>`;
+    const f = $('#avisForm');
+    if (f) f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const note = +((f.elements.note && f.elements.note.value) || 0);
+      if (!note) { $('#avisErr').textContent = 'Choisissez une note de 1 à 5 étoiles.'; return; }
+      const bt = f.querySelector('[type=submit]'); bt.disabled = true;
+      const y = await window.SOZO_API('PUT', `/api/livres/${encodeURIComponent(b.id)}/avis`, { note, texte: f.elements.texte.value });
+      bt.disabled = false;
+      if (!y.ok) { $('#avisErr').textContent = y.d.erreur || 'Votre avis n’a pas été enregistré.'; return; }
+      S.toast('Merci : votre avis est publié.'); avis();
+    });
+    const rt = $('#avisRetirer');
+    if (rt) rt.addEventListener('click', async () => {
+      rt.disabled = true;
+      const y = await window.SOZO_API('DELETE', `/api/livres/${encodeURIComponent(b.id)}/avis`);
+      if (!y.ok) { rt.disabled = false; S.toast(y.d.erreur || 'Le retrait a échoué.'); return; }
+      S.toast('Votre avis est retiré.'); avis();
+    });
+  }
+  avis();
+  if (location.hash === '#avis') montrer('avis');
+
   S.reveals(); S.footer();
 }).catch(window.SOZO_ERREUR);

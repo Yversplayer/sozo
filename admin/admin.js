@@ -276,12 +276,18 @@
     async communaute(el, plus) {
       const quoi = sessionStorage.getItem('ad-cq') || 'ecrits', retires = sessionStorage.getItem('ad-cr') === '1';
       if (!plus) el._lignes = [];
-      const r = await api('GET', `/api/admin/communaute?quoi=${quoi}${retires ? '&retires=1' : ''}${plus ? `&avant=${plus}` : ''}`);
+      const r = quoi === 'avis' ? await api('GET', `/api/admin/avis${retires ? '?retires=1' : ''}`)
+        : await api('GET', `/api/admin/communaute?quoi=${quoi}${retires ? '&retires=1' : ''}${plus ? `&avant=${plus}` : ''}`);
       if (!r.ok) { el.innerHTML = `<p class="warn">${esc(r.d.erreur)}</p>`; return; }
       const L = el._lignes = el._lignes.concat(r.d.lignes);
       const maintenant = new Date().toISOString();
       const etatEcrit = (x) => x.retire_le ? `Retiré le ${date(x.retire_le)}<br><small class="ash">${esc(x.retrait_motif || '')}</small>` : x.corbeille_le ? 'Dans la corbeille de l’auteur' : x.publie_le > maintenant ? `Programmé (${date(x.publie_le)})` : 'En ligne';
-      const lignes = quoi === 'ecrits' ? L.map((x) => `<tr>
+      const lignes = quoi === 'avis' ? L.map((x) => `<tr>
+          <td>${date(x.created_at)}</td><td class="ad-motif"><strong>${'★'.repeat(x.note)}</strong> ${esc((x.texte || '').slice(0, 300))}</td>
+          <td><a href="../app/livre.html?id=${encodeURIComponent(x.slug)}#avis" target="_blank" rel="noopener">${esc(x.titre)}</a></td>
+          <td>${esc(x.auteur)}</td><td>—</td><td>${x.retire_le ? `Retiré le ${date(x.retire_le)}` : 'Visible'}</td>
+          <td>${!peut('moderation') ? '' : `<button class="btn btn--sm btn--ghost" data-cm="avis" data-id="${x.id}" data-a="${x.retire_le ? 'retablir' : 'retirer'}">${x.retire_le ? 'Rétablir' : 'Retirer'}</button>`}</td></tr>`)
+        : quoi === 'ecrits' ? L.map((x) => `<tr>
           <td>${date(x.publie_le)}</td>
           <td class="ad-motif"><a href="../app/ecrit.html?id=${x.id}" target="_blank" rel="noopener"><strong>${esc(x.titre || x.nature)}</strong></a><br><small class="ash">${esc((x.extrait || '').slice(0, 200))}</small></td>
           <td>${esc(x.auteur)}</td><td>${x.commentaires}</td><td>${x.signalements ? `<b class="ad-n">${x.signalements}</b>` : '0'}</td><td>${etatEcrit(x)}</td>
@@ -292,23 +298,23 @@
           <td>${esc(x.auteur)}</td><td>${x.signalements ? `<b class="ad-n">${x.signalements}</b>` : '0'}</td><td>${x.retire_le ? `Retiré le ${date(x.retire_le)}` : 'Visible'}</td>
           <td>${!peut('moderation') ? '' : x.retire_le ? `<button class="btn btn--sm btn--ghost" data-cm="commentaires" data-id="${x.id}" data-a="retablir">Rétablir</button>` : `<button class="btn btn--sm btn--ghost" data-cm="commentaires" data-id="${x.id}" data-a="retirer">Retirer</button>`}</td></tr>`);
       el.innerHTML = `<div class="tbl-tools">
-          <label class="ad-sel">Afficher <select id="cq"><option value="ecrits"${quoi === 'ecrits' ? ' selected' : ''}>Écrits publiés</option><option value="commentaires"${quoi === 'commentaires' ? ' selected' : ''}>Commentaires</option></select></label>
+          <label class="ad-sel">Afficher <select id="cq"><option value="ecrits"${quoi === 'ecrits' ? ' selected' : ''}>Écrits publiés</option><option value="commentaires"${quoi === 'commentaires' ? ' selected' : ''}>Commentaires</option><option value="avis"${quoi === 'avis' ? ' selected' : ''}>Avis sur les livres</option></select></label>
           <label class="ad-sel"><select id="cr"><option value="0"${retires ? '' : ' selected'}>visibles</option><option value="1"${retires ? ' selected' : ''}>retirés par la modération</option></select></label>
         </div>
         <p class="note" style="margin:0 0 12px">Retirer cache le contenu pour tous ; rien n’est détruit et l’auteur est prévenu du motif. Seul ce que la modération a retiré peut être rétabli.${peut('moderation') ? '' : ' Agir demande le rôle « moderation ».'}</p>
-        ${L.length ? table(quoi === 'ecrits' ? ['Paru le', 'Écrit', 'Auteur', 'Commentaires', 'Signalements', 'État', ''] : ['Le', 'Commentaire', 'Sous l’écrit', 'Par', 'Signalements', 'État', ''], lignes) : vide(retires ? 'Rien n’a été retiré.' : 'Rien pour l’instant.')}
+        ${L.length ? table(quoi === 'avis' ? ['Le', 'Avis', 'Livre', 'Par', '', 'État', ''] : quoi === 'ecrits' ? ['Paru le', 'Écrit', 'Auteur', 'Commentaires', 'Signalements', 'État', ''] : ['Le', 'Commentaire', 'Sous l’écrit', 'Par', 'Signalements', 'État', ''], lignes) : vide(retires ? 'Rien n’a été retiré.' : 'Rien pour l’instant.')}
         ${r.d.suite ? `<div class="tbl-tools"><button class="btn btn--sm btn--ghost" type="button" id="cplus">Voir plus</button></div>` : ''}`;
       $('#cq').addEventListener('change', (e) => { sessionStorage.setItem('ad-cq', e.target.value); PANNEAUX.communaute(el); });
       $('#cr').addEventListener('change', (e) => { sessionStorage.setItem('ad-cr', e.target.value); PANNEAUX.communaute(el); });
       const pl = $('#cplus'); if (pl) pl.addEventListener('click', () => PANNEAUX.communaute(el, r.d.suite));
       $$('[data-cm]', el).forEach((b) => b.addEventListener('click', async () => {
-        const url = `/api/admin/${b.dataset.cm}/${b.dataset.id}/${b.dataset.a}`, ecrit = b.dataset.cm === 'ecrits';
+        const url = `/api/admin/${b.dataset.cm}/${b.dataset.id}/${b.dataset.a}`, ecrit = b.dataset.cm === 'ecrits', av = b.dataset.cm === 'avis';
         if (b.dataset.a === 'retablir') {
           b.disabled = true; const y = await api('POST', url);
           if (!y.ok) { b.disabled = false; toast(y.d.erreur); return; }
-          toast(ecrit ? 'Écrit rétabli : il est de nouveau visible.' : 'Commentaire rétabli.'); console_(); return;
+          toast(ecrit ? 'Écrit rétabli : il est de nouveau visible.' : av ? 'Avis rétabli.' : 'Commentaire rétabli.'); console_(); return;
         }
-        demander({ titre: ecrit ? 'Retirer cet écrit ?' : 'Retirer ce commentaire ?', bouton: 'Retirer',
+        demander({ titre: ecrit ? 'Retirer cet écrit ?' : av ? 'Retirer cet avis ?' : 'Retirer ce commentaire ?', bouton: 'Retirer',
           corps: `${motif('Motif (l’auteur le verra)')}<p class="note">Exemple : « Propos blessants, contraires à la charte de la communauté. »</p>`,
           valider: async (f) => { const m = f.elements.motif.value.trim(); if (m.length < 3) return 'Indiquez un motif.'; const y = await api('POST', url, { motif: m }); if (!y.ok) return y.d.erreur; toast('Retiré : il n’est plus visible.'); console_(); } });
       }));

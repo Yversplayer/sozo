@@ -93,6 +93,7 @@ Les deux suites doivent être vertes. Chaque garde-fou a été **vu tomber** qua
   - La recherche dans un livre et les marque-pages ne touchent QUE les pages lisibles par la personne : une page payante non achetée ne laisse fuir ni un mot, ni son numéro.
   - Hors ligne, les données personnelles ne sont servies qu'au compte qui les a lues, et seulement sans réseau ; une réponse 401/402/403/404 retire la copie ; la déconnexion vide ces caches.
   - **Charte de la communauté** : publier un écrit (ou le programmer) et commenter exigent la charte EN VIGUEUR, vérifiée par le serveur (403, `code: charte`) ; une nouvelle version se fait accepter de nouveau.
+  - **Avis sur les livres** (`avis.py`) : une note par personne et par livre, seulement après avoir pu lire une page, jamais sur son livre, charte exigée ; la moyenne ne compte que les avis visibles.
   - **Modération directe** (rôle `moderation`) : retirer cache sans détruire, motif obligatoire, auteur prévenu, signalements ouverts clos ; rétablir ne rend que ce que la modération a retiré — jamais un commentaire que son auteur a lui-même retiré.
 
 ## Messages, notifications, tâches
