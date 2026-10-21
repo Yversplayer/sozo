@@ -227,6 +227,9 @@ RLS = {
     "signalements_ecrits": f"user_id = {_MOI}",
     # Lot C : on voit qui on suit, et qui nous suit ; on ne s'abonne qu'en son nom
     "abonnements": (f"user_id = {_MOI} OR auteur_id = {_MOI}", f"user_id = {_MOI}"),
+    # Lot D
+    "versets": f"user_id = {_MOI}",
+    "signets": f"user_id = {_MOI}",
 }
 
 

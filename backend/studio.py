@@ -1001,7 +1001,7 @@ def enregistrer(app):
             bid = b["id"]
             manuscrits._effacer(cx, cx.tous("SELECT id, empreinte, nature FROM imports WHERE book_id = ? AND efface_le IS NULL", (bid,)))
             cx.execute("DELETE FROM page_versions WHERE page_id IN (SELECT id FROM pages WHERE book_id = ?)", (bid,))
-            for t in ("pages", "chapters", "imports", "follows", "progress", "signalements", "couvertures", "epingles"):
+            for t in ("pages", "chapters", "imports", "follows", "progress", "signalements", "couvertures", "epingles", "signets"):
                 cx.execute(f"DELETE FROM {t} WHERE book_id = ?", (bid,))      # noms de tables : liste fermée ci-dessus
             cx.execute("DELETE FROM books WHERE id = ?", (bid,))
             auditer("livre.efface", ressource=f"book:{bid}", avant=b["titre"][:100], cx=cx)

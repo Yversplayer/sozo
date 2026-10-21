@@ -113,6 +113,11 @@ window.SOZO_PRET.then(() => {
             <div id="appareils"><p class="ash" role="status">Chargement…</p></div>
             <button class="btn btn--ghost btn--sm" type="button" id="partout" style="margin-top:12px">${S.icon('lock')} Me déconnecter de tous les autres appareils</button>
           </section>
+          <section class="panel" aria-labelledby="hAppli" id="appli">
+            <h2 id="hAppli">L’application</h2>
+            <p class="ash" id="appliTxt">${S.installer.installee() ? 'Sōzō est installé sur cet appareil.' : 'Installez Sōzō sur votre écran d’accueil : il s’ouvre comme une application, et les pages déjà lues restent lisibles sans réseau.'}</p>
+            ${S.installer.installee() ? '' : `<button class="btn btn--accent btn--sm" type="button" id="installer" style="margin-top:12px">${S.icon('upload')} Installer Sōzō</button>`}
+          </section>
           <section class="panel" aria-labelledby="hDon">
             <h2 id="hDon">Mes données</h2>
             <p class="ash">Tout ce que Sōzō garde de vous, en un fichier : votre profil, vos livres et leurs pages, vos écrits, vos commentaires, vos épingles, vos achats.</p>
@@ -150,6 +155,8 @@ window.SOZO_PRET.then(() => {
       if (!r.ok) { b.disabled = false; S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
       S.toast('Cet appareil est déconnecté.'); appareils();
     });
+    const ins = $('#installer');
+    if (ins) ins.addEventListener('click', () => S.installer.lancer());
     const pt = $('#partout');
     if (pt) pt.addEventListener('click', async () => {
       pt.disabled = true;

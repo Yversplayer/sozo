@@ -51,6 +51,9 @@ window.SOZO_PRET.then(() => {
   top.innerHTML = `
     <a class="icon-btn" href="livre.html?id=${encodeURIComponent(b.id)}" aria-label="Retour à la fiche du livre">${S.icon('left')}</a>
     <div class="rd-title"><strong>${S.esc(b.title)}</strong><span id="rdOu"></span></div>
+    <button class="icon-btn" type="button" id="chercheBtn" aria-expanded="false" aria-controls="chercheL" aria-label="Chercher dans ce livre" title="Chercher dans ce livre">${S.icon('search')}</button>
+    <button class="icon-btn" type="button" id="signetBtn" aria-pressed="false" aria-label="Marque-page sur cette page" title="Marque-page">${S.icon('garder')}</button>
+    <button class="icon-btn" type="button" id="voixBtn" aria-pressed="false" aria-label="Écouter la page" title="Écouter la page">${S.icon('bulle')}</button>
     <button class="icon-btn" type="button" id="pinsBtn" aria-expanded="false" aria-controls="pins" aria-label="Mes épingles">${S.icon('tag')}<span class="dot dot--abs" id="pinsN" hidden></span></button>
     <button class="icon-btn" type="button" id="focusBtn" aria-pressed="false" aria-label="Mode concentration">${S.icon('eye')}</button>
     <button class="icon-btn" type="button" id="setBtn" aria-expanded="false" aria-controls="settings" aria-label="Réglages de lecture">${S.icon('type')}</button>
@@ -63,6 +66,9 @@ window.SOZO_PRET.then(() => {
       <label class="rd-coche"><input type="checkbox" id="prefAuteur"${pref.auteur ? ' checked' : ''}> Mise en page de l’auteur</label>
       <label class="rd-coche"><input type="checkbox" id="prefFocusP"${pref.focusP ? ' checked' : ''}> En concentration, éclairer le paragraphe lu</label>
     </div>
+    <aside class="rd-pins rd-cherche" id="chercheL" hidden aria-label="Chercher dans ce livre"><div class="rd-pins-h"><strong>Chercher dans ce livre</strong><button class="icon-btn" type="button" id="chercheX" aria-label="Fermer">${S.icon('x')}</button></div>
+      <form id="chercheF" role="search"><label class="search search--sm"><span class="sr">Mot ou phrase</span>${S.icon('search')}<input type="search" id="chercheQ" placeholder="Un mot, une phrase…" autocomplete="off"></label></form>
+      <p class="ash rd-cherche-n">Seules les pages que vous pouvez lire sont parcourues.</p><div id="chercheR" aria-live="polite"></div></aside>
     <aside class="rd-pins" id="pins" hidden aria-label="Mes épingles dans ce livre"><div class="rd-pins-h"><strong>Mes épingles</strong><button class="icon-btn" type="button" id="pinsX" aria-label="Fermer">${S.icon('x')}</button></div><div id="pinsL"></div></aside>`;
   body.prepend(top);
   const sortie = document.createElement('button');
@@ -253,7 +259,18 @@ window.SOZO_PRET.then(() => {
     document.title = `${b.title}, page ${n} — Sōzō`;
     history.replaceState(null, '', `lire.html?id=${encodeURIComponent(b.id)}&p=${n}`);
     $$('.rd-strip a').forEach((x) => { const ici = +x.dataset.aller === n; x.classList.toggle('is-here', ici); if (ici) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
+    majSignet();
   }
+
+  /* ─── Lot D (22/10/2026) : marque-pages, recherche dans le livre, voix ─── */
+  let signets = [];
+  function majSignet() {
+    const bt = document.getElementById('signetBtn'); if (!bt) return;
+    const on = signets.some((x) => x.n === n);
+    bt.setAttribute('aria-pressed', String(on));
+    bt.setAttribute('aria-label', on ? `Retirer le marque-page de la page ${n}` : `Poser un marque-page sur la page ${n}`);
+  }
+  API('GET', `/api/signets?livre=${encodeURIComponent(b.id)}`).then((r) => { if (r.ok) { signets = r.d.signets; majSignet(); } });
   function aller(k) {
     if (!visible.some((p) => p.n === k)) return;
     n = k;
@@ -413,6 +430,58 @@ window.SOZO_PRET.then(() => {
   const setBtn = $('#setBtn'), panel = $('#settings'), pins = $('#pins');
   setBtn.addEventListener('click', () => { const o = panel.classList.toggle('is-open'); setBtn.setAttribute('aria-expanded', String(o)); });
   document.addEventListener('click', (e) => { if (!top.contains(e.target)) { panel.classList.remove('is-open'); setBtn.setAttribute('aria-expanded', 'false'); } });
+  $('#signetBtn').addEventListener('click', async () => {
+    const bt = $('#signetBtn'), ex = signets.find((x) => x.n === n);
+    bt.disabled = true;
+    const r = ex ? await API('DELETE', `/api/signets/${ex.id}`) : await API('POST', '/api/signets', { livre: b.id, n });
+    bt.disabled = false;
+    if (!r.ok) { S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+    signets = ex ? signets.filter((x) => x !== ex) : [...signets, { id: r.d.id, n }];
+    majSignet(); S.toast(ex ? 'Marque-page retiré.' : `Marque-page posé sur la page ${n}. Retrouvez-le dans votre bibliothèque.`);
+  });
+  const cherche = $('#chercheL');
+  const chercheBasc = (o) => { cherche.hidden = !o; $('#chercheBtn').setAttribute('aria-expanded', String(o)); if (o) setTimeout(() => $('#chercheQ').focus(), 30); };
+  $('#chercheBtn').addEventListener('click', () => chercheBasc(cherche.hidden));
+  $('#chercheX').addEventListener('click', () => { chercheBasc(false); $('#chercheBtn').focus(); });
+  let tC;
+  const lancerRecherche = async () => {
+    const q = $('#chercheQ').value.trim(), z = $('#chercheR');
+    if (q.length < 2) { z.innerHTML = ''; return; }
+    z.innerHTML = '<p class="ash"><span class="spin" aria-hidden="true"></span> Recherche…</p>';
+    const r = await API('GET', `/api/livres/${encodeURIComponent(b.id)}/recherche?q=${encodeURIComponent(q)}`);
+    if (!r.ok) { z.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'La recherche n’a pas abouti.')}</span></p>`; return; }
+    z.innerHTML = r.d.resultats.length ? `<ol class="rd-cherche-l">${r.d.resultats.map((x) => `<li><a href="lire.html?id=${encodeURIComponent(b.id)}&p=${x.n}" data-aller="${x.n}"><strong>Page ${x.n}</strong> ${S.esc(x.extrait)}</a></li>`).join('')}</ol>`
+      : '<p class="ash">Rien trouvé dans les pages que vous pouvez lire.</p>';
+  };
+  $('#chercheQ').addEventListener('input', () => { clearTimeout(tC); tC = setTimeout(lancerRecherche, 400); });
+  $('#chercheF').addEventListener('submit', (e) => { e.preventDefault(); lancerRecherche(); });
+  $('#chercheR').addEventListener('click', (e) => { const l = e.target.closest('[data-aller]'); if (!l || pref.defil !== 'page') return; e.preventDefault(); aller(+l.dataset.aller); chercheBasc(false); });
+  /* Écouter la page : la voix du téléphone (synthèse vocale du navigateur). On
+     choisit une voix INSTALLÉE sur l'appareil quand il y en a une : le texte ne
+     part alors nulle part. Sinon, on le dit avant de lire. */
+  const voixBt = $('#voixBtn');
+  if (!('speechSynthesis' in window)) voixBt.hidden = true;
+  const voixLocale = () => { const vs = speechSynthesis.getVoices().filter((v) => /^fr/i.test(v.lang)); return vs.find((v) => v.localService) || null; };
+  voixBt.addEventListener('click', () => {
+    if (speechSynthesis.speaking) { speechSynthesis.cancel(); voixBt.setAttribute('aria-pressed', 'false'); return; }
+    const zone = document.querySelector(pref.defil === 'page' ? '.rd-text[data-page]' : `#flux [data-n="${n}"] .rd-text, .rd-text[data-page="${n}"]`);
+    const t = zone ? zone.innerText.replace(/[​‌‍⁠﻿]/g, '').trim() : '';
+    if (!t) { S.toast('Cette page n’a pas de texte à lire pour vous.'); return; }
+    const parler = () => {
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = 'fr-FR'; u.rate = 0.95;
+      const loc = voixLocale(); if (loc) u.voice = loc;
+      u.onend = u.onerror = () => voixBt.setAttribute('aria-pressed', 'false');
+      speechSynthesis.speak(u); voixBt.setAttribute('aria-pressed', 'true');
+    };
+    if (!voixLocale() && localStorage.getItem('sozo-voix-ok') !== '1') {
+      S.modal({ title: 'Écouter la page', body: '<p>Ce navigateur n’a pas de voix française installée sur l’appareil : sa voix passe par Internet (le texte de la page est alors envoyé au service vocal du navigateur).</p>',
+        actions: [{ label: 'Annuler' }, { label: 'Écouter quand même', primary: true, onClick: (close) => { close(); try { localStorage.setItem('sozo-voix-ok', '1'); } catch (er) {} parler(); } }] });
+      return;
+    }
+    parler();
+  });
+  addEventListener('pagehide', () => { try { speechSynthesis.cancel(); } catch (e) {} });
   const pinsBasc = (o) => { pins.hidden = !o; $('#pinsBtn').setAttribute('aria-expanded', String(o)); };
   $('#pinsBtn').addEventListener('click', () => pinsBasc(pins.hidden));
   $('#pinsX').addEventListener('click', () => pinsBasc(false));

@@ -23,6 +23,24 @@
   var moi = lire();
   if (moi) moi.name = moi.nom;
 
+  /* Application installable, lecture hors ligne (22/10/2026) : le service worker
+     garde les données du compte À SON NOM ; on lui dit qui est connecté, et on
+     vide ces caches à la déconnexion ou quand la session n'est plus valable. */
+  function annoncer(m) {
+    if (!m || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('sw.js', { scope: '/app/' })
+      .then(function () { return navigator.serviceWorker.ready; })
+      .then(function (reg) { if (reg && reg.active) reg.active.postMessage({ type: 'compte', id: 'u' + m.id }); })
+      .catch(function () {});
+  }
+  function oublierCaches() {
+    try { if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'deconnexion' }); } catch (e) {}
+    if (!window.caches) return Promise.resolve();
+    return caches.keys().then(function (ks) {
+      return Promise.all(ks.filter(function (k) { return k.indexOf('sozo-u') === 0 || /-etat$/.test(k); }).map(function (k) { return caches.delete(k); }));
+    }).catch(function () {});
+  }
+
   window.SozoAuth = {
     session: moi,
     csrf: csrf,
@@ -30,10 +48,12 @@
     close: function () {
       fetch('/api/sessions/courante', { method: 'DELETE', headers: { 'X-CSRF-Token': csrf() }, credentials: 'same-origin' })
         .catch(function () {})
+        .then(oublierCaches)
         .then(function () { garder(null); location.href = 'connexion.html'; });
     }
   };
   if (page === 'connexion.html') return;
+  annoncer(moi);
 
   // Sans profil connu, on n'affiche rien avant la réponse du serveur.
   if (!moi) document.documentElement.style.visibility = 'hidden';
@@ -52,7 +72,7 @@
   }
   demander(0)
     .then(function (r) {
-      if (r.status === 401) { garder(null); versConnexion(); return null; }
+      if (r.status === 401) { garder(null); oublierCaches().then(versConnexion); return null; }
       if (!r.ok) throw new Error('serveur');
       return r.json();
     })
@@ -60,6 +80,7 @@
       if (!d) return;
       var avant = !!moi;
       garder(d.moi);
+      annoncer(d.moi);
       // Le thème choisi dans Mon compte suit la personne d'un appareil à l'autre
       if (window.SozoTheme && d.moi && d.moi.theme) SozoTheme.set(d.moi.theme);
       if (!avant) location.reload();          // première visite de l'onglet : on affiche avec le profil

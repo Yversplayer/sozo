@@ -212,7 +212,8 @@ def creer_app():
     import notifications
     import ecrits
     import communaute
-    for module in (comptes, catalogue, argent, studio, admin, notifications, ecrits, communaute):
+    import lecture_plus
+    for module in (comptes, catalogue, argent, studio, admin, notifications, ecrits, communaute, lecture_plus):
         module.enregistrer(app)
     if os.environ.get("SOZO_TACHES_INTEGREES", "").strip() == "1":
         import taches

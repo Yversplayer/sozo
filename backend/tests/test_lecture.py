@@ -188,6 +188,10 @@ class Balayage(TestBase):
         "fermer_session": [("DELETE", "/api/moi/sessions/{sid}", {404})],
         # lot B
         "exporter_livre": [("GET", "/api/studio/livres/{slug}/export.docx", {404})],
+        # lot D
+        "livre_recherche": [("GET", "/api/livres/{slug_brouillon}/recherche?q=secret", {404})],
+        "verset_retirer": [("DELETE", "/api/versets/{vid}", {404})],
+        "signet_retirer": [("DELETE", "/api/signets/{sgid}", {404})],
     }
     # Routes paramétrées hors balayage, avec la raison :
     EXEMPTES = {
@@ -224,6 +228,8 @@ class Balayage(TestBase):
             nid = cx.inserer("INSERT INTO notifications (user_id, type, titre, corps, cle, created_at) VALUES (?, 'test', 'Texte secret', 'Texte secret', 'balayage', ?)",
                              (a.id, "2026-10-22T00:00:00Z"))
             sid = cx.un("SELECT id FROM sessions WHERE user_id = ? ORDER BY id DESC LIMIT 1", (a.id,))["id"]
+            vid = cx.inserer("INSERT INTO versets (user_id, b, c, v1, v2, created_at) VALUES (?, 43, 3, 16, 16, ?)", (a.id, "2026-10-22T00:00:00Z"))
+            sgid = cx.inserer("INSERT INTO signets (user_id, book_id, n, created_at) VALUES (?, ?, 1, ?)", (a.id, bid, "2026-10-22T00:00:00Z"))
             cx.valider()
         finally:
             cx.fermer()
@@ -233,7 +239,7 @@ class Balayage(TestBase):
         a.post(f"/api/studio/livres/{slug}/pages", {"contenu": "Texte secret jeté."})
         n_jete = a.get(f"/api/studio/livres/{slug}").get_json()["livre"]["pages"][-1]["n"]
         pgid = a.delete(f"/api/studio/livres/{slug}/pages/{n_jete}").get_json()["page"]
-        cle = {"slug": slug, "slug_brouillon": slug, "pid": pid, "rid": 1, "n": 1, "aid": aid, "eid": eid, "ecid": ecid, "cmid": cmid, "pgid": pgid, "nid": nid, "sid": sid}
+        cle = {"slug": slug, "slug_brouillon": slug, "pid": pid, "rid": 1, "n": 1, "aid": aid, "eid": eid, "ecid": ecid, "cmid": cmid, "pgid": pgid, "nid": nid, "sid": sid, "vid": vid, "sgid": sgid}
         for ep, essais in self.ROUTES.items():
             for essai in essais:
                 meth, url, attendus = essai[:3]

@@ -407,3 +407,39 @@ html[data-theme="dark"] .vl-trop { color: #F2A29B; }
 .au-onglets { margin-top: 26px; }
 .ex-recherche { padding-bottom: 8px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
 .au-head h1 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.005em; }
+
+/* ═══════════ Bible : recherche, verset du jour, garder ═══════════ */
+.bb-cherche { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 6px 0 12px; }
+.bb-cherche .search { flex: 1 1 320px; }
+.bb-res { margin-bottom: 18px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); max-height: 360px; overflow: auto; }
+.bb-res-l { list-style: none; display: grid; gap: 8px; margin-top: 8px; }
+.bb-res-l a { display: block; font: 400 17px/1.45 var(--serif); }
+.bb-res-l a:hover { color: var(--ver-text); }
+.bb-res-l strong { font: 600 13px/1 var(--sans); color: var(--gold-text); margin-right: 6px; }
+.bb-text p { position: relative; }
+.bb-garder { display: inline-grid; place-items: center; width: 28px; height: 28px; margin-left: 6px; vertical-align: -6px; border: 0; border-radius: 50%; background: none; color: var(--ash); cursor: pointer; opacity: 0; }
+.bb-text p:hover .bb-garder, .bb-garder:focus-visible, .bb-garder.is-on { opacity: 1; }
+.bb-garder.is-on { color: var(--gold-text); }
+.bb-garder.is-on .ic { fill: currentColor; }
+.bb-garder .ic { width: 16px; height: 16px; }
+@media (hover: none) { .bb-garder { opacity: .55; } }
+.bi-signet { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.bi-signet .ic { width: 15px; height: 15px; color: var(--gold-text); vertical-align: -2px; }
+.rd-cherche form { margin: 8px 0; }
+.rd-cherche-n { font-size: 12.5px; margin-bottom: 8px; }
+.rd-cherche-l { list-style: none; display: grid; gap: 8px; max-height: 50vh; overflow: auto; }
+.rd-cherche-l a { display: block; font: 400 15px/1.45 var(--serif); }
+.rd-cherche-l strong { font: 600 12.5px/1 var(--sans); color: var(--gold-text); margin-right: 6px; }
+#signetBtn[aria-pressed="true"], #voixBtn[aria-pressed="true"] { color: var(--ver); }
+#signetBtn[aria-pressed="true"] .ic { fill: currentColor; }
+html[data-theme="dark"] #signetBtn[aria-pressed="true"], html[data-theme="dark"] #voixBtn[aria-pressed="true"] { color: var(--gold); }
+.vl-installer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--gold); background: var(--paper); font-size: 14.5px; }
+.vl-installer[hidden] { display: none; }
+.vl-installer .ic { width: 18px; height: 18px; vertical-align: -3px; color: var(--gold-text); }
+.vl-ios { list-style: none; display: grid; gap: 12px; margin-bottom: 12px; }
+.vl-ios li { display: flex; gap: 12px; align-items: flex-start; }
+.vl-ios li > span { flex: 0 0 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--velours); color: #E2C25E; font-weight: 600; }
+.vl-ios .ic { width: 16px; height: 16px; vertical-align: -3px; }
+.vl-jour { margin-top: 10px; max-width: 70ch; font: italic 400 18px/1.45 var(--serif); color: var(--ink); }
+.vl-jour a { font: 600 13px/1 var(--sans); font-style: normal; color: var(--gold-text); margin-left: 4px; }
+.vl-jour[hidden] { display: none; }

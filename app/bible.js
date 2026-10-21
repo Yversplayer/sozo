@@ -21,14 +21,13 @@ window.SOZO_PRET.then(() => {
           <input id="ref" placeholder="Ex. : Jean 3:16, Ps 23, Ésaïe 26:4" autocomplete="off"><button class="btn btn--sm" type="submit">Aller</button></form>
       </div>
       <p class="note" id="goMsg" aria-live="polite"></p>
+      <form class="bb-cherche" id="cherche" role="search"><label class="search search--sm"><span class="sr">Chercher un mot dans toute la Bible</span>${S.icon('search')}<input type="search" id="motB" placeholder="Chercher un mot dans toute la Bible (ex. : berger, lumière)" autocomplete="off"></label>
+        <label class="pl-coche"><input type="checkbox" id="ceLivre"> dans ce livre seulement</label></form>
+      <div class="bb-res" id="bRes" aria-live="polite" hidden></div>
       <nav class="bb-chaps" id="chaps" aria-label="Chapitres"></nav>
       <article class="bb-text" id="text" aria-live="polite"></article>
       <nav class="rd-nav bb-nav" id="nav" aria-label="Chapitre précédent ou suivant"></nav>
-      <aside class="bb-day panel">
-        <p class="kicker">Un verset pour commencer</p>
-        <blockquote>« Confiez-vous en l’Éternel à perpétuité, car l’Éternel, l’Éternel est le rocher des siècles. »</blockquote>
-        <p><a class="bref" href="bible.html?b=23&c=26&v=4" data-b="23" data-c="26" data-v1="4" data-v2="4">Ésaïe 26:4</a> — « le rocher des siècles ».</p>
-      </aside>
+      <aside class="bb-day panel" id="jour" aria-live="polite"><p class="kicker">Le verset du jour</p><p class="ash">Chargement…</p></aside>
       <p class="note">${S.icon('book')} Texte de la Bible Louis Segond (1910), dans le domaine public. Une référence écrite par un auteur (« Ps 23:4 », « Jean 3:16 ») devient un lien vers ce passage.</p>
     </section>
   </div>`;
@@ -58,7 +57,7 @@ window.SOZO_PRET.then(() => {
       if (!ch) { $('#text').innerHTML = `<div class="empty"><strong>Ce chapitre n'existe pas</strong>${S.esc(name)} compte ${book.length} chapitre${book.length > 1 ? 's' : ''}.</div>`; return; }
       $('#text').innerHTML = ch.map((t, i) => {
         const n1 = i + 1, hit = v1 && n1 >= v1 && n1 <= v2;
-        return `<p id="v${n1}" class="${hit ? 'is-hit' : ''}"><sup>${n1}</sup>${S.esc(t)}</p>`;
+        return `<p id="v${n1}" class="${hit ? 'is-hit' : ''}"><sup>${n1}</sup>${S.esc(t)}<button type="button" class="bb-garder" data-garder="${n1}" aria-label="Garder le verset ${n1}" title="Garder ce verset">${S.icon('garder')}</button></p>`;
       }).join('');
       const prev = c > 1 ? [b, c - 1] : b > 1 ? [b - 1, index ? index[b - 2][1].length : 1] : null;
       const next = c < book.length ? [b, c + 1] : b < 66 ? [b + 1, 1] : null;
@@ -76,6 +75,37 @@ window.SOZO_PRET.then(() => {
     const r = B.parse($('#ref').value.trim());
     if (!r) { $('#goMsg').textContent = 'Référence non reconnue. Essayez « Jean 3:16 », « Ps 23 » ou « 1 Co 13:4-7 ».'; return; }
     location.href = B.href(r);
+  });
+  /* Lot D (22/10/2026) : chercher dans toute la Bible (côté serveur : la Bible
+     entière est trop lourde pour un téléphone), le verset du jour, garder un verset. */
+  const nomRef = (x) => `${B.BOOKS[x.b - 1][0]} ${x.c}:${x.v}`;
+  let tB;
+  $('#cherche').addEventListener('submit', (e) => e.preventDefault());
+  const chercher = async () => {
+    const q = $('#motB').value.trim(), z = $('#bRes');
+    if (q.length < 3) { z.hidden = true; return; }
+    z.hidden = false; z.innerHTML = '<p class="ash"><span class="spin" aria-hidden="true"></span> Recherche…</p>';
+    const r = await window.SOZO_API('GET', `/api/bible/recherche?q=${encodeURIComponent(q)}${$('#ceLivre').checked ? `&livre=${b}` : ''}`);
+    if (!r.ok) { z.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'La recherche n’a pas abouti.')}</span></p>`; return; }
+    z.innerHTML = r.d.total ? `<p class="ash">${r.d.total} verset${r.d.total > 1 ? 's' : ''}${r.d.total > r.d.versets.length ? `, les ${r.d.versets.length} premiers` : ''}</p>
+      <ol class="bb-res-l">${r.d.versets.map((x) => `<li><a href="bible.html?b=${x.b}&c=${x.c}&v=${x.v}"><strong>${S.esc(nomRef(x))}</strong> ${S.esc(x.t)}</a></li>`).join('')}</ol>`
+      : '<p class="ash">Aucun verset ne contient ces mots.</p>';
+  };
+  $('#motB').addEventListener('input', () => { clearTimeout(tB); tB = setTimeout(chercher, 450); });
+  $('#ceLivre').addEventListener('change', chercher);
+  window.SOZO_API('GET', '/api/bible/jour').then((r) => {
+    const x = r.ok && r.d.verset;
+    $('#jour').innerHTML = x ? `<p class="kicker">Le verset du jour</p><blockquote>« ${S.esc(x.t)} »</blockquote>
+      <p><a href="bible.html?b=${x.b}&c=${x.c}&v=${x.v}">${S.esc(nomRef(x))}</a></p>` : '<p class="kicker">Le verset du jour</p><p class="ash">Indisponible pour le moment.</p>';
+  });
+  $('#text').addEventListener('click', async (e) => {
+    const g = e.target.closest('[data-garder]'); if (!g) return;
+    g.disabled = true;
+    const r = await window.SOZO_API('POST', '/api/versets', { b, c, v1: +g.dataset.garder });
+    g.disabled = false;
+    if (!r.ok) { S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+    g.classList.add('is-on'); g.setAttribute('aria-label', `Verset ${g.dataset.garder} gardé`);
+    S.toast(`${B.BOOKS[b - 1][0]} ${c}:${g.dataset.garder} gardé dans votre bibliothèque.`);
   });
   books();
   fetch(`bible/index.json`).then((r) => r.json()).then((ix) => { index = ix; show(); }).catch(() => show());

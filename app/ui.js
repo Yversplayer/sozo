@@ -479,6 +479,37 @@ window.SOZO = (() => {
   const ONGLETS = [['accueil', 'decouvrir.html', 'Accueil', 'home'], ['explorer', 'explorer.html', 'Explorer', 'grid'],
     ['ecrits', 'ecrits.html', 'Écrire', 'feather'], ['bibliotheque', 'suivis.html', 'Bibliothèque', 'library'], ['profil', 'compte.html', 'Profil', 'user']];
   const ouvertGarde = () => { try { return localStorage.getItem('sozo-nav-ouverte') === '1'; } catch (e) { return false; } };
+  /* ─── installer l'application (22/10/2026) ───
+     Android et ordinateur : la fenêtre d'installation du navigateur
+     (beforeinstallprompt). iPhone : Safari ne le permet pas — un guide en
+     images (Partager → Sur l'écran d'accueil). Déjà installée : rien. */
+  let invite = null;
+  addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); invite = e; document.dispatchEvent(new CustomEvent('sozo:installable')); });
+  const installee = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const iphone = () => /iPhone|iPad|iPod/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent);
+  const installer = {
+    possible: () => !installee() && (!!invite || iphone()),
+    installee,
+    async lancer() {
+      if (invite) {
+        invite.prompt();
+        const r = await invite.userChoice.catch(() => null);
+        invite = null;
+        if (r && r.outcome === 'accepted') toast('Sōzō s’installe : vous le retrouverez sur votre écran d’accueil.');
+        return;
+      }
+      if (iphone()) {
+        modal({ title: 'Installer Sōzō sur votre iPhone', body: `<ol class="vl-ios">
+          <li><span>1</span>Dans Safari, touchez le bouton <strong>Partager</strong> ${icon('partager')} en bas de l’écran.</li>
+          <li><span>2</span>Choisissez <strong>Sur l’écran d’accueil</strong>.</li>
+          <li><span>3</span>Touchez <strong>Ajouter</strong> : l’icône de Sōzō apparaît avec vos applications.</li></ol>
+          <p class="note">${icon('shield')} Les pages que vous ouvrez restent lisibles sans réseau sur cet appareil, à votre nom seulement.</p>`, actions: [{ label: 'Compris', primary: true }] });
+        return;
+      }
+      toast('Ce navigateur ne propose pas l’installation. Essayez avec Chrome sur Android, ou Safari sur iPhone.');
+    }
+  };
+
   function shell(active) {
     active = ALIAS[active] || active;
     const n = unread();
@@ -651,5 +682,5 @@ window.SOZO = (() => {
 
   return { D, leger, esc, icon, img, money, dateLong, dateShort, dayLong, relDays, parse, now, book, author, booksBy, status, access, readable,
            visiblePages, stats, accessLabel, priceFrom, chapterOf, pagesRange, follows, isFollowed, toggleFollow, notifications, markSeen,
-           unread, majCloche, libelleAppareil, sess, cover, bookCard, visite, monogramme, PLUME_SVG, emphase, POLICES, NOMS_POLICES, couvUrl, mise, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced };
+           unread, majCloche, libelleAppareil, sess, cover, bookCard, visite, monogramme, PLUME_SVG, emphase, installer, POLICES, NOMS_POLICES, couvUrl, mise, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced };
 })();

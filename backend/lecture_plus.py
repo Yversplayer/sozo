@@ -110,7 +110,9 @@ def enregistrer(app):
     def versets_lire():
         cx = db.connecter()
         try:
-            return jsonify(versets=cx.tous("SELECT id, b, c, v1, v2, created_at FROM versets WHERE user_id = ? ORDER BY id DESC LIMIT 1000", (g.user["id"],)))
+            lignes = cx.tous("SELECT id, b, c, v1, v2, created_at FROM versets WHERE user_id = ? ORDER BY id DESC LIMIT 1000", (g.user["id"],))
+            index = {(b, c, n): t for (b, c, n, t) in _bible()}
+            return jsonify(versets=[{**x, "t": " ".join(index.get((x["b"], x["c"], n), "") for n in range(x["v1"], x["v2"] + 1)).strip()} for x in lignes])
         finally:
             cx.fermer()
 

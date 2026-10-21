@@ -523,3 +523,21 @@ CREATE TABLE IF NOT EXISTS abonnements (
   PRIMARY KEY (user_id, auteur_id)
 );
 CREATE INDEX IF NOT EXISTS abonnements_auteur ON abonnements (auteur_id);
+
+-- Lot D (22/10/2026) : versets gardés (synchronisés d'un appareil à l'autre)
+-- et marque-pages d'un livre (posés seulement sur une page lisible).
+CREATE TABLE IF NOT EXISTS versets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  b INTEGER NOT NULL, c INTEGER NOT NULL, v1 INTEGER NOT NULL, v2 INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE (user_id, b, c, v1, v2)
+);
+CREATE TABLE IF NOT EXISTS signets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  book_id INTEGER NOT NULL REFERENCES books (id),
+  n INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE (user_id, book_id, n)
+);

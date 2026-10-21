@@ -50,8 +50,12 @@ window.SOZO_PRET.then(() => {
     <section class="vl-salut">
       <h1>${S.esc(salut)}${prenom ? `, ${S.esc(prenom)}` : ''}</h1>
       <p>Que voulez-vous écrire, ou lire, aujourd’hui ?</p>
+      <p class="vl-jour" id="versetJour" hidden></p>
       <a class="ac-cherche vl-cherche" href="explorer.html#q">${S.icon('search')}<span>Rechercher un livre, un écrit, un auteur…</span></a>
     </section>
+
+    <aside class="vl-installer" id="bandeauInstaller" hidden><span>${S.icon('upload')} Installez Sōzō sur votre écran d’accueil, et lisez même sans réseau.</span>
+      <span class="row-acts"><button class="btn btn--accent btn--sm" type="button" id="instOui">Installer</button><button class="ec-lien" type="button" id="instNon">Plus tard</button></span></aside>
 
     <section class="vl-plume-carte vl-velours" aria-labelledby="plumeT">
       <div class="vl-plume-t">
@@ -101,6 +105,15 @@ window.SOZO_PRET.then(() => {
     </section>` : ''}
   </div>`;
 
+  /* L'application installable : un bandeau discret, une fois refusé il se tait 30 jours */
+  const bandeau = () => {
+    let plusTard = 0; try { plusTard = +localStorage.getItem('sozo-installer-plus-tard') || 0; } catch (e) {}
+    $('#bandeauInstaller').hidden = !(S.installer.possible() && Date.now() - plusTard > 30 * 864e5);
+  };
+  bandeau(); document.addEventListener('sozo:installable', bandeau);
+  $('#instOui').addEventListener('click', async () => { await S.installer.lancer(); bandeau(); });
+  $('#instNon').addEventListener('click', () => { try { localStorage.setItem('sozo-installer-plus-tard', String(Date.now())); } catch (e) {} $('#bandeauInstaller').hidden = true; });
+
   /* Écrits du jour : la réponse du serveur, ou un état honnête */
   let ecrits = [];
   const chargerFil = async (abos) => {
@@ -115,6 +128,13 @@ window.SOZO_PRET.then(() => {
       : `<div class="empty"><strong>Aucun écrit pour l’instant</strong>Le premier peut être le vôtre : une phrase suffit.<br><br><a class="btn" href="ecrits.html?nouveau=pensee">${S.icon('feather')} Écrire une pensée</a></div>`;
   };
   chargerFil(false);
+  window.SOZO_API('GET', '/api/bible/jour').then((r) => {
+    const x = r.ok && r.d.verset; if (!x) return;
+    const nom = S.bible ? S.bible.BOOKS[x.b - 1][0] : '';
+    const z = $('#versetJour');
+    z.innerHTML = `<span>« ${S.esc(x.t)} »</span> <a href="bible.html?b=${x.b}&c=${x.c}&v=${x.v}">${S.esc(nom)} ${x.c}:${x.v}</a>`;
+    z.hidden = false;
+  });
   $$('[data-fil]').forEach((c) => c.addEventListener('click', () => { $$('[data-fil]').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); chargerFil(!!c.dataset.fil); }));
   E.brancher($('#fil'), (id) => ecrits.find((e) => e.id === id));
 

@@ -12,9 +12,14 @@ window.SOZO_PRET.then(async () => {
   const chargerEpingles = async () => { const r = await window.SOZO_API('GET', '/api/epingles'); epingles = r.ok ? r.d.epingles : null; };
   // 21/10/2026 : les écrits qu'on « garde » (poèmes, pensées, prières…) ont leur onglet
   const chargerGardes = async () => { const r = await window.SOZO_API('GET', '/api/ecrits/gardes'); gardes = r.ok ? r.d.ecrits : null; };
-  let abonnements = null;
+  let abonnements = null, versets = [], signets = [];
+  const chargerLot = async () => {
+    const [a, b] = await Promise.all([window.SOZO_API('GET', '/api/versets'), window.SOZO_API('GET', '/api/signets')]);
+    versets = a.ok ? a.d.versets : []; signets = b.ok ? b.d.signets : [];
+  };
   const chargerAbos = async () => { const r = await window.SOZO_API('GET', '/api/abonnements'); abonnements = r.ok ? r.d.auteurs : null; };
-  await Promise.all([charger(), chargerEpingles(), chargerGardes(), chargerAbos()]);
+  await Promise.all([charger(), chargerEpingles(), chargerGardes(), chargerAbos(), chargerLot()]);
+  const NOMS_B = ['Genèse', 'Exode', 'Lévitique', 'Nombres', 'Deutéronome', 'Josué', 'Juges', 'Ruth', '1 Samuel', '2 Samuel', '1 Rois', '2 Rois', '1 Chroniques', '2 Chroniques', 'Esdras', 'Néhémie', 'Esther', 'Job', 'Psaumes', 'Proverbes', 'Ecclésiaste', 'Cantique des Cantiques', 'Ésaïe', 'Jérémie', 'Lamentations', 'Ézéchiel', 'Daniel', 'Osée', 'Joël', 'Amos', 'Abdias', 'Jonas', 'Michée', 'Nahum', 'Habacuc', 'Sophonie', 'Aggée', 'Zacharie', 'Malachie', 'Matthieu', 'Marc', 'Luc', 'Jean', 'Actes des Apôtres', 'Romains', '1 Corinthiens', '2 Corinthiens', 'Galates', 'Éphésiens', 'Philippiens', 'Colossiens', '1 Thessaloniciens', '2 Thessaloniciens', '1 Timothée', '2 Timothée', 'Tite', 'Philémon', 'Hébreux', 'Jacques', '1 Pierre', '2 Pierre', '1 Jean', '2 Jean', '3 Jean', 'Jude', 'Apocalypse'];
   const ONGLETS = [['livres', 'En cours', 'book'], ['ecrits', 'Écrits gardés', 'garder'], ['abonnements', 'Abonnements', 'user'], ['epingles', 'Épingles', 'tag'], ['notifications', 'Notifications', 'bell']];
   let onglet = (location.hash || '').slice(1);
   if (!ONGLETS.some(([k]) => k === onglet)) onglet = 'livres';
@@ -46,6 +51,10 @@ window.SOZO_PRET.then(async () => {
           : `<div class="empty"><strong>Vous ne suivez personne</strong>Sur la page d’un auteur, touchez « Suivre » : ses nouveaux écrits vous seront signalés.<br><br><a class="btn btn--ghost btn--sm" href="explorer.html?vue=ecrits">Lire des écrits</a></div>`}
       </section>
       <section class="sec" id="epingles" style="padding-top:28px"${onglet === 'epingles' ? '' : ' hidden'}>
+        ${signets.length ? `<div class="panel bi-pins"><h2>Mes marque-pages</h2>${signets.map((x) => `<div class="bi-pin bi-signet"><span>${S.icon('garder')} <strong>${S.esc(x.titre)}</strong> · page ${x.n}</span>
+          <span class="row-acts"><a class="btn btn--ghost btn--sm" href="lire.html?id=${encodeURIComponent(x.livre)}&p=${x.n}">Ouvrir ${S.icon('right')}</a><button class="btn btn--ghost btn--sm" type="button" data-signet="${x.id}">Retirer</button></span></div>`).join('')}</div>` : ''}
+        ${versets.length ? `<div class="panel bi-pins"><h2>Mes versets</h2>${versets.map((x) => `<div class="bi-pin"><blockquote>« ${S.esc(x.t)} »</blockquote>
+          <div class="row-acts"><a class="btn btn--ghost btn--sm" href="bible.html?b=${x.b}&c=${x.c}&v=${x.v1}${x.v2 !== x.v1 ? '-' + x.v2 : ''}">${S.esc(NOMS_B[x.b - 1])} ${x.c}:${x.v1}${x.v2 !== x.v1 ? '–' + x.v2 : ''} ${S.icon('right')}</a><button class="btn btn--ghost btn--sm" type="button" data-verset="${x.id}">Retirer</button></div></div>`).join('')}</div>` : ''}
         ${epingles === null ? `<p class="warn">${S.icon('x')}<span>Épingles indisponibles pour le moment.</span></p>`
           : epingles.length ? (() => { const par = {}; epingles.forEach((e) => (par[e.livre] = par[e.livre] || { titre: e.titre, l: [] }).l.push(e)); return Object.entries(par).map(([slug, g]) => `<div class="panel bi-pins">
               <h2>${S.esc(g.titre)}</h2>
@@ -107,6 +116,14 @@ window.SOZO_PRET.then(async () => {
       t.addEventListener('click', () => { onglet = t.dataset.bi; history.replaceState(null, '', '#' + onglet); render(); document.getElementById('bi-' + onglet).focus(); });
       t.addEventListener('keydown', (e) => { const k = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!k) return; e.preventDefault(); onglet = tabs[(i + k + tabs.length) % tabs.length].dataset.bi; history.replaceState(null, '', '#' + onglet); render(); document.getElementById('bi-' + onglet).focus(); });
     });
+    document.querySelectorAll('[data-signet], [data-verset]').forEach((x) => x.addEventListener('click', async () => {
+      x.disabled = true;
+      const sig = x.dataset.signet;
+      const r = await window.SOZO_API('DELETE', sig ? `/api/signets/${sig}` : `/api/versets/${x.dataset.verset}`);
+      if (!r.ok) { x.disabled = false; S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+      if (sig) signets = signets.filter((y) => y.id !== +sig); else versets = versets.filter((y) => y.id !== +x.dataset.verset);
+      render();
+    }));
     document.querySelectorAll('[data-desabo]').forEach((x) => x.addEventListener('click', async () => {
       x.disabled = true;
       const r = await window.SOZO_API('DELETE', `/api/profils/${x.dataset.desabo.slice(1)}/abonnement`);
