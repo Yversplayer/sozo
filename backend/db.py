@@ -17,7 +17,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 11   # v11 (22/10/2026) : corbeille et retrait des livres, réponses, e-mail ; v10 : écrits ; v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
+VERSION_SCHEMA = 12   # v12 (21/10/2026) : charte de la communauté ; v11 (21/10/2026) : corbeille et retrait des livres, réponses, e-mail ; v10 : écrits ; v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
 _verrou = threading.Lock()
 
 
@@ -313,7 +313,7 @@ TYPES_NOTIFICATION = ('parution', 'paiement', 'vente', 'reversement', 'securite'
 
 
 def _types_de_notification(cx):
-    """Lot C (22/10/2026) : deux types de notification de plus (« communaute »,
+    """Lot C (21/10/2026) : deux types de notification de plus (« communaute »,
     « abonnements »). Une règle CHECK ne s'élargit pas par ALTER … ADD COLUMN :
     * PostgreSQL (la production) : on remplace la contrainte, rien d'autre ne bouge ;
     * SQLite (développement, tests) : seule une reconstruction de la table change
@@ -381,7 +381,7 @@ def _migrer(cx):
     # pour libérer UNIQUE(book_id, n)) et se récupère depuis la corbeille.
     _ajouter_colonne(cx, "pages", "corbeille_le", "TEXT")
     _ajouter_colonne(cx, "pages", "n_avant", "INTEGER")
-    # v11 (22/10/2026), lot A « compléter ce qui existe » :
+    # v11 (21/10/2026), lot A « compléter ce qui existe » :
     # un livre se RETIRE du catalogue par son auteur (cache_le : ses lecteurs
     # gardent leurs pages) ou va à la CORBEILLE (corbeille_le : seulement s'il
     # n'a jamais rien publié) ;
@@ -400,3 +400,7 @@ def _migrer(cx):
     # lot C : un écrit n'est annoncé qu'une fois à ceux qui suivent son auteur
     _ajouter_colonne(cx, "ecrits", "annonce_le", "TEXT")
     _types_de_notification(cx)
+    # v12, lot E : la charte de la communauté acceptée (quelle version, quand) ;
+    # une nouvelle version de la charte se fait accepter de nouveau.
+    _ajouter_colonne(cx, "users", "charte_version", "TEXT")
+    _ajouter_colonne(cx, "users", "charte_le", "TEXT")

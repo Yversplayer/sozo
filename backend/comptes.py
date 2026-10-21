@@ -9,6 +9,7 @@ from datetime import timedelta
 
 from flask import g, jsonify, request
 
+import charte
 import config
 import db
 import envois
@@ -26,6 +27,8 @@ ERREUR_CONNEXION = "E-mail ou mot de passe incorrect."
 def _moi(user):
     return {"id": user["id"], "nom": user["nom"], "email": user["email"], "role": user["role"],
             "email_verifie": bool(user["email_verifie_at"]),
+            # Lot E : la charte de la communauté (version en vigueur) est-elle acceptée ?
+            "charte": user.get("charte_version") == charte.VERSION,
             # Thème choisi dans Mon compte : il suit la personne d'un appareil à l'autre
             "theme": "nocturne" if user.get("theme") == "nocturne" else "clair"}   # 19/10/2026 : le BLANC par défaut (demande du propriétaire)
 
@@ -157,7 +160,7 @@ def enregistrer(app):
                                     raison="Message de sécurité, envoyé à chaque changement de mot de passe.")
         mailer.preparer(cx, u["email"], "Votre mot de passe Sōzō a changé", texte, html, user_id=u["id"])
 
-    # ═══ Lot A (22/10/2026) : adresse e-mail, appareils, mes données ═══════
+    # ═══ Lot A (21/10/2026) : adresse e-mail, appareils, mes données ═══════
     @app.post("/api/moi/email/code")
     @connectee
     def code_email():
@@ -286,7 +289,7 @@ def enregistrer(app):
                 livres.append({**{k: b[k] for k in ("slug", "titre", "categorie", "description", "acces", "created_at")}, "pages": pages})
             d = {
                 "genere_le": v.maintenant(),
-                "compte": cx.un("SELECT nom, email, role, bio, ville, theme, created_at FROM users WHERE id = ?", (uid,)),
+                "compte": cx.un("SELECT nom, email, role, bio, ville, theme, charte_version, charte_le, created_at FROM users WHERE id = ?", (uid,)),
                 "livres": livres,
                 "ecrits": cx.tous("SELECT nature, titre, texte, statut, publie_le, created_at FROM ecrits WHERE user_id = ? AND efface_le IS NULL", (uid,)),
                 "commentaires": cx.tous("SELECT ecrit_id, texte, created_at, retire_le FROM ecrits_commentaires WHERE user_id = ?", (uid,)),

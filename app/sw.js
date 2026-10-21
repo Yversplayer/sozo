@@ -1,5 +1,5 @@
 /* Sōzō — service worker : notifications d'appareil (Web Push) et, depuis le
-   22/10/2026 (lot D), l'application installable qui s'ouvre et se lit HORS LIGNE.
+   21/10/2026 (lot D), l'application installable qui s'ouvre et se lit HORS LIGNE.
 
    La règle d'avant tient toujours : une page protégée ne doit jamais être
    servie depuis un cache à quelqu'un qui n'y a plus droit (appareil partagé,

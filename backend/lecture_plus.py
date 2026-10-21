@@ -1,4 +1,4 @@
-"""Lot D (22/10/2026) : la Bible et la liseuse, en plus riche.
+"""Lot D (21/10/2026) : la Bible et la liseuse, en plus riche.
 
 * Bible : chercher un mot dans TOUTE la Bible (côté serveur : la Bible entière
   pèse 4,4 Mo, trop pour un téléphone en 3G), un verset du jour, des versets

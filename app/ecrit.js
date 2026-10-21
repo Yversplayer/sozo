@@ -37,7 +37,7 @@ window.SOZO_PRET.then(async () => {
   </div>`;
   E.brancher($('#ecrit'), () => e);
 
-  /* 22/10/2026 : des fils (un commentaire et ses réponses), et la correction
+  /* 21/10/2026 : des fils (un commentaire et ses réponses), et la correction
      de son propre commentaire dans les 15 minutes. */
   const unCom = (c) => `<li class="vl-com${c.parent ? ' vl-com--rep' : ''}" data-com="${c.id}">${S.monogramme(c.auteur.nom, c.parent ? 26 : 32)}
       <div><p class="vl-com-h"><strong>${S.esc(c.auteur.nom)}</strong> <small class="ash">${S.esc(E.depuis(c.le))}${c.modifie ? ' · modifié' : ''}</small></p>

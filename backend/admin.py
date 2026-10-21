@@ -23,6 +23,7 @@ from flask import g, jsonify, request
 import acces
 import argent
 import catalogue
+import charte
 import envois
 import notifications
 import config
@@ -224,6 +225,13 @@ def enregistrer(app):
                 paiements_attente=n("SELECT COUNT(*) AS n FROM payments WHERE etat IN ('PENDING', 'UNKNOWN')"),
                 reversements_attente=n("SELECT COUNT(*) AS n FROM payouts WHERE etat = 'DEMANDE'"),
                 signalements=n("SELECT COUNT(*) AS n FROM signalements WHERE etat = 'ouvert'"),
+                # Lot E (21/10/2026) : la communauté — écrits, commentaires, abonnements
+                signalements_ecrits=n("SELECT COUNT(*) AS n FROM signalements_ecrits WHERE etat = 'ouvert'"),
+                ecrits=n("SELECT COUNT(*) AS n FROM ecrits WHERE statut = 'publie' AND corbeille_le IS NULL AND retire_le IS NULL AND efface_le IS NULL AND publie_le <= ?", (acces.maintenant(),)),
+                ecrits_retires=n("SELECT COUNT(*) AS n FROM ecrits WHERE retire_le IS NOT NULL AND efface_le IS NULL"),
+                commentaires=n("SELECT COUNT(*) AS n FROM ecrits_commentaires WHERE retire_le IS NULL"),
+                abonnements=n("SELECT COUNT(*) AS n FROM abonnements"),
+                charte=n("SELECT COUNT(*) AS n FROM users WHERE actif = 1 AND charte_version = ?", (charte.VERSION,)),
                 utilisateurs=n("SELECT COUNT(*) AS n FROM users WHERE actif = 1"),
                 auteurs=n("SELECT COUNT(*) AS n FROM users WHERE actif = 1 AND role = 'auteur'"),
                 livres=n("SELECT COUNT(*) AS n FROM books WHERE statut = 'actif'"),

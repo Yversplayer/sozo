@@ -546,7 +546,7 @@ window.SOZO_PRET.then(() => {
   }
   document.addEventListener('click', (e) => { if (e.target.closest('[data-corbeille]') && livre) corbeille(); });
 
-  /* La corbeille des LIVRES (22/10/2026) : récupérer, ou effacer pour de bon
+  /* La corbeille des LIVRES (21/10/2026) : récupérer, ou effacer pour de bon
      un livre qui n'a jamais paru et que personne n'a acheté. */
   function corbeilleLivres() {
     const m = S.modal({ title: 'Corbeille des livres', body: '<div id="corbL" aria-live="polite"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>', actions: [{ label: 'Fermer', primary: true, onClick: (close) => { close(); relireLivre(); } }] });

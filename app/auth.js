@@ -23,7 +23,7 @@
   var moi = lire();
   if (moi) moi.name = moi.nom;
 
-  /* Application installable, lecture hors ligne (22/10/2026) : le service worker
+  /* Application installable, lecture hors ligne (21/10/2026) : le service worker
      garde les données du compte À SON NOM ; on lui dit qui est connecté, et on
      vide ces caches à la déconnexion ou quand la session n'est plus valable. */
   function annoncer(m) {

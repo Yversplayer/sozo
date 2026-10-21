@@ -35,7 +35,7 @@ TYPES = {
     "plume": ("Mon abonnement Plume", True, True),
     "moderation": ("Décisions de modération", False, True),
     "securite": ("Sécurité du compte", True, True),
-    # Lot C (22/10/2026)
+    # Lot C (21/10/2026)
     "communaute": ("Commentaires, réponses, j’aime et abonnés", True, False),
     "abonnements": ("Écrits des auteurs que je suis", True, False),
 }
@@ -57,6 +57,24 @@ def preferences(cx, user_id):
         c = p.get(t) if isinstance(p.get(t), dict) else {}
         out[t] = {"push": bool(c.get("push", push)), "email": True if t in TOUJOURS_PAR_EMAIL else bool(c.get("email", email))}
     return out
+
+
+def emettre_chez_autrui(user_id, type_, titre, corps, lien, cle, *, email=None):
+    """Prévenir UN AUTRE compte depuis la requête de quelqu'un (commentaire,
+    réponse, j'aime, nouvel abonné). Sous PostgreSQL, la connexion de la
+    personne qui agit n'écrit que SES lignes (RLS `notifications`) : écrire la
+    notification d'un autre dans sa transaction échouait — commenter ou aimer
+    l'écrit de quelqu'un rendait une erreur 500 (constaté le 21/10/2026, la
+    suite SQLite ne pouvait pas le voir). La notification part donc par une
+    connexion globale, explicite, à n'appeler qu'APRÈS la validation du fait :
+    elle n'annonce jamais un fait annulé. Dédoublonnée par `cle` comme les autres."""
+    cg = db.connecter(globale=True)
+    try:
+        fait = emettre(cg, user_id, type_, titre, corps, lien, cle, email=email)
+        cg.valider()
+        return fait
+    finally:
+        cg.fermer()
 
 
 def emettre(cx, user_id, type_, titre, corps, lien, cle, *, email=None):
@@ -133,7 +151,7 @@ def enregistrer(app):
     @app.delete("/api/notifications/<int:nid>")
     @connectee
     def notification_supprimer(nid):
-        """Supprimer une de SES notifications (22/10/2026)."""
+        """Supprimer une de SES notifications (21/10/2026)."""
         cx = db.connecter()
         try:
             if cx.execute("DELETE FROM notifications WHERE id = ? AND user_id = ?", (nid, g.user["id"])).rowcount != 1:

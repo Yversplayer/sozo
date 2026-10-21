@@ -86,7 +86,7 @@ window.SOZO_ECRITS = (() => {
     catch (er) { s.modal({ title: 'Partager', body: `<p>Copiez ce lien :</p><p><input class="vl-lien" readonly value="${s.esc(url)}" aria-label="Lien de l’écrit"></p>`, actions: [{ label: 'Fermer', primary: true }] }); }
   }
 
-  /* ─── la carte à partager (22/10/2026) : une IMAGE velours et or, dessinée
+  /* ─── la carte à partager (21/10/2026) : une IMAGE velours et or, dessinée
      sur l'appareil (Canvas) — rien ne part chez un service extérieur. Pour
      WhatsApp, un statut, une impression. 1080 × 1350 (format portrait). ─── */
   const PLUME_D = 'M20.6 3.2c-6.8.4-12 4.9-13.8 11.6l-1.9 6.3 1.3.4 1.6-4.5c1.5.2 3.3-.2 5-1.3 3.5-2.3 6.4-6.7 7.8-12.5z';

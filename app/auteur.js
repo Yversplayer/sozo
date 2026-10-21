@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   Sōzō — la page d'une personne qui écrit (lot C, 22/10/2026).
+   Sōzō — la page d'une personne qui écrit (lot C, 21/10/2026).
    Pour TOUS : l'auteur d'un livre comme celle qui publie une seule pensée.
    Le serveur (/api/profils/<id>) ne rend que ce qui est déjà public : nom,
    ville, présentation, livres visibles, écrits parus. Suivre la personne

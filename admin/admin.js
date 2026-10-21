@@ -103,7 +103,7 @@
   $('#sortir').addEventListener('click', async () => { await api('DELETE', '/api/admin/sessions/courante').catch(() => {}); connexion(); });
 
   /* ─── la console ─── */
-  const ONGLETS = [['tableau', 'Tableau'], ['paiements', 'Paiements'], ['reversements', 'Reversements'], ['cadeaux', 'Cadeaux'], ['livres', 'Livres'], ['signalements', 'Signalements'], ['utilisateurs', 'Utilisateurs'], ['audit', 'Journal']];
+  const ONGLETS = [['tableau', 'Tableau'], ['paiements', 'Paiements'], ['reversements', 'Reversements'], ['cadeaux', 'Cadeaux'], ['livres', 'Livres'], ['communaute', 'Communauté'], ['signalements', 'Signalements'], ['utilisateurs', 'Utilisateurs'], ['audit', 'Journal']];
   let onglet = (location.hash || '#tableau').slice(1), compteurs = {}, roles = [];
   const peut = (r) => roles.includes(r);
   async function console_() {
@@ -114,7 +114,7 @@
     $('#who').textContent = `${r.d.admin.nom} · ${r.d.admin.roles.join(', ') || 'aucun rôle'}`; roles = r.d.admin.roles; $('#sortir').hidden = false;
     if (!ONGLETS.some(([k]) => k === onglet)) onglet = 'tableau';
     main.innerHTML = `<nav class="at-tabs ad-tabs" role="tablist" aria-label="Sections">${ONGLETS.map(([k, l]) => {
-      const n = { paiements: r.d.paiements_attente, reversements: r.d.reversements_attente, signalements: r.d.signalements }[k];
+      const n = { paiements: r.d.paiements_attente, reversements: r.d.reversements_attente, signalements: r.d.signalements + r.d.signalements_ecrits }[k];
       return `<button type="button" role="tab" data-o="${k}" id="t-${k}" aria-selected="${onglet === k}" tabindex="${onglet === k ? 0 : -1}">${l}${n ? ` <b class="ad-n">${n}</b>` : ''}</button>`;
     }).join('')}</nav><section id="pan" role="tabpanel" aria-labelledby="t-${onglet}" class="ad-pan"><p class="ad-wait" role="status">Chargement…</p></section>`;
     const tabs = $$('[data-o]');
@@ -134,10 +134,14 @@
     async tableau(el) {
       const d = compteurs;
       el.innerHTML = `<div class="ad-kpis">
-        ${[['Paiements à vérifier', d.paiements_attente, 'paiements'], ['Reversements demandés', d.reversements_attente, 'reversements'], ['Signalements ouverts', d.signalements, 'signalements']].map(([l, v, o]) => `<a class="at-card${v ? ' at-card--or' : ''}" href="#${o}" data-aller="${o}"><strong>${v}</strong><span class="at-card-l">${l}</span><small>${v ? 'À traiter' : 'Rien en attente'}</small></a>`).join('')}
+        ${[['Paiements à vérifier', d.paiements_attente, 'paiements'], ['Reversements demandés', d.reversements_attente, 'reversements'], ['Signalements ouverts', d.signalements + d.signalements_ecrits, 'signalements']].map(([l, v, o]) => `<a class="at-card${v ? ' at-card--or' : ''}" href="#${o}" data-aller="${o}"><strong>${v}</strong><span class="at-card-l">${l}</span><small>${v ? 'À traiter' : 'Rien en attente'}</small></a>`).join('')}
         ${[['Encaissé (confirmé)', usd(d.encaisse)], ['Commission Sōzō', usd(d.commission)], ['Dû aux auteurs', usd(d.du_aux_auteurs)], ['Ventes confirmées', d.ventes], ['Utilisateurs actifs', d.utilisateurs], ['Dont auteurs', d.auteurs], ['Livres en ligne', d.livres]].map(([l, v]) => `<div class="at-card"><strong>${esc(v)}</strong><span class="at-card-l">${l}</span></div>`).join('')}
       </div>
-      <p class="note">Les montants ne comptent que les paiements CONFIRMÉS. Aucun prestataire n’est branché : chaque paiement est déclaré par le lecteur et vérifié ici, à la main, sur le relevé de l’opérateur.</p>`;
+      <p class="note">Les montants ne comptent que les paiements CONFIRMÉS. Aucun prestataire n’est branché : chaque paiement est déclaré par le lecteur et vérifié ici, à la main, sur le relevé de l’opérateur.</p>
+      <h2 class="ad-h2">Communauté</h2>
+      <div class="ad-kpis">
+        ${[['Écrits en ligne', d.ecrits], ['Commentaires visibles', d.commentaires], ['Abonnements à des auteurs', d.abonnements], ['Charte acceptée', d.charte], ['Écrits retirés', d.ecrits_retires]].map(([l, v]) => `<a class="at-card" href="#communaute" data-aller="communaute"><strong>${esc(v)}</strong><span class="at-card-l">${l}</span></a>`).join('')}
+      </div>`;
       $$('[data-aller]', el).forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); onglet = a.dataset.aller; history.replaceState(null, '', '#' + onglet); console_(); }));
     },
 
@@ -264,6 +268,50 @@
         corps: `${motif('Motif (l’auteur le verra dans son atelier)')}<p class="note">Les lecteurs qui l’ont acheté le gardent ; il disparaît du catalogue.</p>`,
         valider: async (f) => { const m = f.elements.motif.value.trim(); if (m.length < 3) return 'Indiquez un motif.'; const y = await api('POST', `/api/admin/livres/${b.dataset.retirer}/retirer`, { motif: m }); if (!y.ok) return y.d.erreur; toast('Livre retiré.'); console_(); } })));
       $$('[data-retablir]', el).forEach((b) => b.addEventListener('click', async () => { b.disabled = true; const y = await api('POST', `/api/admin/livres/${b.dataset.retablir}/retablir`); if (!y.ok) { b.disabled = false; toast(y.d.erreur); return; } toast('Livre rétabli.'); console_(); }));
+    },
+
+    /* Lot E (21/10/2026) — la communauté, sans attendre un signalement.
+       Retirer cache pour tous (rien n'est détruit, l'auteur est prévenu du
+       motif) ; rétablir ne rend que ce que la modération a retiré. */
+    async communaute(el, plus) {
+      const quoi = sessionStorage.getItem('ad-cq') || 'ecrits', retires = sessionStorage.getItem('ad-cr') === '1';
+      if (!plus) el._lignes = [];
+      const r = await api('GET', `/api/admin/communaute?quoi=${quoi}${retires ? '&retires=1' : ''}${plus ? `&avant=${plus}` : ''}`);
+      if (!r.ok) { el.innerHTML = `<p class="warn">${esc(r.d.erreur)}</p>`; return; }
+      const L = el._lignes = el._lignes.concat(r.d.lignes);
+      const maintenant = new Date().toISOString();
+      const etatEcrit = (x) => x.retire_le ? `Retiré le ${date(x.retire_le)}<br><small class="ash">${esc(x.retrait_motif || '')}</small>` : x.corbeille_le ? 'Dans la corbeille de l’auteur' : x.publie_le > maintenant ? `Programmé (${date(x.publie_le)})` : 'En ligne';
+      const lignes = quoi === 'ecrits' ? L.map((x) => `<tr>
+          <td>${date(x.publie_le)}</td>
+          <td class="ad-motif"><a href="../app/ecrit.html?id=${x.id}" target="_blank" rel="noopener"><strong>${esc(x.titre || x.nature)}</strong></a><br><small class="ash">${esc((x.extrait || '').slice(0, 200))}</small></td>
+          <td>${esc(x.auteur)}</td><td>${x.commentaires}</td><td>${x.signalements ? `<b class="ad-n">${x.signalements}</b>` : '0'}</td><td>${etatEcrit(x)}</td>
+          <td>${!peut('moderation') ? '' : x.retire_le ? `<button class="btn btn--sm btn--ghost" data-cm="ecrits" data-id="${x.id}" data-a="retablir">Rétablir</button>` : `<button class="btn btn--sm btn--ghost" data-cm="ecrits" data-id="${x.id}" data-a="retirer">Retirer</button>`}</td></tr>`)
+        : L.map((x) => `<tr>
+          <td>${date(x.created_at)}</td><td class="ad-motif">« ${esc((x.texte || '').slice(0, 300))} »</td>
+          <td><a href="../app/ecrit.html?id=${x.ecrit_id}#commentaires" target="_blank" rel="noopener">${esc(x.titre || x.nature)}</a><br><small class="ash">de ${esc(x.auteur_ecrit)}</small></td>
+          <td>${esc(x.auteur)}</td><td>${x.signalements ? `<b class="ad-n">${x.signalements}</b>` : '0'}</td><td>${x.retire_le ? `Retiré le ${date(x.retire_le)}` : 'Visible'}</td>
+          <td>${!peut('moderation') ? '' : x.retire_le ? `<button class="btn btn--sm btn--ghost" data-cm="commentaires" data-id="${x.id}" data-a="retablir">Rétablir</button>` : `<button class="btn btn--sm btn--ghost" data-cm="commentaires" data-id="${x.id}" data-a="retirer">Retirer</button>`}</td></tr>`);
+      el.innerHTML = `<div class="tbl-tools">
+          <label class="ad-sel">Afficher <select id="cq"><option value="ecrits"${quoi === 'ecrits' ? ' selected' : ''}>Écrits publiés</option><option value="commentaires"${quoi === 'commentaires' ? ' selected' : ''}>Commentaires</option></select></label>
+          <label class="ad-sel"><select id="cr"><option value="0"${retires ? '' : ' selected'}>visibles</option><option value="1"${retires ? ' selected' : ''}>retirés par la modération</option></select></label>
+        </div>
+        <p class="note" style="margin:0 0 12px">Retirer cache le contenu pour tous ; rien n’est détruit et l’auteur est prévenu du motif. Seul ce que la modération a retiré peut être rétabli.${peut('moderation') ? '' : ' Agir demande le rôle « moderation ».'}</p>
+        ${L.length ? table(quoi === 'ecrits' ? ['Paru le', 'Écrit', 'Auteur', 'Commentaires', 'Signalements', 'État', ''] : ['Le', 'Commentaire', 'Sous l’écrit', 'Par', 'Signalements', 'État', ''], lignes) : vide(retires ? 'Rien n’a été retiré.' : 'Rien pour l’instant.')}
+        ${r.d.suite ? `<div class="tbl-tools"><button class="btn btn--sm btn--ghost" type="button" id="cplus">Voir plus</button></div>` : ''}`;
+      $('#cq').addEventListener('change', (e) => { sessionStorage.setItem('ad-cq', e.target.value); PANNEAUX.communaute(el); });
+      $('#cr').addEventListener('change', (e) => { sessionStorage.setItem('ad-cr', e.target.value); PANNEAUX.communaute(el); });
+      const pl = $('#cplus'); if (pl) pl.addEventListener('click', () => PANNEAUX.communaute(el, r.d.suite));
+      $$('[data-cm]', el).forEach((b) => b.addEventListener('click', async () => {
+        const url = `/api/admin/${b.dataset.cm}/${b.dataset.id}/${b.dataset.a}`, ecrit = b.dataset.cm === 'ecrits';
+        if (b.dataset.a === 'retablir') {
+          b.disabled = true; const y = await api('POST', url);
+          if (!y.ok) { b.disabled = false; toast(y.d.erreur); return; }
+          toast(ecrit ? 'Écrit rétabli : il est de nouveau visible.' : 'Commentaire rétabli.'); console_(); return;
+        }
+        demander({ titre: ecrit ? 'Retirer cet écrit ?' : 'Retirer ce commentaire ?', bouton: 'Retirer',
+          corps: `${motif('Motif (l’auteur le verra)')}<p class="note">Exemple : « Propos blessants, contraires à la charte de la communauté. »</p>`,
+          valider: async (f) => { const m = f.elements.motif.value.trim(); if (m.length < 3) return 'Indiquez un motif.'; const y = await api('POST', url, { motif: m }); if (!y.ok) return y.d.erreur; toast('Retiré : il n’est plus visible.'); console_(); } });
+      }));
     },
 
     async signalements(el) {

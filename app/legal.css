@@ -1,0 +1,40 @@
+/* Sōzō — pages de texte (charte, conditions, confidentialité). Lot E, 21/10/2026.
+   Pages PUBLIQUES : elles ne chargent ni auth.js ni les données, et se lisent
+   sans compte (on doit pouvoir lire les conditions AVANT de s'inscrire). */
+:root {
+  --fond: #FFFDF9; --encre: #241C1D; --cendre: #5F5753; --filet: rgba(36, 28, 29, .12);
+  --vin: #6B0F1A; --or: #8A6A12; --bandeau: #FBF3DD; --bandeau-bord: #E3CF8E; --trou: #FCE9B8;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --fond: #16110F; --encre: #F3EADB; --cendre: #C2B6A6; --filet: rgba(243, 234, 219, .14);
+    --vin: #E59AA4; --or: #E2C46B; --bandeau: #2A2214; --bandeau-bord: #6A5523; --trou: #4A3A12; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--encre); font: 17px/1.65 'Inter', ui-sans-serif, system-ui, sans-serif; }
+a { color: var(--vin); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--vin); outline-offset: 3px; border-radius: 2px; }
+.lg-tete { border-bottom: 1px solid var(--filet); }
+.lg-tete-in, .lg-corps, .lg-pied-in { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+.lg-tete-in { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; padding-block: 18px; }
+.lg-marque { font: 600 26px/1 'Cormorant Garamond', Georgia, serif; color: var(--encre); text-decoration: none; }
+.lg-nav { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 15px; }
+.lg-nav a[aria-current="page"] { color: var(--encre); font-weight: 600; text-decoration: none; }
+.lg-corps { padding-block: 34px 56px; }
+.lg-corps h1 { font: 600 clamp(34px, 6vw, 46px)/1.1 'Cormorant Garamond', Georgia, serif; margin: 0 0 6px; }
+.lg-date { color: var(--cendre); font-size: 15px; margin: 0 0 22px; }
+.lg-projet { background: var(--bandeau); border: 1px solid var(--bandeau-bord); border-radius: 8px; padding: 14px 16px; margin: 0 0 28px; font-size: 15px; }
+.lg-projet strong { display: block; margin-bottom: 2px; }
+.lg-corps h2 { font: 600 25px/1.2 'Cormorant Garamond', Georgia, serif; margin: 34px 0 8px; }
+.lg-corps h3 { font-size: 17px; margin: 22px 0 4px; }
+.lg-corps p, .lg-corps li { max-width: 68ch; }
+.lg-corps ul { padding-left: 22px; }
+.lg-corps li { margin: 4px 0; }
+.lg-corps li::marker { color: var(--vin); }
+.lg-trou { background: var(--trou); border-radius: 3px; padding: 0 4px; font-style: normal; }
+.lg-pied { border-top: 1px solid var(--filet); color: var(--cendre); font-size: 14px; }
+.lg-pied-in { display: flex; flex-wrap: wrap; gap: 8px 18px; padding-block: 18px 28px; }
+@media print {
+  .lg-tete, .lg-pied { display: none; }
+  body { background: #fff; color: #000; }
+}

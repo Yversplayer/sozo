@@ -132,7 +132,7 @@ window.SOZO_PRET.then(async () => {
     }));
     const fg = $('#filGardes');
     if (fg) E.brancher(fg, (id) => gardes.find((e) => e.id === id));
-    // 22/10/2026 : une note personnelle sur une épingle ; supprimer une notification
+    // 21/10/2026 : une note personnelle sur une épingle ; supprimer une notification
     document.querySelectorAll('[data-note]').forEach((x) => x.addEventListener('click', () => {
       const e = epingles.find((y) => y.id === +x.dataset.note);
       const m = S.modal({ title: 'Ma note', body: `<blockquote class="bi-pin-cit">« ${S.esc(e.extrait)} »</blockquote>

@@ -27,7 +27,7 @@ window.SOZO_PLUME = (() => {
   const emphase = (h) => h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>');
   function enBlocs(texte) {
     const lignes = String(texte || '').split('\n');
-    // 22/10/2026 : « • » et « 1. » en tête de ligne = une liste (lignes consécutives regroupées)
+    // 21/10/2026 : « • » et « 1. » en tête de ligne = une liste (lignes consécutives regroupées)
     const html = lignes.map((t) => {
       let l = /^• (.*)$/.exec(t);
       if (l) return `\u0001ul<li>${emphase(esc(l[1])) || '<br>'}</li>`;

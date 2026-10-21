@@ -279,7 +279,7 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
       ${v.remplacee_le ? `<span class="row-acts"><button class="ec-lien" type="button" data-voir-v="${v.version}">Voir</button><button class="ec-lien" type="button" data-restaurer-v="${v.version}">Restaurer</button></span>` : ''}</li>`).join('');
     $('#hist').hidden = false;
   }
-  /* Revenir à une ancienne version (22/10/2026) : le serveur crée une NOUVELLE
+  /* Revenir à une ancienne version (21/10/2026) : le serveur crée une NOUVELLE
      version avec l'ancien texte — rien n'est écrasé, pas même ce qu'on quitte. */
   $('#histL').addEventListener('click', async (e) => {
     const vv = e.target.closest('[data-voir-v]'), rv = e.target.closest('[data-restaurer-v]');
@@ -499,7 +499,7 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
   $('#doc').addEventListener('mousedown', (e) => { if (e.target.closest('[data-pg], [data-menu-page]')) e.preventDefault(); });
   document.addEventListener('click', (e) => { if (!e.target.closest('.pl-page-a .pl-menu')) document.querySelectorAll('[data-pop-page]').forEach((x) => { x.hidden = true; }); });
 
-  /* Insérer, dupliquer, couper, fusionner (22/10/2026). Tout part du texte
+  /* Insérer, dupliquer, couper, fusionner (21/10/2026). Tout part du texte
      ENREGISTRÉ : on enregistre d'abord, et le serveur refuse ce qui ferait
      bouger une page sortie. */
   function positionCoupe(f) {

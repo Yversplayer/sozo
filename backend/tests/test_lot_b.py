@@ -1,4 +1,4 @@
-"""22/10/2026 — lot B, l'écriture : recueil, thèmes, export Word, série
+"""21/10/2026 — lot B, l'écriture : recueil, thèmes, export Word, série
 d'écriture. Chaque test protège une règle : on ne rassemble, n'exporte et ne
 compte que ce qui est À SOI."""
 import io

@@ -20,6 +20,7 @@ import json
 from flask import g, jsonify, request
 
 import acces
+import charte
 import db
 import envois
 import notifications
@@ -27,7 +28,7 @@ import security
 import validation as v
 from app import auditer, connectee
 
-# Lot B (22/10/2026) : jusqu'à trois thèmes par écrit, sur liste fermée
+# Lot B (21/10/2026) : jusqu'à trois thèmes par écrit, sur liste fermée
 THEMES = ("Espérance", "Foi", "Louange", "Gratitude", "Pardon", "Paix", "Amour", "Famille", "Courage", "Épreuve", "Deuil", "Guérison")
 NATURES = {"poeme": "Poème", "recit": "Récit", "conte": "Conte", "pensee": "Pensée", "priere": "Prière"}
 # Une pensée tient en quelques phrases ; un récit ou un conte peut être long.
@@ -95,7 +96,7 @@ def _lisible(cx, eid):
     if e["statut"] != "publie" or e["corbeille_le"] or e["retire_le"] or not e["auteur_actif"]:
         return None
     if e["publie_le"] and e["publie_le"] > acces.maintenant():
-        return None          # programmé (22/10/2026) : il n'existe pas encore pour les lecteurs
+        return None          # programmé (21/10/2026) : il n'existe pas encore pour les lecteurs
     return e
 
 
@@ -115,11 +116,19 @@ def _corrigeable(created_at):
     return datetime.now(timezone.utc) - t <= timedelta(minutes=CORRECTION_MINUTES)
 
 
-def _annoncer(cx, e):
+def _annoncer(e):
+    """Prévenir les abonnés d'un écrit paru : on écrit chez D'AUTRES comptes,
+    donc par une connexion globale (voir notifications.emettre_chez_autrui),
+    une fois l'écrit validé. La réservation de annonce_le et les notifications
+    restent dans UNE transaction : si l'une échoue, l'autre est annulée."""
     import communaute
-    n = communaute.annoncer_ecrit(cx, e)
-    cx.valider()
-    return n
+    cg = db.connecter(globale=True)
+    try:
+        n = communaute.annoncer_ecrit(cg, e)
+        cg.valider()
+        return n
+    finally:
+        cg.fermer()
 
 
 def _compteurs(cx, ids):
@@ -277,6 +286,8 @@ def enregistrer(app):
         publier = d.get("publier") is True
         cx = db.connecter()
         try:
+            if publier and not charte.acceptee(cx, g.user["id"]):
+                return charte.refus()
             if security.depasse(cx, "ecrit:compte", str(g.user["id"])):
                 cx.valider()
                 return jsonify(erreur="Beaucoup d’écrits en peu de temps : réessayez dans une heure."), 429
@@ -289,7 +300,7 @@ def enregistrer(app):
             auditer("ecrit.creation", ressource=f"ecrit:{eid}", apres="publie" if publier else "brouillon", cx=cx)
             cx.valider()
             e = cx.un("SELECT e.*, u.nom AS auteur_nom FROM ecrits e JOIN users u ON u.id = e.user_id WHERE e.id = ?", (eid,))
-            if publier and _annoncer(cx, e):
+            if publier and _annoncer(e):
                 envois.declencher()
             return jsonify(ecrit=_servir(cx, [e], entier=True)[0]), 201
         finally:
@@ -341,8 +352,10 @@ def enregistrer(app):
             if action == "publier":
                 if e["corbeille_le"]:
                     return jsonify(erreur="Cet écrit est dans la corbeille : récupérez-le d’abord."), 409
+                if not charte.acceptee(cx, g.user["id"]):
+                    return charte.refus()
                 if date:
-                    # Programmer (22/10/2026) : seulement un brouillon, et dans le futur
+                    # Programmer (21/10/2026) : seulement un brouillon, et dans le futur
                     if e["statut"] == "publie" and e["publie_le"] and e["publie_le"] <= m:
                         return jsonify(erreur="Cet écrit est déjà publié."), 409
                     cx.execute("UPDATE ecrits SET statut = 'publie', publie_le = ?, updated_at = ? WHERE id = ?", (date, m, eid))
@@ -364,7 +377,7 @@ def enregistrer(app):
             cx.valider()
             if action == "publier":
                 pub = cx.un("SELECT * FROM ecrits WHERE id = ?", (eid,))
-                if _annoncer(cx, pub):        # paru maintenant (un écrit programmé sera annoncé par les tâches)
+                if _annoncer(pub):        # paru maintenant (un écrit programmé sera annoncé par les tâches)
                     envois.declencher()
             e = cx.un("SELECT e.*, u.nom AS auteur_nom FROM ecrits e JOIN users u ON u.id = e.user_id WHERE e.id = ?", (eid,))
             return jsonify(ecrit=_servir(cx, [e], entier=True)[0])
@@ -394,14 +407,25 @@ def enregistrer(app):
                 return jsonify(erreur="Introuvable."), 404
             if not e["corbeille_le"]:
                 return jsonify(erreur="Mettez d’abord l’écrit à la corbeille."), 409
-            if cx.un("SELECT id FROM signalements_ecrits WHERE ecrit_id = ? AND etat = 'ouvert' LIMIT 1", (eid,)):
+            # Les signalements sont ceux des AUTRES : sous PostgreSQL, la RLS les cache
+            # à l'auteur, la garde ne voyait rien et l'effacement passait (constaté
+            # le 21/10/2026, invisible sous SQLite). Lecture globale, réduite à un oui/non.
+            import studio
+            if studio._signale("signalements_ecrits", "ecrit_id", eid):
                 return jsonify(erreur="Un signalement de cet écrit est en cours d’examen : il ne peut pas être effacé pour l’instant.", code="signalement_ouvert"), 409
             m = acces.maintenant()
             cx.execute("UPDATE ecrits SET titre = '', texte = '', apparence = NULL, efface_le = ?, updated_at = ? WHERE id = ?", (m, m, eid))
-            cx.execute("DELETE FROM ecrits_gestes WHERE ecrit_id = ?", (eid,))
             cx.execute("UPDATE ecrits_commentaires SET retire_le = COALESCE(retire_le, ?), retire_par = COALESCE(retire_par, 'auteur') WHERE ecrit_id = ?", (m, eid))
             auditer("ecrit.efface", ressource=f"ecrit:{eid}", cx=cx)
             cx.valider()
+            # Les j'aime sont ceux des lecteurs : même raison, connexion globale,
+            # une fois l'effacement validé.
+            cg = db.connecter(globale=True)
+            try:
+                cg.execute("DELETE FROM ecrits_gestes WHERE ecrit_id = ?", (eid,))
+                cg.valider()
+            finally:
+                cg.fermer()
             return jsonify(ok=True)
         finally:
             cx.fermer()
@@ -436,14 +460,15 @@ def enregistrer(app):
             if oui and not existe:
                 cx.execute("INSERT INTO ecrits_gestes (ecrit_id, user_id, nature, created_at) VALUES (?, ?, ?, ?)",
                            (eid, g.user["id"], nature, acces.maintenant()))
-                if nature == "jaime" and e["user_id"] != g.user["id"]:
-                    # regroupés : une notification par écrit et par jour, pas une par cœur
-                    notifications.emettre(cx, e["user_id"], "communaute", f"{g.user['nom']} aime votre {NATURES[e['nature']].lower()}",
-                                          f"« {e['titre']} »" if e["titre"] else "Il touche vos lecteurs.",
-                                          f"/app/ecrit.html?id={eid}", f"jaime:{eid}:{acces.maintenant()[:10]}")
             elif not oui and existe:
                 cx.execute("DELETE FROM ecrits_gestes WHERE ecrit_id = ? AND user_id = ? AND nature = ?", (eid, g.user["id"], nature))
             cx.valider()
+            if oui and not existe and nature == "jaime" and e["user_id"] != g.user["id"]:
+                # regroupés : une notification par écrit et par jour, pas une par cœur
+                notifications.emettre_chez_autrui(e["user_id"], "communaute", f"{g.user['nom']} aime votre {NATURES[e['nature']].lower()}",
+                                                  f"« {e['titre']} »" if e["titre"] else "Il touche vos lecteurs.",
+                                                  f"/app/ecrit.html?id={eid}", f"jaime:{eid}:{acces.maintenant()[:10]}")
+                envois.declencher()
             n = cx.un("SELECT COUNT(*) AS n FROM ecrits_gestes WHERE ecrit_id = ? AND nature = ?", (eid, nature))["n"]
             return jsonify(ok=True, actif=oui, total=n)
         finally:
@@ -483,6 +508,8 @@ def enregistrer(app):
             e = _lisible(cx, eid)
             if not e or e["statut"] != "publie" or e["corbeille_le"] or e["retire_le"]:
                 return jsonify(erreur="Introuvable."), 404
+            if not charte.acceptee(cx, g.user["id"]):
+                return charte.refus()
             if parent is not None:
                 # Une réponse vise un commentaire de CET écrit, visible, et de premier niveau
                 pc = cx.un("SELECT id, parent_id FROM ecrits_commentaires WHERE id = ? AND ecrit_id = ? AND retire_le IS NULL", (parent, eid))
@@ -497,15 +524,14 @@ def enregistrer(app):
                              (eid, g.user["id"], texte.strip(), m, parent))
             auditer("ecrit.commentaire", ressource=f"ecrit:{eid}", apres=f"commentaire:{cid}", cx=cx)
             extrait = texte.strip()[:120]
-            if e["user_id"] != g.user["id"]:
-                notifications.emettre(cx, e["user_id"], "communaute", f"{g.user['nom']} a commenté votre {NATURES[e['nature']].lower()}",
-                                      extrait, f"/app/ecrit.html?id={eid}#commentaires", f"commentaire:{cid}")
-            if parent is not None:
-                pa = cx.un("SELECT user_id FROM ecrits_commentaires WHERE id = ?", (parent,))
-                if pa and pa["user_id"] not in (g.user["id"], e["user_id"]):
-                    notifications.emettre(cx, pa["user_id"], "communaute", f"{g.user['nom']} vous a répondu", extrait,
-                                          f"/app/ecrit.html?id={eid}#commentaires", f"reponse:{cid}")
+            pa = cx.un("SELECT user_id FROM ecrits_commentaires WHERE id = ?", (parent,)) if parent is not None else None
             cx.valider()
+            if e["user_id"] != g.user["id"]:
+                notifications.emettre_chez_autrui(e["user_id"], "communaute", f"{g.user['nom']} a commenté votre {NATURES[e['nature']].lower()}",
+                                                  extrait, f"/app/ecrit.html?id={eid}#commentaires", f"commentaire:{cid}")
+            if pa and pa["user_id"] not in (g.user["id"], e["user_id"]):
+                notifications.emettre_chez_autrui(pa["user_id"], "communaute", f"{g.user['nom']} vous a répondu", extrait,
+                                                  f"/app/ecrit.html?id={eid}#commentaires", f"reponse:{cid}")
             envois.declencher()
             return jsonify(commentaire={"id": cid, "texte": texte.strip(), "le": m, "auteur": {"id": f"u{g.user['id']}", "nom": g.user["nom"]},
                                         "parent": parent, "modifie": False, "peut_modifier": True, "peut_retirer": True}), 201
@@ -553,7 +579,7 @@ def enregistrer(app):
         finally:
             cx.fermer()
 
-    # ── Lot B (22/10/2026) : export, série d'écriture ───────────────────────
+    # ── Lot B (21/10/2026) : export, série d'écriture ───────────────────────
     @app.get("/api/mes-ecrits/export.docx")
     @connectee
     def exporter_ecrits():
@@ -670,6 +696,114 @@ def enregistrer_admin(app, admin_requis, role_requis, trace):
             cx.execute("UPDATE signalements_ecrits SET etat = ? WHERE id = ?", ("traite" if decision == "retirer" else "rejete", sid))
             trace("signalement_ecrit." + decision, f"signalement_ecrit:{sid}", motif or "", cx)
             cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    # ── Lot E (21/10/2026) : modération directe, sans attendre un signalement ──
+    # La modération voit les écrits publiés et les commentaires récents, retire
+    # et rétablit. Retirer ne détruit rien (retire_le, motif gardé, journal) ;
+    # rétablir ne rend QUE ce que la modération a retiré : un commentaire retiré
+    # par celui qui l'a écrit (ou par l'auteur de l'écrit) reste retiré — la
+    # modération ne fait pas reparler quelqu'un à sa place.
+    @app.get("/api/admin/communaute")
+    @admin_requis
+    def admin_communaute():
+        quoi = request.args.get("quoi", "ecrits")
+        if quoi not in ("ecrits", "commentaires"):
+            raise v.Invalide("Liste inconnue.", "quoi")
+        retires = request.args.get("retires") == "1"
+        avant = request.args.get("avant", type=int)
+        cx = db.connecter()
+        try:
+            if quoi == "ecrits":
+                cond = ["e.statut = 'publie'", "e.efface_le IS NULL", "e.retire_le IS NOT NULL" if retires else "e.retire_le IS NULL"]
+                p = []
+                if avant:
+                    cond.append("e.id < ?")
+                    p.append(avant)
+                lignes = cx.tous(f"""SELECT e.id, e.nature, e.titre, substr(e.texte, 1, 300) AS extrait, e.publie_le, e.corbeille_le,
+                                            e.retire_le, e.retrait_motif, u.nom AS auteur, u.id AS auteur_id,
+                                            (SELECT COUNT(*) FROM ecrits_commentaires c WHERE c.ecrit_id = e.id AND c.retire_le IS NULL) AS commentaires,
+                                            (SELECT COUNT(*) FROM signalements_ecrits s WHERE s.ecrit_id = e.id AND s.etat = 'ouvert') AS signalements
+                                       FROM ecrits e JOIN users u ON u.id = e.user_id
+                                      WHERE {' AND '.join(cond)} ORDER BY e.id DESC LIMIT 51""", p)
+            else:
+                cond = ["c.retire_par = 'moderation'" if retires else "c.retire_le IS NULL"]
+                p = []
+                if avant:
+                    cond.append("c.id < ?")
+                    p.append(avant)
+                lignes = cx.tous(f"""SELECT c.id, c.texte, c.created_at, c.retire_le, c.retire_par, c.ecrit_id, e.titre, e.nature,
+                                            u.nom AS auteur, a.nom AS auteur_ecrit,
+                                            (SELECT COUNT(*) FROM signalements_ecrits s WHERE s.commentaire_id = c.id AND s.etat = 'ouvert') AS signalements
+                                       FROM ecrits_commentaires c JOIN ecrits e ON e.id = c.ecrit_id
+                                       JOIN users u ON u.id = c.user_id JOIN users a ON a.id = e.user_id
+                                      WHERE {' AND '.join(cond)} ORDER BY c.id DESC LIMIT 51""", p)
+            suite = lignes[49]["id"] if len(lignes) > 50 else None
+            return jsonify(lignes=lignes[:50], suite=suite)
+        finally:
+            cx.fermer()
+
+    @app.post("/api/admin/ecrits/<int:eid>/<action>")
+    @admin_requis
+    @role_requis("moderation")
+    def moderer_ecrit(eid, action):
+        if action not in ("retirer", "retablir"):
+            return jsonify(erreur="Introuvable."), 404
+        motif = v.texte(v.corps_json(request), "motif", mini=3, maxi=300) if action == "retirer" else None
+        cx = db.connecter()
+        try:
+            m = acces.maintenant()
+            if action == "retirer":
+                cur = cx.execute("UPDATE ecrits SET retire_le = ?, retrait_motif = ? WHERE id = ? AND retire_le IS NULL AND efface_le IS NULL", (m, motif, eid))
+            else:
+                cur = cx.execute("UPDATE ecrits SET retire_le = NULL, retrait_motif = NULL WHERE id = ? AND retire_le IS NOT NULL AND efface_le IS NULL", (eid,))
+            if cur.rowcount != 1:
+                return jsonify(erreur="Déjà fait (ou introuvable)."), 409
+            if action == "retirer":
+                # les signalements ouverts sur cet écrit sont tranchés par ce retrait
+                cx.execute("UPDATE signalements_ecrits SET etat = 'traite' WHERE ecrit_id = ? AND commentaire_id IS NULL AND etat = 'ouvert'", (eid,))
+            trace("ecrit." + action, f"ecrit:{eid}", motif or "rétabli", cx)
+            e = cx.un("SELECT user_id, nature, titre FROM ecrits WHERE id = ?", (eid,))
+            nom = f"« {e['titre']} »" if e["titre"] else f"Votre {NATURES[e['nature']].lower()}"
+            notifications.emettre(cx, e["user_id"], "moderation", "Écrit retiré par la modération" if action == "retirer" else "Écrit rétabli",
+                                  f"{nom} : {motif}" if action == "retirer" else f"{nom} est de nouveau visible.",
+                                  f"/app/ecrits.html", f"moderation:ecrit:{eid}:{action}:{m}")
+            cx.valider()
+            envois.declencher()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    @app.post("/api/admin/commentaires/<int:cid>/<action>")
+    @admin_requis
+    @role_requis("moderation")
+    def moderer_commentaire(cid, action):
+        if action not in ("retirer", "retablir"):
+            return jsonify(erreur="Introuvable."), 404
+        motif = v.texte(v.corps_json(request), "motif", mini=3, maxi=300) if action == "retirer" else None
+        cx = db.connecter()
+        try:
+            m = acces.maintenant()
+            if action == "retirer":
+                cur = cx.execute("UPDATE ecrits_commentaires SET retire_le = ?, retire_par = 'moderation' WHERE id = ? AND retire_le IS NULL", (m, cid))
+            else:
+                # (pas sous un écrit effacé pour de bon par son auteur : il n'a plus de page)
+                cur = cx.execute("""UPDATE ecrits_commentaires SET retire_le = NULL, retire_par = NULL WHERE id = ? AND retire_par = 'moderation'
+                                    AND ecrit_id IN (SELECT id FROM ecrits WHERE efface_le IS NULL)""", (cid,))
+            if cur.rowcount != 1:
+                return jsonify(erreur="Déjà fait (ou introuvable)." if action == "retirer"
+                               else "Seul un commentaire retiré par la modération peut être rétabli."), 409
+            if action == "retirer":
+                cx.execute("UPDATE signalements_ecrits SET etat = 'traite' WHERE commentaire_id = ? AND etat = 'ouvert'", (cid,))
+            trace("commentaire." + action, f"commentaire:{cid}", motif or "rétabli", cx)
+            c = cx.un("SELECT user_id, ecrit_id FROM ecrits_commentaires WHERE id = ?", (cid,))
+            notifications.emettre(cx, c["user_id"], "moderation", "Commentaire retiré par la modération" if action == "retirer" else "Commentaire rétabli",
+                                  f"Motif : {motif}" if action == "retirer" else "Votre commentaire est de nouveau visible.",
+                                  f"/app/ecrit.html?id={c['ecrit_id']}#commentaires", f"moderation:commentaire:{cid}:{action}:{m}")
+            cx.valider()
+            envois.declencher()
             return jsonify(ok=True)
         finally:
             cx.fermer()

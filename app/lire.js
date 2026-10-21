@@ -262,7 +262,7 @@ window.SOZO_PRET.then(() => {
     majSignet();
   }
 
-  /* ─── Lot D (22/10/2026) : marque-pages, recherche dans le livre, voix ─── */
+  /* ─── Lot D (21/10/2026) : marque-pages, recherche dans le livre, voix ─── */
   let signets = [];
   function majSignet() {
     const bt = document.getElementById('signetBtn'); if (!bt) return;

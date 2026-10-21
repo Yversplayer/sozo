@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   Sōzō — le reçu d'un achat, à imprimer (22/10/2026).
+   Sōzō — le reçu d'un achat, à imprimer (21/10/2026).
    Tout vient du serveur (/api/paiements/<id>) : un achat qui n'a pas été
    confirmé par Sōzō n'a PAS de reçu, et cette page le dit au lieu d'en
    fabriquer un.

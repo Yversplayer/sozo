@@ -410,7 +410,7 @@ window.SOZO = (() => {
   const inkAll = (scope = document) => scope.querySelectorAll('[data-ink-text]').forEach((el) => ink(el, el.dataset.inkText));
 
   /* ─── fenêtre modale accessible (Échap, focus rendu) ─── */
-  function modal({ title, body, actions = [] }) {
+  function modal({ title, body, actions = [], onClose }) {
     const prev = document.activeElement;
     const wrap = document.createElement('div');
     wrap.className = 'md-wrap';
@@ -420,7 +420,8 @@ window.SOZO = (() => {
       <div class="md-body">${body}</div>
       <div class="md-actions">${actions.map((a, i) => `<button type="button" class="btn ${a.primary ? 'btn--accent' : 'btn--ghost'}" data-i="${i}"${a.disabled ? ' disabled aria-disabled="true"' : ''}>${esc(a.label)}</button>`).join('')}</div>
     </div>`;
-    const close = () => { wrap.classList.remove('is-open'); setTimeout(() => wrap.remove(), 250); document.removeEventListener('keydown', onKey); prev && prev.focus && prev.focus(); };
+    let fermee = false;
+    const close = () => { if (fermee) return; fermee = true; wrap.classList.remove('is-open'); setTimeout(() => wrap.remove(), 250); document.removeEventListener('keydown', onKey); prev && prev.focus && prev.focus(); if (onClose) onClose(); };
     const onKey = (e) => {
       if (e.key === 'Escape') close();
       if (e.key === 'Tab') {
@@ -438,6 +439,41 @@ window.SOZO = (() => {
     requestAnimationFrame(() => { wrap.classList.add('is-open'); (wrap.querySelector('.md-actions .btn:not([disabled])') || wrap.querySelector('.md-x')).focus(); });
     return { close, el: wrap };
   }
+
+  /* ─── la charte de la communauté (lot E, 21/10/2026) ───
+     Le SERVEUR refuse de publier un écrit ou un commentaire tant que la charte
+     en vigueur n'est pas acceptée (403, code « charte »). SOZO_API appelle
+     alors cette fenêtre ; si la personne accepte, la demande est rejouée telle
+     quelle. Rend une promesse : vrai si la charte est acceptée. */
+  function charte(version) {
+    return new Promise((fin) => {
+      let accepte = false;
+      const m = modal({
+        title: 'La charte de la communauté',
+        body: `<p>Avant votre premier écrit public ou votre premier commentaire, quelques règles simples pour que Sōzō reste un lieu sûr et bienveillant.</p>
+          <ul class="vl-charte">
+            <li>Publiez ce que vous avez écrit vous-même, ou ce que vous avez le droit de partager, en citant l’auteur.</li>
+            <li>Respectez chaque personne : ni insulte, ni moquerie, ni harcèlement, ni propos haineux.</li>
+            <li>Débattez des idées sans attaquer les personnes, y compris celles qui croient autrement ou qui doutent.</li>
+            <li>Rien de violent, d’obscène ou de dangereux ; ni publicité, ni appel à l’argent.</li>
+            <li>Ne publiez aucune information privée sur quelqu’un (téléphone, adresse, photos…).</li>
+            <li>La modération peut retirer un écrit ou un commentaire contraire à la charte (motif à l’appui) et, en cas de récidive, désactiver un compte.</li>
+          </ul>
+          <p><a class="vl-lien" href="charte.html" target="_blank" rel="noopener">Lire la charte complète</a></p>
+          <label class="cx-check"><input type="checkbox" id="charteOk"><span>J’ai lu la charte et je l’accepte.</span></label>
+          <p class="warn" id="charteErr" role="alert" hidden></p>`,
+        actions: [{ label: 'Plus tard' }, { label: 'Accepter et continuer', primary: true, onClick: async (close) => {
+          const err = m.el.querySelector('#charteErr');
+          if (!m.el.querySelector('#charteOk').checked) { err.textContent = 'Cochez la case pour accepter la charte.'; err.hidden = false; return; }
+          const r = await window.SOZO_API('POST', '/api/moi/charte', { version });
+          if (!r.ok) { err.textContent = r.d.erreur || 'Le serveur n’a pas enregistré votre accord.'; err.hidden = false; return; }
+          accepte = true; close();
+        } }],
+        onClose: () => fin(accepte)
+      });
+    });
+  }
+  window.SOZO_CHARTE = charte;
 
   function toast(msg) {
     let t = document.querySelector('.toast');
@@ -479,7 +515,7 @@ window.SOZO = (() => {
   const ONGLETS = [['accueil', 'decouvrir.html', 'Accueil', 'home'], ['explorer', 'explorer.html', 'Explorer', 'grid'],
     ['ecrits', 'ecrits.html', 'Écrire', 'feather'], ['bibliotheque', 'suivis.html', 'Bibliothèque', 'library'], ['profil', 'compte.html', 'Profil', 'user']];
   const ouvertGarde = () => { try { return localStorage.getItem('sozo-nav-ouverte') === '1'; } catch (e) { return false; } };
-  /* ─── installer l'application (22/10/2026) ───
+  /* ─── installer l'application (21/10/2026) ───
      Android et ordinateur : la fenêtre d'installation du navigateur
      (beforeinstallprompt). iPhone : Safari ne le permet pas — un guide en
      images (Partager → Sur l'écran d'accueil). Déjà installée : rien. */
@@ -651,7 +687,7 @@ window.SOZO = (() => {
       <div class="foot-brand">${window.SOZO_LOGO || ''}<p>Écrire et lire, calmement : une pensée, une prière, un poème, un livre. Gratuit, payant ou mixte : l'auteur décide, le lecteur sait.</p><p class="foot-tag">Heal your heart · Grown your faith · Glow your spirit</p></div>
       <div><p class="mono ash">ÉCRIRE</p><a href="ecrits.html?nouveau=pensee">Une pensée, un poème</a><a href="ecrits.html">Mes écrits</a><a href="studio.html">Mes livres</a><a href="studio.html?action=importer">Importer un manuscrit</a></div>
       <div><p class="mono ash">LIRE</p><a href="decouvrir.html">Accueil</a><a href="explorer.html">Explorer</a><a href="suivis.html">Ma bibliothèque</a><a href="bible.html">La Bible intégrée</a></div>
-      <div><p class="mono ash">Sōzō</p><a href="compte.html">Mon compte</a><a href="${root}index.html">La plateforme</a></div>
+      <div><p class="mono ash">Sōzō</p><a href="compte.html">Mon compte</a><a href="${root}index.html">La plateforme</a><a href="charte.html">Charte de la communauté</a><a href="cgu.html">Conditions d’utilisation</a><a href="confidentialite.html">Confidentialité</a></div>
     </div>
     <p class="foot-legal mono ash">© 2026 Sōzō — PLUS QU’UNE APPLICATION, UN CHEMIN</p>`;
     document.body.appendChild(f);

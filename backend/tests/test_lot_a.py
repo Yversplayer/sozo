@@ -1,4 +1,4 @@
-"""22/10/2026 — lot A, « compléter ce qui existe » : chaque objet du studio et
+"""21/10/2026 — lot A, « compléter ce qui existe » : chaque objet du studio et
 du compte a son cycle complet. Chaque test protège une règle que l'écran ne
 peut pas tenir seul. Les mêmes principes partout : une page SORTIE ne bouge
 jamais, rien de ce qui a été vendu ne s'efface, l'historique ne s'écrase pas."""

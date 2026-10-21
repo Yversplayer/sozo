@@ -99,7 +99,7 @@ def lire_session(cx, jeton):
     if not jeton or len(jeton) > 100:
         return None
     return cx.un(
-        """SELECT u.id, u.email, u.nom, u.role, u.email_verifie_at, u.theme, s.id AS session_id
+        """SELECT u.id, u.email, u.nom, u.role, u.email_verifie_at, u.theme, u.charte_version, s.id AS session_id
              FROM sessions s JOIN users u ON u.id = s.user_id
             WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND u.actif = 1""",
         (empreinte(jeton), _utc(maintenant())))
@@ -163,7 +163,7 @@ def _empreinte_code(user_id, objet, code):
 def creer_code(cx, user_id, objet, but=None, nouvel_email=None):
     """Un code neuf ; l'ancien, s'il en restait un, cesse de valoir.
 
-    `but` (22/10/2026) distingue un code de changement d'ADRESSE (envoyé à la
+    `but` (21/10/2026) distingue un code de changement d'ADRESSE (envoyé à la
     nouvelle adresse) d'un code de changement de mot de passe (envoyé à
     l'ancienne) : sans lui, un code reçu sur une adresse choisie par un voleur
     de session aurait suffi à changer le mot de passe."""

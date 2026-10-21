@@ -170,7 +170,7 @@ class Balayage(TestBase):
         "page_corbeille": [("DELETE", "/api/studio/livres/{slug}/pages/1", {404})],
         "studio_corbeille": [("GET", "/api/studio/livres/{slug}/corbeille", {404})],
         "page_restaurer": [("POST", "/api/studio/livres/{slug}/corbeille/{pgid}/restaurer", {404})],
-        # 22/10/2026 — lot A
+        # 21/10/2026 — lot A
         "page_dupliquer": [("POST", "/api/studio/livres/{slug}/pages/1/dupliquer", {404})],
         "page_couper": [("POST", "/api/studio/livres/{slug}/pages/1/couper", {404}, {"position": 3})],
         "page_fusionner": [("POST", "/api/studio/livres/{slug}/pages/1/fusionner", {404})],
@@ -192,6 +192,9 @@ class Balayage(TestBase):
         "livre_recherche": [("GET", "/api/livres/{slug_brouillon}/recherche?q=secret", {404})],
         "verset_retirer": [("DELETE", "/api/versets/{vid}", {404})],
         "signet_retirer": [("DELETE", "/api/signets/{sgid}", {404})],
+        # lot E : la modération — une session de lecteur n'ouvre rien
+        "moderer_ecrit": [("POST", "/api/admin/ecrits/{ecid}/retirer", {401}, {"motif": "essai"})],
+        "moderer_commentaire": [("POST", "/api/admin/commentaires/{cmid}/retirer", {401}, {"motif": "essai"})],
     }
     # Routes paramétrées hors balayage, avec la raison :
     EXEMPTES = {

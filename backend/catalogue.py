@@ -309,7 +309,7 @@ def enregistrer(app):
     @app.patch("/api/epingles/<int:eid>")
     @connectee
     def epingle_note(eid):
-        """La note personnelle d'une épingle (22/10/2026) : visible par soi seul."""
+        """La note personnelle d'une épingle (21/10/2026) : visible par soi seul."""
         note = v.texte(v.corps_json(request), "note", requis=False, maxi=500, multiligne=True)
         cx = db.connecter()
         try:
@@ -492,12 +492,21 @@ def enregistrer(app):
             cx.execute("DELETE FROM ecrits_gestes WHERE user_id = ?", (uid,))
             cx.execute("DELETE FROM versets WHERE user_id = ?", (uid,))
             cx.execute("DELETE FROM signets WHERE user_id = ?", (uid,))
-            cx.execute("DELETE FROM abonnements WHERE user_id = ? OR auteur_id = ?", (uid, uid))
+            cx.execute("DELETE FROM abonnements WHERE user_id = ?", (uid,))
             security.revoquer_toutes(cx, uid)
             auditer("compte.suppression", ressource=f"user:{uid}", cx=cx)
             cx.valider()
         finally:
             cx.fermer()
+        # Ceux qui la suivaient : ces lignes sont LES LEURS, que la RLS cache à la
+        # personne qui part (sous PostgreSQL, elles restaient). Connexion globale,
+        # une fois la suppression validée.
+        cg = db.connecter(globale=True)
+        try:
+            cg.execute("DELETE FROM abonnements WHERE auteur_id = ?", (uid,))
+            cg.valider()
+        finally:
+            cg.fermer()
         import manuscrits
         manuscrits.effacer_pour(uid)
         invalider_vitrine()            # après validation : la suppression est acquise

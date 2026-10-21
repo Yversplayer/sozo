@@ -467,3 +467,8 @@ html[data-theme="dark"] .sz-plan--plume { background: #4A0B14; border-color: #D4
 .card-velours cite { display: block; margin-top: 14px; font: 500 11.5px/1 'Inter', system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; font-style: normal; color: #D4AF37; }
 .sz-cat { background: radial-gradient(110% 90% at 20% 0%, rgba(150, 32, 52, .55), transparent 60%), linear-gradient(160deg, #5C0E1B, #23050A); }
 .sz-cat::after { background: none !important; }
+
+/* Lot E (22/10/2026) : les textes de Sōzō, lisibles avant l'inscription */
+.footer-legal { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; margin-top: 18px; font-size: 13px; }
+.footer-legal a { color: inherit; opacity: .82; text-underline-offset: 3px; }
+.footer-legal a:hover, .footer-legal a:focus-visible { opacity: 1; }

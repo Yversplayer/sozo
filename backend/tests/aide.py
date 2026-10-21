@@ -69,7 +69,7 @@ MDP = "Lumiere-2026!"
 class Personne:
     """Un client de test connecté, avec son jeton CSRF posé sur chaque mutation."""
 
-    def __init__(self, app, role="lecteur", nom=None):
+    def __init__(self, app, role="lecteur", nom=None, charte=True):
         self.c = app.test_client()
         k = next(_compteur)
         self.email = f"p{k}-{os.getpid()}@exemple.cd"
@@ -77,6 +77,11 @@ class Personne:
                         environ_base={"REMOTE_ADDR": f"10.{k // 250}.{k % 250}.1"})
         assert r.status_code == 201, r.get_json()
         self.id = r.get_json()["moi"]["id"]
+        if charte:
+            # Lot E : publier ou commenter exige la charte acceptée. Par défaut,
+            # une personne de test l'a acceptée ; test_lot_e éprouve le cas contraire.
+            import charte as ch
+            assert self.post("/api/moi/charte", {"version": ch.VERSION}).status_code == 200
 
     def _h(self):
         import security

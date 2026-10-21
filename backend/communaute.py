@@ -1,4 +1,4 @@
-"""Communauté (lot C, 22/10/2026) : suivre un auteur, profils publics,
+"""Communauté (lot C, 21/10/2026) : suivre un auteur, profils publics,
 recherche d'auteurs, et les notifications qui relient les gens.
 
 Ce qu'un profil montre est ce que la personne a déjà rendu PUBLIC : son nom,
@@ -9,6 +9,7 @@ from flask import g, jsonify, request
 
 import acces
 import db
+import envois
 import notifications
 import security
 import validation as v
@@ -30,7 +31,7 @@ def _public(cx, uid):
     """La personne, si elle est active ET a publié quelque chose (un écrit paru,
     un livre visible) — ou s'il s'agit de soi. Sans cette condition, essayer les
     numéros un à un listait le nom et la ville de lecteurs qui n'ont jamais rien
-    rendu public (relevé par la relecture de sécurité du 22/10/2026)."""
+    rendu public (relevé par la relecture de sécurité du 21/10/2026)."""
     if uid == g.user["id"]:
         return cx.un("SELECT id, nom, ville, bio, created_at FROM users WHERE id = ? AND actif = 1", (uid,))
     return cx.un(f"SELECT u.id, u.nom, u.ville, u.bio, u.created_at FROM users u WHERE u.id = ? AND u.actif = 1 AND {_A_PUBLIE}",
@@ -66,6 +67,19 @@ def annoncer_ecrit(cx, e):
     return n
 
 
+def nb_abonnes(uid):
+    """Combien de personnes suivent cet auteur : un nombre PUBLIC, affiché sur son
+    profil. Les lignes d'abonnement appartiennent à ceux qui suivent : sous
+    PostgreSQL, la RLS n'en montre à un visiteur que la sienne, et le profil
+    affichait 0 ou 1 (constaté le 21/10/2026, invisible sous SQLite). Lecture
+    globale, réduite à un compte."""
+    cg = db.connecter(globale=True)
+    try:
+        return cg.un("SELECT COUNT(*) AS n FROM abonnements WHERE auteur_id = ?", (uid,))["n"]
+    finally:
+        cg.fermer()
+
+
 def enregistrer(app):
 
     @app.get("/api/profils/<int:uid>")
@@ -84,7 +98,7 @@ def enregistrer(app):
             return jsonify(profil={
                 "id": _cle(uid), "nom": u["nom"], "ville": u["ville"], "bio": u["bio"], "depuis": u["created_at"],
                 "livres": [{"id": b["slug"], "titre": b["titre"]} for b in livres], "ecrits": nb_ecrits,
-                "abonnes": cx.un("SELECT COUNT(*) AS n FROM abonnements WHERE auteur_id = ?", (uid,))["n"],
+                "abonnes": nb_abonnes(uid),
                 "moi": {"soi": uid == moi, "abonne": bool(cx.un("SELECT 1 AS x FROM abonnements WHERE user_id = ? AND auteur_id = ?", (moi, uid)))},
             })
         finally:
@@ -105,14 +119,16 @@ def enregistrer(app):
             existe = cx.un("SELECT 1 AS x FROM abonnements WHERE user_id = ? AND auteur_id = ?", (moi, uid))
             if oui and not existe:
                 cx.execute("INSERT INTO abonnements (user_id, auteur_id, created_at) VALUES (?, ?, ?)", (moi, uid, acces.maintenant()))
-                notifications.emettre(cx, uid, "communaute", "Un nouvel abonné", f"{g.user['nom']} suit désormais vos écrits.",
-                                      f"/app/auteur.html?id={_cle(moi)}", f"abonne:{moi}")
                 auditer("abonnement", ressource=f"user:{uid}", cx=cx)
             elif not oui and existe:
                 cx.execute("DELETE FROM abonnements WHERE user_id = ? AND auteur_id = ?", (moi, uid))
             cx.valider()
-            n = cx.un("SELECT COUNT(*) AS n FROM abonnements WHERE auteur_id = ?", (uid,))["n"]
-            return jsonify(ok=True, abonne=oui, abonnes=n)
+            if oui and not existe:
+                # chez l'auteur suivi : connexion globale, après validation (voir notifications.emettre_chez_autrui)
+                notifications.emettre_chez_autrui(uid, "communaute", "Un nouvel abonné", f"{g.user['nom']} suit désormais vos écrits.",
+                                                  f"/app/auteur.html?id={_cle(moi)}", f"abonne:{moi}")
+                envois.declencher()
+            return jsonify(ok=True, abonne=oui, abonnes=nb_abonnes(uid))
         finally:
             cx.fermer()
 

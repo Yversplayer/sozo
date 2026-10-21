@@ -443,3 +443,8 @@ html[data-theme="dark"] #signetBtn[aria-pressed="true"], html[data-theme="dark"]
 .vl-jour { margin-top: 10px; max-width: 70ch; font: italic 400 18px/1.45 var(--serif); color: var(--ink); }
 .vl-jour a { font: 600 13px/1 var(--sans); font-style: normal; color: var(--gold-text); margin-left: 4px; }
 .vl-jour[hidden] { display: none; }
+
+/* ─── Lot E (21/10/2026) : la charte de la communauté, en fenêtre ─── */
+.vl-charte { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 15px; line-height: 1.45; }
+.vl-charte li::marker { color: var(--ver); }
+.vl-lien { color: var(--ver); text-decoration: underline; text-underline-offset: 3px; }

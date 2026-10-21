@@ -1,4 +1,4 @@
-"""Exporter son texte en Word (.docx), pour l'AUTEUR seulement (22/10/2026).
+"""Exporter son texte en Word (.docx), pour l'AUTEUR seulement (21/10/2026).
 
 « Pas de PDF téléchargeable » vaut pour les LECTEURS : un livre vendu page par
 page ne sort jamais d'un bloc. Mais l'auteur, lui, doit pouvoir reprendre SON

@@ -1,4 +1,4 @@
-"""22/10/2026 — lot D : Bible (recherche, verset du jour, versets gardés) et
+"""21/10/2026 — lot D : Bible (recherche, verset du jour, versets gardés) et
 liseuse (recherche dans un livre, marque-pages). La règle qui compte : une
 recherche ne lit QUE les pages que la personne a le droit de lire — une page
 payante non achetée ne laisse fuir ni un mot, ni même son numéro."""

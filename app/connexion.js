@@ -55,7 +55,7 @@
             <label><input type="radio" name="role" value="auteur" checked><span>${S.icon('feather')}<b>Écrire et publier</b><small>Mon atelier d’auteur (je peux aussi lire)</small></span></label>
             <label><input type="radio" name="role" value="lecteur"><span>${S.icon('book')}<b>Lire seulement</b><small>Découvrir, suivre, acheter des pages</small></span></label>
           </fieldset>
-          <label class="cx-check"><input type="checkbox" name="cgu" required><span>J’accepte les conditions d’utilisation et la politique de confidentialité <small>(textes à rédiger avant le lancement)</small>.</span></label>
+          <label class="cx-check"><input type="checkbox" name="cgu" required><span>J’accepte les <a href="cgu.html" target="_blank" rel="noopener">conditions d’utilisation</a> et la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a>.</span></label>
           <p class="cx-err" role="alert"></p>
           <button class="btn btn--accent cx-submit" type="submit">Créer mon compte ${S.icon('right')}</button>
         </form>

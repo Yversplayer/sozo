@@ -35,8 +35,8 @@ Les deux suites doivent être vertes. Chaque garde-fou a été **vu tomber** qua
 
 | Couche | Fichiers |
 |---|---|
-| Pages et scripts (JS natif, sans compilation, CSP `script-src 'self'`) | `index.html` (landing), `app/` (lecteur, studio, compte), `admin/` |
-| Serveur Flask | `backend/app.py` (socle, routes fermées par défaut), `comptes.py`, `catalogue.py`, `studio.py`, `argent.py`, `admin.py` |
+| Pages et scripts (JS natif, sans compilation, CSP `script-src 'self'`) | `index.html` (landing), `app/` (lecteur, studio, compte ; `charte.html`, `cgu.html`, `confidentialite.html` lisibles sans compte), `admin/` |
+| Serveur Flask | `backend/app.py` (socle, routes fermées par défaut), `comptes.py`, `catalogue.py`, `studio.py`, `argent.py`, `admin.py`, `ecrits.py`, `communaute.py`, `lecture_plus.py`, `charte.py` |
 | Règles | `acces.py` : **seule** source de vérité de l'accès à une page · `prestataires.py` : contrat des futurs agrégateurs |
 | Base | `schema.sql` (SQLite et PostgreSQL), migrations additives dans `db._migrer`, RLS dans `db.RLS` |
 
@@ -49,6 +49,7 @@ Les deux suites doivent être vertes. Chaque garde-fou a été **vu tomber** qua
 - **Isolation.**
   - Un balayage appelle chaque route paramétrée avec les identifiants d'un autre compte (`test_lecture.Balayage`). Toute nouvelle route doit y être ajoutée.
   - Sous PostgreSQL, la RLS s'ajoute à ces contrôles, avec un rôle qui ne peut pas la contourner.
+  - Ce qui touche le compte d'un AUTRE depuis la requête de quelqu'un (le prévenir, compter ses abonnés, vérifier qu'il n'a ni droit ni signalement en cours) passe par une connexion globale explicite (`notifications.emettre_chez_autrui`, `studio._sans_lecteur`, `studio._signale`, `communaute.nb_abonnes`), réduite au strict nécessaire. Sous SQLite ces erreurs sont invisibles : seule la suite PostgreSQL les montre (`test_lot_e.EffacerSousRLS`, `CompterChezLesAutres`).
 - **Import.**
   - Le type de fichier est reconnu par son contenu.
   - Les archives piégées sont arrêtées, et l'analyse tourne dans un processus séparé, tué au bout de 30 s.
@@ -84,6 +85,15 @@ Les deux suites doivent être vertes. Chaque garde-fou a été **vu tomber** qua
   - Une couverture envoyée est reconnue par sa signature (JPEG, PNG, WebP ; un SVG est refusé) et n'est servie qu'à qui peut voir le livre.
 - **Épingles.** Un passage n'est épinglé que s'il figure dans une page que la personne peut lire (300 signes au plus sur une page achetée).
 - **Relecture par l'IA.** À la demande de l'auteur, sur une page de SON livre ; chaque proposition est vérifiée dans le texte ; plafond par jour ; rien ne part sans `ANTHROPIC_API_KEY`.
+
+- **Cycle complet (lots A–E, 21/10/2026 ; `test_lot_a` à `test_lot_e`).**
+  - Rien ne s'efface par mégarde : une page, un écrit, un livre passent par la corbeille avant l'effacement définitif ; un écrit visé par un signalement ouvert ne s'efface pas (409).
+  - Changer d'adresse e-mail : le code part à la NOUVELLE adresse, l'ancienne est prévenue, les autres sessions sont fermées ; la réponse est la même si l'adresse est déjà prise.
+  - Un profil n'existe que pour qui a publié (ou pour soi-même) ; l'adresse e-mail n'est jamais montrée ; un nouvel écrit n'est annoncé qu'une fois à ceux qui suivent son auteur.
+  - La recherche dans un livre et les marque-pages ne touchent QUE les pages lisibles par la personne : une page payante non achetée ne laisse fuir ni un mot, ni son numéro.
+  - Hors ligne, les données personnelles ne sont servies qu'au compte qui les a lues, et seulement sans réseau ; une réponse 401/402/403/404 retire la copie ; la déconnexion vide ces caches.
+  - **Charte de la communauté** : publier un écrit (ou le programmer) et commenter exigent la charte EN VIGUEUR, vérifiée par le serveur (403, `code: charte`) ; une nouvelle version se fait accepter de nouveau.
+  - **Modération directe** (rôle `moderation`) : retirer cache sans détruire, motif obligatoire, auteur prévenu, signalements ouverts clos ; rétablir ne rend que ce que la modération a retiré — jamais un commentaire que son auteur a lui-même retiré.
 
 ## Messages, notifications, tâches
 

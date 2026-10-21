@@ -64,7 +64,7 @@ window.SOZO_PRET.then(async () => {
         </a>${vue === 'corbeille' ? `<span class="row-acts"><button class="btn btn--ghost btn--sm" type="button" data-restaurer="${e.id}">${S.icon('restaurer')} Récupérer</button><button class="btn btn--ghost btn--sm" type="button" data-effacer="${e.id}">Supprimer définitivement</button></span>` : ''}</li>`).join('')}</ul>`
         : `<div class="empty"><strong>${{ brouillon: 'Aucun brouillon', publie: 'Rien de publié pour l’instant', corbeille: 'La corbeille est vide' }[vue]}</strong>${vue === 'corbeille' ? 'Un écrit jeté arrive ici ; il se récupère quand vous voulez.' : 'Choisissez ci-dessus ce que vous voulez écrire.'}</div>`;
     };
-    /* Recueil (22/10/2026) : cocher des écrits, dans l'ordre voulu, puis en faire un livre */
+    /* Recueil (21/10/2026) : cocher des écrits, dans l'ordre voulu, puis en faire un livre */
     let choix = false, choisis = [];
     const majChoix = () => { $('#recueilN').textContent = `${choisis.length} écrit${choisis.length > 1 ? 's' : ''} choisi${choisis.length > 1 ? 's' : ''}, dans l’ordre des numéros`; $('#recueilOk').disabled = !choisis.length; };
     $('#recueil').addEventListener('click', () => { choix = true; choisis = []; $('#recueilBarre').hidden = false; if (vue === 'corbeille') vue = 'brouillon'; majChoix(); peindre(); });
@@ -280,7 +280,7 @@ window.SOZO_PRET.then(async () => {
           actions: [{ label: 'Continuer d’écrire' }, { label: 'Partager', onClick: (close) => { close(); E.partager(ecrit); } }, { label: 'Le voir', primary: true, onClick: () => { location.href = `ecrit.html?id=${ecrit.id}`; } }] });
       }
     });
-    /* Programmer la parution (22/10/2026) : l'heure choisie est celle de
+    /* Programmer la parution (21/10/2026) : l'heure choisie est celle de
        l'appareil ; elle part au serveur en temps universel. */
     const prog = $('#cProgrammer');
     if (prog) prog.addEventListener('click', async () => {

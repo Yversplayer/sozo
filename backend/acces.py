@@ -38,7 +38,7 @@ def statut_effectif(page, a=None):
 
 
 def hors_catalogue(b):
-    """Retiré par la modération, retiré par son auteur (22/10/2026), ou à la corbeille."""
+    """Retiré par la modération, retiré par son auteur (21/10/2026), ou à la corbeille."""
     return b["statut"] != "actif" or bool(b.get("cache_le")) or bool(b.get("corbeille_le"))
 
 

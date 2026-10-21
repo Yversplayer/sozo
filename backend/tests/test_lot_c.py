@@ -1,4 +1,4 @@
-"""22/10/2026 — lot C, la communauté : suivre un auteur, profils, recherche,
+"""21/10/2026 — lot C, la communauté : suivre un auteur, profils, recherche,
 notifications sociales. Chaque test protège une règle : on ne s'abonne qu'en
 son nom, un profil ne montre que ce qui est public, une notification part une
 fois et à la bonne personne."""

@@ -152,7 +152,7 @@ window.SOZO_PRET.then(() => {
     try { await navigator.clipboard.writeText(url); S.toast('Lien copié : collez-le où vous voulez le partager.'); }
     catch (er) { S.modal({ title: 'Partager', body: `<p>Copiez ce lien :</p><p><input class="vl-lien" readonly value="${S.esc(url)}" aria-label="Lien du livre"></p>`, actions: [{ label: 'Fermer', primary: true }] }); }
   });
-  /* 22/10/2026 : signaler un livre (le serveur était prêt, l'écran n'avait pas de bouton) */
+  /* 21/10/2026 : signaler un livre (le serveur était prêt, l'écran n'avait pas de bouton) */
   const sigL = document.getElementById('signalerLivre');
   if (sigL) sigL.addEventListener('click', () => {
     const m = S.modal({ title: 'Signaler ce livre', body: `<p>Dites en quelques mots ce qui ne va pas. L’équipe de modération de Sōzō lit chaque signalement.</p>

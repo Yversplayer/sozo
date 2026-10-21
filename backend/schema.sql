@@ -514,7 +514,7 @@ CREATE TABLE IF NOT EXISTS signalements_ecrits (
 );
 CREATE INDEX IF NOT EXISTS signalements_ecrits_etat ON signalements_ecrits (etat, id);
 
--- Lot C (22/10/2026) : suivre un AUTEUR (pas seulement un livre). Une ligne par
+-- Lot C (21/10/2026) : suivre un AUTEUR (pas seulement un livre). Une ligne par
 -- personne et par auteur ; on ne se suit pas soi-même (refusé par le serveur).
 CREATE TABLE IF NOT EXISTS abonnements (
   user_id INTEGER NOT NULL REFERENCES users (id),
@@ -524,7 +524,7 @@ CREATE TABLE IF NOT EXISTS abonnements (
 );
 CREATE INDEX IF NOT EXISTS abonnements_auteur ON abonnements (auteur_id);
 
--- Lot D (22/10/2026) : versets gardés (synchronisés d'un appareil à l'autre)
+-- Lot D (21/10/2026) : versets gardés (synchronisés d'un appareil à l'autre)
 -- et marque-pages d'un livre (posés seulement sur une page lisible).
 CREATE TABLE IF NOT EXISTS versets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

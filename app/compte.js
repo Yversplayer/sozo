@@ -136,7 +136,7 @@ window.SOZO_PRET.then(() => {
     lier(); lierCompte(); appareils();
   }
 
-  /* ─── 22/10/2026 : appareils, adresse e-mail ─── */
+  /* ─── 21/10/2026 : appareils, adresse e-mail ─── */
   async function appareils() {
     const z = $('#appareils'); if (!z) return;
     const r = await window.SOZO_API('GET', '/api/moi/sessions');

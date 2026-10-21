@@ -355,7 +355,7 @@ def enregistrer(app):
                 return jsonify(erreur="Introuvable."), 404
             r = cx.un("SELECT numero, created_at FROM receipts WHERE payment_id = ?", (pid,))
             b = cx.un("SELECT titre, slug FROM books WHERE id = ?", (p["book_id"],)) if p["book_id"] else None
-            # 22/10/2026 : de quoi imprimer un reçu (titre du livre, date du reçu)
+            # 21/10/2026 : de quoi imprimer un reçu (titre du livre, date du reçu)
             return jsonify(paiement=_public(p), recu=r["numero"] if r else None, recu_le=r["created_at"] if r else None,
                            livre={"titre": b["titre"], "id": b["slug"]} if b else None)
         finally:

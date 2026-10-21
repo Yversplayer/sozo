@@ -76,7 +76,7 @@ window.SOZO_PRET.then(() => {
     if (!r) { $('#goMsg').textContent = 'Référence non reconnue. Essayez « Jean 3:16 », « Ps 23 » ou « 1 Co 13:4-7 ».'; return; }
     location.href = B.href(r);
   });
-  /* Lot D (22/10/2026) : chercher dans toute la Bible (côté serveur : la Bible
+  /* Lot D (21/10/2026) : chercher dans toute la Bible (côté serveur : la Bible
      entière est trop lourde pour un téléphone), le verset du jour, garder un verset. */
   const nomRef = (x) => `${B.BOOKS[x.b - 1][0]} ${x.c}:${x.v}`;
   let tB;

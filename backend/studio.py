@@ -175,7 +175,7 @@ def _file(cx, b):
 
 
 def _creer_page(cx, b, contenu, apres=None, source="editor"):
-    """Crée un brouillon, à la fin ou juste après la page `apres` (22/10/2026).
+    """Crée un brouillon, à la fin ou juste après la page `apres` (21/10/2026).
     Insérer entre deux pages décale les brouillons qui suivent : refusé si
     l'insertion tomberait avant une page sortie."""
     pages, sortie = _file(cx, b)
@@ -211,11 +211,30 @@ def _jeter(cx, b, p):
     return None
 
 
-def _sans_lecteur(cx, book_id):
-    """Vrai si personne n'a jamais payé, reçu ni acheté quoi que ce soit de ce livre."""
-    return not (cx.un("SELECT id FROM payments WHERE book_id = ? LIMIT 1", (book_id,))
-                or cx.un("SELECT id FROM entitlements WHERE book_id = ? LIMIT 1", (book_id,))
-                or cx.un("SELECT id FROM dons WHERE book_id = ? LIMIT 1", (book_id,)))
+def _sans_lecteur(book_id):
+    """Vrai si personne n'a jamais payé, reçu ni acheté quoi que ce soit de ce livre.
+    Ces lignes appartiennent aux LECTEURS : sous PostgreSQL, la RLS les cache à
+    l'auteur, et la garde ne voyait rien (constaté le 21/10/2026 : un livre
+    offert par l'administration paraissait « sans lecteur » et s'effaçait).
+    Lecture globale, explicite, réduite à un oui/non."""
+    cg = db.connecter(globale=True)
+    try:
+        return not (cg.un("SELECT id FROM payments WHERE book_id = ? LIMIT 1", (book_id,))
+                    or cg.un("SELECT id FROM entitlements WHERE book_id = ? LIMIT 1", (book_id,))
+                    or cg.un("SELECT id FROM dons WHERE book_id = ? LIMIT 1", (book_id,)))
+    finally:
+        cg.fermer()
+
+
+def _signale(table, colonne, ident):
+    """Un signalement ouvert vise-t-il ce livre (ou cet écrit) ? Les signalements
+    sont ceux des AUTRES : même raison, même lecture globale réduite à un oui/non.
+    `table` et `colonne` viennent du code, jamais de la requête."""
+    cg = db.connecter(globale=True)
+    try:
+        return bool(cg.un(f"SELECT id FROM {table} WHERE {colonne} = ? AND etat = 'ouvert' LIMIT 1", (ident,)))
+    finally:
+        cg.fermer()
 
 
 def _prix(d, champ):
@@ -776,7 +795,7 @@ def enregistrer(app):
         finally:
             cx.fermer()
 
-    # ═══ Lot A (22/10/2026) : compléter ce qui existe ═══════════════════════
+    # ═══ Lot A (21/10/2026) : compléter ce qui existe ═══════════════════════
     # « On pouvait créer une page, pas la supprimer » : chaque objet du studio
     # a désormais son cycle complet. Mêmes règles partout : une page SORTIE ne
     # bouge jamais (des lecteurs y ont peut-être droit), rien de ce qui a été
@@ -948,7 +967,7 @@ def enregistrer(app):
             b = _a_moi(cx, slug)
             if not b:
                 return jsonify(erreur="Introuvable."), 404
-            if cx.un("SELECT id FROM pages WHERE book_id = ? AND n > 0 AND statut <> 'draft' LIMIT 1", (b["id"],)) or not _sans_lecteur(cx, b["id"]):
+            if cx.un("SELECT id FROM pages WHERE book_id = ? AND n > 0 AND statut <> 'draft' LIMIT 1", (b["id"],)) or not _sans_lecteur(b["id"]):
                 return jsonify(erreur="Ce livre a déjà paru (ou des lecteurs y ont droit) : il ne va pas à la corbeille. Vous pouvez le retirer du catalogue.",
                                code="deja_paru"), 409
             m = acces.maintenant()
@@ -996,21 +1015,32 @@ def enregistrer(app):
             b = _a_moi_jete(cx, slug)
             if not b:
                 return jsonify(erreur="Introuvable."), 404
-            if not _sans_lecteur(cx, b["id"]):
+            if not _sans_lecteur(b["id"]):
                 return jsonify(erreur="Des lecteurs ont un droit sur ce livre : il ne s'efface pas.", code="deja_paru"), 409
+            if _signale("signalements", "book_id", b["id"]):
+                return jsonify(erreur="Un signalement de ce livre est en cours d’examen : il ne peut pas être effacé pour l’instant.", code="signalement_ouvert"), 409
             bid = b["id"]
-            manuscrits._effacer(cx, cx.tous("SELECT id, empreinte, nature FROM imports WHERE book_id = ? AND efface_le IS NULL", (bid,)))
-            cx.execute("DELETE FROM page_versions WHERE page_id IN (SELECT id FROM pages WHERE book_id = ?)", (bid,))
-            for t in ("pages", "chapters", "imports", "follows", "progress", "signalements", "couvertures", "epingles", "signets"):
-                cx.execute(f"DELETE FROM {t} WHERE book_id = ?", (bid,))      # noms de tables : liste fermée ci-dessus
-            cx.execute("DELETE FROM books WHERE id = ?", (bid,))
-            auditer("livre.efface", ressource=f"book:{bid}", avant=b["titre"][:100], cx=cx)
-            cx.valider()
-            return jsonify(ok=True)
         finally:
             cx.fermer()
+        # Le livre est à elle (vérifié ci-dessus, sous sa propre identité). L'effacer
+        # touche aussi des lignes d'AUTRES comptes (qui le suivaient, l'avaient
+        # signalé puis vu classer…) : sous PostgreSQL, la connexion de l'auteur ne
+        # les voit pas, les laissait en place, et la suppression du livre échouait
+        # sur leurs clés étrangères. Connexion globale, explicite, pour ce seul effacement.
+        cg = db.connecter(globale=True)
+        try:
+            manuscrits._effacer(cg, cg.tous("SELECT id, empreinte, nature FROM imports WHERE book_id = ? AND efface_le IS NULL", (bid,)))
+            cg.execute("DELETE FROM page_versions WHERE page_id IN (SELECT id FROM pages WHERE book_id = ?)", (bid,))
+            for t in ("pages", "chapters", "imports", "follows", "progress", "signalements", "couvertures", "epingles", "signets"):
+                cg.execute(f"DELETE FROM {t} WHERE book_id = ?", (bid,))      # noms de tables : liste fermée ci-dessus
+            cg.execute("DELETE FROM books WHERE id = ? AND owner_id = ? AND corbeille_le IS NOT NULL", (bid, g.user["id"]))
+            auditer("livre.efface", ressource=f"book:{bid}", avant=b["titre"][:100], cx=cg)
+            cg.valider()
+            return jsonify(ok=True)
+        finally:
+            cg.fermer()
 
-    # ═══ Lot B (22/10/2026) : recueil, export ════════════════════════════
+    # ═══ Lot B (21/10/2026) : recueil, export ════════════════════════════
     @app.post("/api/studio/recueils")
     @connectee
     def creer_recueil():

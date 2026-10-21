@@ -29,6 +29,15 @@
     else if (corps !== undefined) { o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(corps); }
     return fetch(url, o).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, d: d }; });
+    }).then(function (res) {
+      // Lot E : publier ou commenter sans la charte → la montrer, puis rejouer
+      // la demande UNE fois si elle est acceptée (le serveur reste seul juge).
+      if (res.status === 403 && res.d && res.d.code === 'charte' && window.SOZO_CHARTE && !(options && options.sansCharte)) {
+        return window.SOZO_CHARTE(res.d.version).then(function (ok) {
+          return ok ? window.SOZO_API(methode, url, corps, Object.assign({}, options, { sansCharte: true })) : res;
+        });
+      }
+      return res;
     }).catch(function () { return { ok: false, status: 0, d: { erreur: 'Le serveur ne répond pas. Vérifiez votre connexion, puis réessayez.' } }; });
   };
 
