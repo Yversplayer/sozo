@@ -31,6 +31,7 @@ def ecrire(p, t="Un mot.", **k):
 class Abonnements(TestBase):
     def test_suivre_un_auteur(self):
         a, b = Personne(self.app, nom="Ruth Auteure"), Personne(self.app)
+        ecrire(a, "Publié", publier=True)
         self.assertEqual(b.post(f"/api/profils/{a.id}/abonnement").status_code, 200)
         self.assertEqual(b.post(f"/api/profils/{a.id}/abonnement").get_json()["abonnes"], 1)   # une seule fois
         p = b.get(f"/api/profils/{a.id}").get_json()["profil"]
@@ -41,12 +42,23 @@ class Abonnements(TestBase):
         self.assertEqual(b.post("/api/profils/999999/abonnement").status_code, 404)
         self.assertEqual(b.delete(f"/api/profils/{a.id}/abonnement").get_json()["abonnes"], 0)
 
+    def test_un_profil_n_existe_que_pour_qui_a_publie(self):
+        """Sans cette règle, essayer les numéros un à un listait les noms et villes
+        de lecteurs qui n'ont jamais rien rendu public."""
+        lecteur, autre = Personne(self.app, nom="Lecteur Discret"), Personne(self.app)
+        self.assertEqual(autre.get(f"/api/profils/{lecteur.id}").status_code, 404)
+        self.assertEqual(autre.post(f"/api/profils/{lecteur.id}/abonnement").status_code, 404)
+        self.assertEqual(lecteur.get(f"/api/profils/{lecteur.id}").status_code, 200)        # soi-même, toujours
+        ecrire(lecteur, "Ma première pensée", publier=True)
+        self.assertEqual(autre.get(f"/api/profils/{lecteur.id}").status_code, 200)
+
     def test_le_fil_des_abonnements_et_l_annonce(self):
         a, autre, b, c = Personne(self.app), Personne(self.app), Personne(self.app), Personne(self.app)
-        b.post(f"/api/profils/{a.id}/abonnement")
+        premier = ecrire(a, "Premier écrit", publier=True)          # rend le profil public
+        self.assertEqual(b.post(f"/api/profils/{a.id}/abonnement").status_code, 200)
         mien = ecrire(a, "Pour mes abonnés", publier=True)
         ecrire(autre, "D'un autre", publier=True)
-        self.assertEqual([e["id"] for e in b.get("/api/ecrits?abonnements=1").get_json()["ecrits"]], [mien])
+        self.assertEqual([e["id"] for e in b.get("/api/ecrits?abonnements=1").get_json()["ecrits"]], [mien, premier])
         self.assertEqual(len(notifs(b, "abonnements")), 1)
         self.assertEqual(notifs(c, "abonnements"), [])                                        # pas abonné : rien
         # dépublier puis republier n'annonce pas deux fois
@@ -57,7 +69,8 @@ class Abonnements(TestBase):
     def test_un_ecrit_programme_s_annonce_a_son_heure(self):
         import taches
         a, b = Personne(self.app), Personne(self.app)
-        b.post(f"/api/profils/{a.id}/abonnement")
+        ecrire(a, "Déjà paru", publier=True)
+        self.assertEqual(b.post(f"/api/profils/{a.id}/abonnement").status_code, 200)
         eid = ecrire(a, "Plus tard")
         a.post(f"/api/ecrits/{eid}/publier", {"date": "2099-01-01T10:00"})
         taches.annoncer_ecrits()

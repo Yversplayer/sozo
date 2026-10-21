@@ -19,10 +19,22 @@ def _cle(uid):
     return f"u{uid}"
 
 
+_A_PUBLIE = """(EXISTS (SELECT 1 FROM ecrits e WHERE e.user_id = u.id AND e.statut = 'publie' AND e.publie_le <= ?
+                         AND e.corbeille_le IS NULL AND e.retire_le IS NULL AND e.efface_le IS NULL)
+            OR EXISTS (SELECT 1 FROM books b WHERE b.owner_id = u.id AND b.statut = 'actif' AND b.cache_le IS NULL
+                       AND b.corbeille_le IS NULL
+                       AND EXISTS (SELECT 1 FROM pages p WHERE p.book_id = b.id AND p.n > 0 AND p.statut <> 'draft')))"""
+
+
 def _public(cx, uid):
-    """La personne, si elle existe, est active et a quelque chose de public."""
-    u = cx.un("SELECT id, nom, ville, bio, created_at FROM users WHERE id = ? AND actif = 1", (uid,))
-    return u
+    """La personne, si elle est active ET a publié quelque chose (un écrit paru,
+    un livre visible) — ou s'il s'agit de soi. Sans cette condition, essayer les
+    numéros un à un listait le nom et la ville de lecteurs qui n'ont jamais rien
+    rendu public (relevé par la relecture de sécurité du 22/10/2026)."""
+    if uid == g.user["id"]:
+        return cx.un("SELECT id, nom, ville, bio, created_at FROM users WHERE id = ? AND actif = 1", (uid,))
+    return cx.un(f"SELECT u.id, u.nom, u.ville, u.bio, u.created_at FROM users u WHERE u.id = ? AND u.actif = 1 AND {_A_PUBLIE}",
+                 (uid, acces.maintenant()))
 
 
 def _livres_visibles(cx, uid):
@@ -137,13 +149,8 @@ def enregistrer(app):
         cx = db.connecter()
         try:
             m = acces.maintenant()
-            lignes = cx.tous("""SELECT u.id, u.nom, u.ville FROM users u WHERE u.actif = 1 AND LOWER(u.nom) LIKE ? ESCAPE '\\'
-                                  AND (EXISTS (SELECT 1 FROM ecrits e WHERE e.user_id = u.id AND e.statut = 'publie' AND e.publie_le <= ?
-                                               AND e.corbeille_le IS NULL AND e.retire_le IS NULL AND e.efface_le IS NULL)
-                                    OR EXISTS (SELECT 1 FROM books b WHERE b.owner_id = u.id AND b.statut = 'actif' AND b.cache_le IS NULL
-                                               AND b.corbeille_le IS NULL
-                                               AND EXISTS (SELECT 1 FROM pages p WHERE p.book_id = b.id AND p.n > 0 AND p.statut <> 'draft')))
-                                 ORDER BY u.nom LIMIT 20""", (motif, m))
+            lignes = cx.tous(f"""SELECT u.id, u.nom, u.ville FROM users u WHERE u.actif = 1 AND LOWER(u.nom) LIKE ? ESCAPE '\\'
+                                   AND {_A_PUBLIE} ORDER BY u.nom LIMIT 20""", (motif, m))
             return jsonify(auteurs=[{"id": _cle(x["id"]), "nom": x["nom"], "ville": x["ville"]} for x in lignes])
         finally:
             cx.fermer()
