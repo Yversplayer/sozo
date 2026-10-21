@@ -352,3 +352,5 @@ def _migrer(cx):
     # un code peut servir à confirmer une NOUVELLE adresse e-mail (but = 'email')
     _ajouter_colonne(cx, "codes", "but", "TEXT")
     _ajouter_colonne(cx, "codes", "nouvel_email", "TEXT")
+    # lot B : les thèmes d'un écrit (liste fermée, JSON reconstruit par ecrits.py)
+    _ajouter_colonne(cx, "ecrits", "themes", "TEXT")

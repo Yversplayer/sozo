@@ -25,6 +25,8 @@ import security
 import validation as v
 from app import auditer, connectee
 
+# Lot B (22/10/2026) : jusqu'à trois thèmes par écrit, sur liste fermée
+THEMES = ("Espérance", "Foi", "Louange", "Gratitude", "Pardon", "Paix", "Amour", "Famille", "Courage", "Épreuve", "Deuil", "Guérison")
 NATURES = {"poeme": "Poème", "recit": "Récit", "conte": "Conte", "pensee": "Pensée", "priere": "Prière"}
 # Une pensée tient en quelques phrases ; un récit ou un conte peut être long.
 TAILLE_MAX = {"pensee": 600, "priere": 4000, "poeme": 8000, "recit": 30000, "conte": 30000}
@@ -53,6 +55,22 @@ def apparence_propre(d):
             raise v.Invalide(f"Valeur refusée pour « {k} ».", "apparence")
         out[k] = val
     return out
+
+
+def themes_propres(d):
+    if d is None:
+        return None
+    if not isinstance(d, list) or len(d) > 3 or any(t not in THEMES for t in d):
+        raise v.Invalide("Trois thèmes au plus, choisis dans la liste.", "themes")
+    return sorted(set(d), key=THEMES.index)
+
+
+def _themes_lus(e):
+    try:
+        t = json.loads(e["themes"]) if e["themes"] else []
+        return [x for x in t if x in THEMES] if isinstance(t, list) else []
+    except (ValueError, TypeError, KeyError, IndexError):
+        return []
 
 
 def _apparence_lue(e):
@@ -122,7 +140,7 @@ def _servir(cx, lignes, *, entier=False):
             texte = texte[:coupe if coupe > EXTRAIT_FIL // 2 else EXTRAIT_FIL].rstrip()
         out.append({
             "id": e["id"], "nature": e["nature"], "nature_nom": NATURES[e["nature"]], "titre": e["titre"], "texte": texte,
-            "long": long, "apparence": _apparence_lue(e), "statut": e["statut"], "publie_le": e["publie_le"],
+            "long": long, "apparence": _apparence_lue(e), "themes": _themes_lus(e), "statut": e["statut"], "publie_le": e["publie_le"],
             "maj": e["updated_at"], "corbeille_le": e["corbeille_le"], "retire": bool(e["retire_le"]),
             "programme": bool(e["statut"] == "publie" and e["publie_le"] and e["publie_le"] > acces.maintenant()),
             "auteur": {"id": f"u{e['user_id']}", "nom": e["auteur_nom"]}, "mien": e["user_id"] == g.user["id"],
@@ -150,6 +168,9 @@ def enregistrer(app):
         if nature and nature not in NATURES:
             raise v.Invalide("Nature inconnue.", "nature")
         auteur = request.args.get("auteur") or ""
+        theme = request.args.get("theme") or None
+        if theme and theme not in THEMES:
+            raise v.Invalide("Thème inconnu.", "theme")
         avant = request.args.get("avant") or ""
         conditions = ["e.statut = 'publie'", "e.corbeille_le IS NULL", "e.retire_le IS NULL", "u.actif = 1", "e.publie_le <= ?"]
         params = [acces.maintenant()]
@@ -161,6 +182,10 @@ def enregistrer(app):
                 raise v.Invalide("Auteur inconnu.", "auteur")
             conditions.append("e.user_id = ?")
             params.append(int(auteur[1:]))
+        if theme:
+            # liste fermée : la valeur cherchée est l'une des nôtres, entre guillemets JSON
+            conditions.append("e.themes LIKE ?")
+            params.append(f'%"{theme}"%')
         if avant:
             if not avant.isdigit():
                 raise v.Invalide("Curseur invalide.", "avant")
@@ -172,7 +197,7 @@ def enregistrer(app):
                                   WHERE {' AND '.join(conditions)} ORDER BY e.id DESC LIMIT {PAR_PAGE + 1}""", params)
             suite = len(lignes) > PAR_PAGE
             lignes = lignes[:PAR_PAGE]
-            return jsonify(ecrits=_servir(cx, lignes), suite=lignes[-1]["id"] if suite else None, natures=NATURES)
+            return jsonify(ecrits=_servir(cx, lignes), suite=lignes[-1]["id"] if suite else None, natures=NATURES, themes=THEMES)
         finally:
             cx.fermer()
 
@@ -229,6 +254,7 @@ def enregistrer(app):
         nature = v.choix(d, "nature", set(NATURES))
         titre, texte = _lire_corps(d, nature)
         apparence = apparence_propre(d.get("apparence"))
+        themes = themes_propres(d.get("themes"))
         publier = d.get("publier") is True
         cx = db.connecter()
         try:
@@ -236,9 +262,10 @@ def enregistrer(app):
                 cx.valider()
                 return jsonify(erreur="Beaucoup d’écrits en peu de temps : réessayez dans une heure."), 429
             m = acces.maintenant()
-            eid = cx.inserer("""INSERT INTO ecrits (user_id, nature, titre, texte, apparence, statut, publie_le, created_at, updated_at)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            eid = cx.inserer("""INSERT INTO ecrits (user_id, nature, titre, texte, apparence, themes, statut, publie_le, created_at, updated_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                              (g.user["id"], nature, titre, texte, json.dumps(apparence) if apparence else None,
+                              json.dumps(themes, ensure_ascii=False) if themes else None,
                               "publie" if publier else "brouillon", m if publier else None, m, m))
             auditer("ecrit.creation", ressource=f"ecrit:{eid}", apres="publie" if publier else "brouillon", cx=cx)
             cx.valider()
@@ -269,6 +296,9 @@ def enregistrer(app):
             if "apparence" in d:
                 a = apparence_propre(d.get("apparence"))
                 champs["apparence"] = json.dumps(a) if a else None
+            if "themes" in d:
+                t = themes_propres(d.get("themes"))
+                champs["themes"] = json.dumps(t, ensure_ascii=False) if t else None
             champs["updated_at"] = acces.maintenant()
             for k, val in champs.items():     # colonnes : liste fermée ci-dessus, jamais le client
                 cx.execute(f"UPDATE ecrits SET {k} = ? WHERE id = ? AND user_id = ?", (val, eid, g.user["id"]))
@@ -482,6 +512,56 @@ def enregistrer(app):
             return jsonify(ok=True)
         finally:
             cx.fermer()
+
+    # ── Lot B (22/10/2026) : export, série d'écriture ───────────────────────
+    @app.get("/api/mes-ecrits/export.docx")
+    @connectee
+    def exporter_ecrits():
+        import export_docx
+        cx = db.connecter()
+        try:
+            lignes = cx.tous("""SELECT nature, titre, texte, publie_le, created_at FROM ecrits
+                                 WHERE user_id = ? AND efface_le IS NULL AND corbeille_le IS NULL ORDER BY created_at""", (g.user["id"],))
+            sections = [(e["titre"] or NATURES[e["nature"]], e["texte"]) for e in lignes]
+            octets = export_docx.document("Mes écrits", f"{g.user['nom']} — {len(sections)} écrit{'s' if len(sections) > 1 else ''}", sections)
+            auditer("ecrits.export", ressource=f"user:{g.user['id']}", cx=cx)
+            cx.valider()
+        finally:
+            cx.fermer()
+        rep = app.response_class(octets, mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        rep.headers["Content-Disposition"] = 'attachment; filename="mes-ecrits-sozo.docx"'
+        return rep
+
+    @app.get("/api/moi/serie")
+    @connectee
+    def serie():
+        """Les jours où la personne a écrit (une page enregistrée, un écrit créé
+        ou modifié), à l'heure de Kinshasa : sa série en cours et ses 7 derniers
+        jours. Un encouragement discret, jamais une obligation."""
+        from datetime import datetime, timedelta, timezone
+        kin = timezone(timedelta(hours=1))
+        cx = db.connecter()
+        try:
+            depuis = (datetime.now(timezone.utc) - timedelta(days=400)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            dates = [r["d"] for r in cx.tous("SELECT created_at AS d FROM page_versions WHERE auteur_id = ? AND created_at >= ?", (g.user["id"], depuis))]
+            dates += [r["d"] for r in cx.tous("SELECT updated_at AS d FROM ecrits WHERE user_id = ? AND updated_at >= ?", (g.user["id"], depuis))]
+            dates += [r["d"] for r in cx.tous("SELECT created_at AS d FROM ecrits WHERE user_id = ? AND created_at >= ?", (g.user["id"], depuis))]
+        finally:
+            cx.fermer()
+        jours = set()
+        for d in dates:
+            try:
+                jours.add(datetime.strptime(d, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).astimezone(kin).date())
+            except (TypeError, ValueError):
+                pass
+        auj = datetime.now(kin).date()
+        # la série tient si l'on a écrit aujourd'hui OU hier (la journée n'est pas finie)
+        j, n = (auj if auj in jours else auj - timedelta(days=1)), 0
+        while j in jours:
+            n += 1
+            j -= timedelta(days=1)
+        return jsonify(serie=n, aujourdhui=auj in jours,
+                       semaine=[{"jour": (auj - timedelta(days=k)).isoformat(), "ecrit": (auj - timedelta(days=k)) in jours} for k in range(6, -1, -1)])
 
     # ── Signaler, modérer ──────────────────────────────────────────────────
     @app.post("/api/ecrits/<int:eid>/signaler")

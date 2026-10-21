@@ -25,7 +25,8 @@ window.SOZO_PRET.then(async () => {
   /* ═══ la liste ═══ */
   async function liste() {
     main.innerHTML = `<div class="wrap vl-ecrits">
-      <header class="vl-ecrits-h"><h1>Écrire</h1><p>Une phrase, un poème, une prière : commencez, Sōzō garde tout.</p></header>
+      <header class="vl-ecrits-h"><h1>Écrire</h1><p>Une phrase, un poème, une prière : commencez, Sōzō garde tout.</p>
+        <div class="vl-serie" id="serie" aria-live="polite"></div></header>
       <section class="vl-plume-carte vl-velours" aria-label="Commencer un écrit">
         <div class="vl-natures">${Object.entries(E.NATURES).map(([k, l]) => `<a class="vl-nature" href="ecrits.html?nouveau=${k}"><strong>${S.esc(l)}</strong><small>${S.esc(E.AIDE[k])}</small></a>`).join('')}
           <a class="vl-nature vl-nature--livre" href="studio.html"><strong>Un livre</strong><small>Mes livres, page après page</small></a></div>
@@ -35,8 +36,15 @@ window.SOZO_PRET.then(async () => {
         <button role="tab" type="button" data-vue="publie" aria-selected="false">Publiés <span data-n="publie"></span></button>
         <button role="tab" type="button" data-vue="corbeille" aria-selected="false">Corbeille <span data-n="corbeille"></span></button>
       </div>
+      <div class="vl-notes-outils">
+        <button class="btn btn--ghost btn--sm" type="button" id="recueil">${S.icon('book')} Faire un recueil</button>
+        <a class="btn btn--ghost btn--sm" href="/api/mes-ecrits/export.docx" download>${S.icon('file')} Exporter en Word</a>
+      </div>
+      <div class="vl-recueil-barre" id="recueilBarre" hidden><span id="recueilN">0 écrit choisi</span>
+        <button class="btn btn--accent btn--sm" type="button" id="recueilOk" disabled>Créer le recueil</button><button class="btn btn--ghost btn--sm" type="button" id="recueilX">Annuler</button></div>
       <div class="vl-notes" id="notes" aria-busy="true"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>
     </div>`;
+    serie();
     const r = await API('GET', '/api/mes-ecrits');
     const zone = $('#notes');
     zone.removeAttribute('aria-busy');
@@ -49,13 +57,43 @@ window.SOZO_PRET.then(async () => {
     const peindre = () => {
       $$('[data-vue]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.vue === vue)));
       const l = tous.filter((e) => groupe(e) === vue);
-      zone.innerHTML = l.length ? `<ul class="vl-notes-l">${l.map((e) => `<li><a class="vl-note" href="ecrits.html?id=${e.id}">
+      zone.innerHTML = l.length ? `<ul class="vl-notes-l">${l.map((e) => `<li>${choix && vue !== 'corbeille' ? `<label class="vl-choix"><input type="checkbox" data-choix="${e.id}"${choisis.includes(e.id) ? ' checked' : ''} aria-label="Ajouter au recueil"><span>${choisis.includes(e.id) ? choisis.indexOf(e.id) + 1 : ''}</span></label>` : ''}<a class="vl-note" href="ecrits.html?id=${e.id}">
           <span class="vl-note-n">${S.esc(E.NATURES[e.nature])}</span>
           <strong>${S.esc(premiere(e).slice(0, 90)) || '(sans texte)'}</strong>
           <small>${e.retire ? 'Retiré par la modération · ' : ''}${e.programme ? `Programmé pour le ${S.esc(S.dateLong(e.publie_le))} · ` : ''}${S.esc(E.depuis(e.maj))}${e.statut === 'publie' && !e.corbeille_le ? ` · ${e.jaime} j’aime · ${e.commentaires} commentaire${e.commentaires > 1 ? 's' : ''}` : ''}</small>
         </a>${vue === 'corbeille' ? `<span class="row-acts"><button class="btn btn--ghost btn--sm" type="button" data-restaurer="${e.id}">${S.icon('restaurer')} Récupérer</button><button class="btn btn--ghost btn--sm" type="button" data-effacer="${e.id}">Supprimer définitivement</button></span>` : ''}</li>`).join('')}</ul>`
         : `<div class="empty"><strong>${{ brouillon: 'Aucun brouillon', publie: 'Rien de publié pour l’instant', corbeille: 'La corbeille est vide' }[vue]}</strong>${vue === 'corbeille' ? 'Un écrit jeté arrive ici ; il se récupère quand vous voulez.' : 'Choisissez ci-dessus ce que vous voulez écrire.'}</div>`;
     };
+    /* Recueil (22/10/2026) : cocher des écrits, dans l'ordre voulu, puis en faire un livre */
+    let choix = false, choisis = [];
+    const majChoix = () => { $('#recueilN').textContent = `${choisis.length} écrit${choisis.length > 1 ? 's' : ''} choisi${choisis.length > 1 ? 's' : ''}, dans l’ordre des numéros`; $('#recueilOk').disabled = !choisis.length; };
+    $('#recueil').addEventListener('click', () => { choix = true; choisis = []; $('#recueilBarre').hidden = false; if (vue === 'corbeille') vue = 'brouillon'; majChoix(); peindre(); });
+    $('#recueilX').addEventListener('click', () => { choix = false; choisis = []; $('#recueilBarre').hidden = true; peindre(); });
+    zone.addEventListener('change', (e) => {
+      const c = e.target.closest('[data-choix]'); if (!c) return;
+      const id = +c.dataset.choix;
+      choisis = c.checked ? [...choisis, id] : choisis.filter((x) => x !== id);
+      majChoix(); peindre();
+    });
+    $('#recueilOk').addEventListener('click', async () => {
+      const st = await API('GET', '/api/studio');
+      const cats = st.ok && st.d.categories ? st.d.categories : ['Poésie'];
+      const m = S.modal({ title: 'Un recueil', body: `<p>Chaque écrit devient une page, dans l’ordre choisi. Le livre naît en brouillons : rien ne paraît avant que vous le décidiez.</p>
+        <label class="cx-field">Titre du recueil<input id="rcTitre" maxlength="120"></label>
+        <label class="cx-field">Genre<select id="rcCat">${cats.map((c) => `<option${c === 'Poésie' ? ' selected' : ''}>${S.esc(c)}</option>`).join('')}</select></label><p class="cx-err" id="rcErr" role="alert"></p>`,
+        actions: [{ label: 'Annuler' }, { label: 'Créer le recueil', primary: true, onClick: async () => {
+          const titre = m.el.querySelector('#rcTitre').value.trim(), err = m.el.querySelector('#rcErr');
+          if (!titre) { err.textContent = 'Donnez un titre au recueil.'; return; }
+          let r = await API('POST', '/api/studio/recueils', { titre, categorie: m.el.querySelector('#rcCat').value, ecrits: choisis });
+          if (r.status === 403 && r.d.code === 'pas_auteur') {
+            const d = await API('POST', '/api/compte/devenir-auteur');
+            if (d.ok) r = await API('POST', '/api/studio/recueils', { titre, categorie: m.el.querySelector('#rcCat').value, ecrits: choisis });
+          }
+          if (!r.ok) { err.textContent = r.d.erreur || 'Le recueil n’a pas pu être créé.'; return; }
+          location.href = `studio.html?id=${encodeURIComponent(r.d.livre.id)}&tab=pages`;
+        } }] });
+      setTimeout(() => m.el.querySelector('#rcTitre').focus(), 50);
+    });
     peindre();
     $$('[data-vue]').forEach((b) => b.addEventListener('click', () => { vue = b.dataset.vue; peindre(); }));
     zone.addEventListener('click', async (e) => {
@@ -81,6 +119,15 @@ window.SOZO_PRET.then(async () => {
     S.footer();
   }
 
+  /* La série d'écriture : discrète, jamais une obligation */
+  async function serie() {
+    const r = await API('GET', '/api/moi/serie');
+    const z = $('#serie'); if (!r.ok || !z) return;
+    const J = ['di', 'lu', 'ma', 'me', 'je', 've', 'sa'];
+    z.innerHTML = `<span class="vl-serie-n">${r.d.serie ? `${S.icon('feather')} ${r.d.serie} jour${r.d.serie > 1 ? 's' : ''} d’écriture d’affilée` : 'Écrivez aujourd’hui pour commencer une série'}</span>
+      <span class="vl-serie-j" aria-label="Vos sept derniers jours">${r.d.semaine.map((j) => `<i class="${j.ecrit ? 'is-on' : ''}" title="${S.esc(S.dateLong(j.jour + 'T12:00:00Z').replace(/ à .*/, ''))}${j.ecrit ? ' : vous avez écrit' : ''}">${J[new Date(j.jour + 'T12:00:00Z').getUTCDay()]}</i>`).join('')}</span>`;
+  }
+
   /* ═══ la plume : écrire un écrit ═══ */
   async function composer() {
     document.body.classList.add('ecriture', 'vl-composer');
@@ -97,6 +144,7 @@ window.SOZO_PRET.then(async () => {
       nature: ecrit ? ecrit.nature : (E.NATURES[nouveau] ? nouveau : 'pensee'),
       titre: ecrit ? ecrit.titre : '',
       apparence: ecrit ? { ...ecrit.apparence } : {},
+      themes: ecrit ? [...(ecrit.themes || [])] : [],
     };
     const CLE = `sozo-ecrit:${ecrit ? ecrit.id : 'nouveau'}`;
     let secours = null;
@@ -118,6 +166,7 @@ window.SOZO_PRET.then(async () => {
       ${ecrit && ecrit.corbeille_le ? `<p class="warn ec-msg">${S.icon('corbeille')}<span>Cet écrit est dans la corbeille. <button class="btn btn--sm" type="button" id="cRestaurer">Le récupérer</button></span></p>` : ''}
       ${secours && !lectureSeule && (secours.texte !== (ecrit ? ecrit.texte : '') || secours.titre !== etat.titre) ? `<p class="warn ec-msg" id="cSecours">${S.icon('clock')}<span>Une copie plus récente est restée sur cet appareil. <button class="btn btn--sm" type="button" id="cReprendre">La reprendre</button> <button class="btn btn--ghost btn--sm" type="button" id="cOublier">L’oublier</button></span></p>` : ''}
       <div class="vl-compo-natures" role="radiogroup" aria-label="Ce que vous écrivez">${Object.entries(E.NATURES).map(([k, l]) => `<button type="button" role="radio" class="chip" data-nature="${k}" aria-checked="${etat.nature === k}" aria-pressed="${etat.nature === k}"${lectureSeule ? ' disabled' : ''}>${S.esc(l)}</button>`).join('')}</div>
+      <div class="vl-compo-themes" role="group" aria-label="Thèmes (trois au plus)"><span class="ash">Thèmes</span>${['Espérance', 'Foi', 'Louange', 'Gratitude', 'Pardon', 'Paix', 'Amour', 'Famille', 'Courage', 'Épreuve', 'Deuil', 'Guérison'].map((t) => `<button type="button" class="chip chip--sm" data-theme="${S.esc(t)}" aria-pressed="${etat.themes.includes(t)}"${lectureSeule ? ' disabled' : ''}>${S.esc(t)}</button>`).join('')}</div>
       <label class="sr" for="cTitre">Titre</label>
       <input class="vl-compo-titre" id="cTitre" maxlength="120" placeholder="Titre (facultatif)" value="${S.esc(etat.titre)}"${lectureSeule ? ' readonly' : ''}>
       <div id="barre"></div>
@@ -141,8 +190,8 @@ window.SOZO_PRET.then(async () => {
     });
     const f = ed.ajouter({ cle: 'texte', texte: ecrit ? ecrit.texte : '', verrou: lectureSeule });
     f.el.dataset.placeholder = { pensee: 'Une phrase qui vous habite…', poeme: 'Le premier vers…', priere: 'Seigneur,…', recit: 'Il était une fois, ou un matin comme les autres…', conte: 'Il était une fois…' }[etat.nature];
-    let enregistre = ecrit ? JSON.stringify([ecrit.nature, ecrit.titre, ecrit.texte, ecrit.apparence]) : JSON.stringify([etat.nature, '', '', {}]);
-    const courant = () => JSON.stringify([etat.nature, $('#cTitre').value.trim(), ed.texte(f), nettoyerApp()]);
+    let enregistre = ecrit ? JSON.stringify([ecrit.nature, ecrit.titre, ecrit.texte, ecrit.apparence, ecrit.themes || []]) : JSON.stringify([etat.nature, '', '', {}, []]);
+    const courant = () => JSON.stringify([etat.nature, $('#cTitre').value.trim(), ed.texte(f), nettoyerApp(), etat.themes]);
     const nettoyerApp = () => { const a = {}; ['police', 'alignement', 'fond', 'taille'].forEach((k) => { if (etat.apparence[k]) a[k] = etat.apparence[k]; }); return a; };
     let envoi = null, tAuto = null;
     const marque = (t) => { $('#cEtat').textContent = t; };
@@ -159,7 +208,7 @@ window.SOZO_PRET.then(async () => {
       $$('[data-fond]').forEach((x) => x.setAttribute('aria-checked', String((etat.apparence.fond || 'ivoire') === x.dataset.fond)));
     }
     function apercu() {
-      const e = { id: 0, nature: etat.nature, titre: $('#cTitre').value.trim(), texte: ed.texte(f) || ' ', apparence: nettoyerApp(), statut: 'brouillon', auteur: { id: S.sess().id ? `u${S.sess().id}` : '', nom: S.sess().name || 'Vous' }, moi: {}, jaime: 0, commentaires: 0 };
+      const e = { id: 0, nature: etat.nature, titre: $('#cTitre').value.trim(), texte: ed.texte(f) || ' ', apparence: nettoyerApp(), themes: etat.themes, statut: 'brouillon', auteur: { id: S.sess().id ? `u${S.sess().id}` : '', nom: S.sess().name || 'Vous' }, moi: {}, jaime: 0, commentaires: 0 };
       $('#apercu').innerHTML = E.carte(e, { entier: true });
     }
     function compter() {
@@ -185,7 +234,7 @@ window.SOZO_PRET.then(async () => {
       const texte = ed.texte(f);
       if (!texte.trim()) { marque(ecrit ? 'le texte est vide : rien n’est enregistré' : ''); return false; }
       if (!compter()) { marque('trop long : rien n’est enregistré'); return false; }
-      const corps = { nature: etat.nature, titre: $('#cTitre').value.trim(), texte, apparence: nettoyerApp() };
+      const corps = { nature: etat.nature, titre: $('#cTitre').value.trim(), texte, apparence: nettoyerApp(), themes: etat.themes };
       const instantane = courant();
       marque('enregistrement…');
       envoi = (ecrit ? API('PATCH', `/api/ecrits/${ecrit.id}`, corps) : API('POST', '/api/ecrits', corps)).then((r) => {
@@ -204,6 +253,14 @@ window.SOZO_PRET.then(async () => {
     }
 
     $('#cTitre').addEventListener('input', change);
+    $$('.vl-compo-themes [data-theme]').forEach((b) => b.addEventListener('click', () => {
+      const t = b.dataset.theme;
+      if (etat.themes.includes(t)) etat.themes = etat.themes.filter((x) => x !== t);
+      else if (etat.themes.length >= 3) { S.toast('Trois thèmes au plus.'); return; }
+      else etat.themes = [...etat.themes, t];
+      $$('.vl-compo-themes [data-theme]').forEach((x) => x.setAttribute('aria-pressed', String(etat.themes.includes(x.dataset.theme))));
+      change();
+    }));
     $$('[data-nature]').forEach((b) => b.addEventListener('click', () => { etat.nature = b.dataset.nature; peindreEtat(); change(); }));
     $$('[data-fond]').forEach((b) => b.addEventListener('click', () => { etat.apparence.fond = b.dataset.fond === 'ivoire' ? undefined : b.dataset.fond; peindreEtat(); change(); }));
     $('#cGrand').addEventListener('change', (e) => { etat.apparence.taille = e.target.checked ? 'grande' : undefined; change(); });

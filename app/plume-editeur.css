@@ -118,3 +118,5 @@ body.ecriture { --pl-haut: 57px; }
 .ed-hist li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; padding: 4px 0; }
 .ed-hist .row-acts { margin-left: auto; display: inline-flex; gap: 10px; }
 .ec-version { max-height: 55vh; overflow: auto; padding: 4px 2px; font-family: var(--serif); font-size: 18px; line-height: 1.6; }
+.pl-feuille ul, .pl-feuille ol { padding-left: 1.4em; }
+.pl-feuille li + li { margin-top: .25em; }

@@ -406,6 +406,12 @@ window.SOZO_PRET.then(() => {
           <p class="cx-err" id="errChap" role="alert"></p>
           <button class="btn" type="submit">Enregistrer les chapitres</button>
         </form>
+        <section class="panel at-visible" aria-labelledby="hTexte">
+          <h3 class="at-h3" id="hTexte">Votre texte, chez vous</h3>
+          <p class="ash">Reprenez votre livre pour le relire sur papier ou l’envoyer : vous seul pouvez le faire. Vos lecteurs, eux, ne téléchargent jamais un livre.</p>
+          <span class="row-acts"><a class="btn btn--ghost btn--sm" href="/api/studio/livres/${enc(livre.id)}/export.docx" download>${S.icon('file')} Exporter en Word</a>
+          <a class="btn btn--ghost btn--sm" href="imprimer.html?id=${enc(livre.id)}" target="_blank" rel="noopener">${S.icon('eye')} Imprimer ou PDF</a></span>
+        </section>
         <section class="panel at-visible" aria-labelledby="hVis">
           <h3 class="at-h3" id="hVis">Le livre dans le catalogue</h3>
           ${livre.cache ? `<p class="warn">${S.icon('eyeOff')}<span>Retiré du catalogue par vous : les nouveaux lecteurs ne le voient plus ; ceux qui ont acheté des pages les gardent.</span></p>

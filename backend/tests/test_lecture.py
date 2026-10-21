@@ -186,6 +186,8 @@ class Balayage(TestBase):
         "epingle_note": [("PATCH", "/api/epingles/{eid}", {404}, {"note": "Volée"})],
         "notification_supprimer": [("DELETE", "/api/notifications/{nid}", {404})],
         "fermer_session": [("DELETE", "/api/moi/sessions/{sid}", {404})],
+        # lot B
+        "exporter_livre": [("GET", "/api/studio/livres/{slug}/export.docx", {404})],
     }
     # Routes paramétrées hors balayage, avec la raison :
     EXEMPTES = {

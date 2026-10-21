@@ -18,7 +18,7 @@ balise. `nu()` rend le texte tel que le lecteur le lit, sans les marques : une
 import re
 
 _EMPHASE = re.compile(r"\*\*(.+?)\*\*|\*(.+?)\*")
-_PREFIXE = re.compile(r"^(#{1,2} |> )")
+_PREFIXE = re.compile(r"^(#{1,2} |> |• |\d{1,3}\. )")
 _SEPARATEUR = re.compile(r"^\s*(\*\s*){3}\s*$")
 
 

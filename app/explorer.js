@@ -51,29 +51,31 @@ window.SOZO_PRET.then(() => {
     </div>
     <div id="vueEcrits"${vue0 === 'ecrits' ? '' : ' hidden'}>
       <div class="ex-cats" role="group" aria-label="Natures"><button class="chip" type="button" data-nature="" aria-pressed="true">Tous</button>${Object.entries(E.NATURES).map(([k, l]) => `<button class="chip" type="button" data-nature="${k}" aria-pressed="false">${S.esc(l)}</button>`).join('')}</div>
+      <div class="ex-cats ex-themes" role="group" aria-label="Thèmes"><span class="ash">Thème</span>${['Espérance', 'Foi', 'Louange', 'Gratitude', 'Pardon', 'Paix', 'Amour', 'Famille', 'Courage', 'Épreuve', 'Deuil', 'Guérison'].map((t) => `<button class="chip chip--sm" type="button" data-theme="${S.esc(t)}" aria-pressed="${S.q('theme') === t}">${S.esc(t)}</button>`).join('')}</div>
       <div class="vl-fil" id="fil" aria-live="polite"></div>
       <div class="ex-plus"><button class="btn btn--ghost" type="button" id="plus" hidden>Voir plus d’écrits</button></div>
     </div>
   </div>`;
 
   /* ─── les écrits : du serveur, par nature, page après page ─── */
-  let ecrits = [], suite = null, nature = '', charge = false;
+  let ecrits = [], suite = null, nature = '', theme = S.q('theme') || '', charge = false;
   async function chargerEcrits(neuf) {
     if (charge) return;
     charge = true;
     const fil = $('#fil'), plus = $('#plus');
     if (neuf) { ecrits = []; suite = null; fil.innerHTML = '<p class="ash"><span class="spin" aria-hidden="true"></span> Chargement des écrits…</p>'; }
-    const r = await window.SOZO_API('GET', `/api/ecrits?${new URLSearchParams({ ...(nature ? { nature } : {}), ...(suite ? { avant: suite } : {}) })}`);
+    const r = await window.SOZO_API('GET', `/api/ecrits?${new URLSearchParams({ ...(nature ? { nature } : {}), ...(theme ? { theme } : {}), ...(suite ? { avant: suite } : {}) })}`);
     charge = false;
     if (!r.ok) { fil.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'Les écrits n’ont pas pu se charger.')}</span></p>`; return; }
     ecrits = ecrits.concat(r.d.ecrits); suite = r.d.suite;
     fil.innerHTML = ecrits.length ? ecrits.map((e) => E.carte(e)).join('')
-      : `<div class="empty" style="grid-column:1/-1"><strong>Aucun écrit ${nature ? `de ce genre ` : ''}pour l’instant</strong>Le premier peut être le vôtre.<br><br><a class="btn" href="ecrits.html?nouveau=${nature || 'pensee'}">${S.icon('feather')} Écrire</a></div>`;
+      : `<div class="empty" style="grid-column:1/-1"><strong>Aucun écrit ${nature || theme ? `ici ` : ''}pour l’instant</strong>Le premier peut être le vôtre.<br><br><a class="btn" href="ecrits.html?nouveau=${nature || 'pensee'}">${S.icon('feather')} Écrire</a></div>`;
     plus.hidden = !suite;
   }
   E.brancher($('#fil'), (id) => ecrits.find((e) => e.id === id));
   $('#plus').addEventListener('click', () => chargerEcrits(false));
   $$('[data-nature]').forEach((c) => c.addEventListener('click', () => { nature = c.dataset.nature; $$('[data-nature]').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); chargerEcrits(true); }));
+  $$('.ex-themes [data-theme]').forEach((c) => c.addEventListener('click', () => { theme = theme === c.dataset.theme ? '' : c.dataset.theme; $$('.ex-themes [data-theme]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.theme === theme))); chargerEcrits(true); }));
   const montrer = (v) => {
     $$('[data-vue]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.vue === v)));
     $('#vueLivres').hidden = v !== 'livres'; $('#vueEcrits').hidden = v !== 'ecrits';

@@ -58,6 +58,9 @@ window.SOZO = (() => {
     filter: 'M4 5h16l-6 8v6l-4 2v-8z',
     type: 'M4 7V5h16v2M12 5v14M9 19h6',
     dots: 'M5 12h.01M12 12h.01M19 12h.01',
+    puces: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01',
+    numeros: 'M10 6h10M10 12h10M10 18h10M4 4.5h1.5V9M4 9h3M4 14.5c0-1 2.8-1 2.8.3 0 1-2.8 1.6-2.8 3.2h3',
+    image: 'M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15 9h.01',
     // 21/10/2026 : écrits, mini-Word
     bulle: 'M4 5h16v11H9l-5 4z',
     partager: 'M12 15V3M7 8l5-5 5 5M5 13v7h14v-7',
@@ -330,7 +333,7 @@ window.SOZO = (() => {
         if (m) return `<h3 class="pg-t${m[1].length === 2 ? ' pg-t2' : ''}">${emphase(f(m[2]))}</h3>`;
         m = /^> (.*)$/.exec(t);
         if (m) return `<blockquote class="pg-cit"><p>${emphase(f(m[1]))}</p></blockquote>`;
-        return `<p>${emphase(f(t))}</p>`;
+        return /^(• |\d{1,3}\. )/.test(t) ? `<p class="pg-li">${emphase(f(t))}</p>` : `<p>${emphase(f(t))}</p>`;
       }).join('');
     }
   };

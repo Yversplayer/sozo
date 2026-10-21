@@ -1010,6 +1010,69 @@ def enregistrer(app):
         finally:
             cx.fermer()
 
+    # ═══ Lot B (22/10/2026) : recueil, export ════════════════════════════
+    @app.post("/api/studio/recueils")
+    @connectee
+    def creer_recueil():
+        """Rassembler ses écrits (poèmes, prières, pensées…) en un livre, en un
+        geste : un écrit = une page, dans l'ordre choisi. Le livre naît en
+        BROUILLONS : rien ne paraît avant que l'auteur le décide. Seuls SES
+        écrits entrent (un identifiant d'un autre compte ne produit rien)."""
+        refus = _auteur()
+        if refus:
+            return refus
+        d = v.corps_json(request)
+        titre = v.texte(d, "titre", mini=1, maxi=120)
+        cat = v.choix(d, "categorie", CATEGORIES)
+        ids = d.get("ecrits")
+        if not isinstance(ids, list) or not ids or len(ids) > 300 or not all(isinstance(x, int) and not isinstance(x, bool) for x in ids) or len(set(ids)) != len(ids):
+            raise v.Invalide("Choisissez les écrits du recueil.", "ecrits")
+        cx = db.connecter()
+        try:
+            marques = ",".join("?" * len(ids))
+            miens = {e["id"]: e for e in cx.tous(f"SELECT id, titre, texte FROM ecrits WHERE user_id = ? AND efface_le IS NULL AND retire_le IS NULL AND id IN ({marques})",
+                                                (g.user["id"], *ids))}
+            if len(miens) != len(ids):
+                return jsonify(erreur="Introuvable."), 404
+            m = acces.maintenant()
+            slug = _slug(cx, titre)
+            bid = cx.inserer("""INSERT INTO books (owner_id, slug, titre, categorie, description, couverture, style, format, mode, acces, created_at, updated_at)
+                                VALUES (?, ?, ?, ?, '', 'couv-pages', 'a', ?, 'progressive', 'free', ?, ?)""",
+                             (g.user["id"], slug, titre, cat, "vers" if cat == "Poésie" else "texte", m, m))
+            b = cx.un("SELECT * FROM books WHERE id = ?", (bid,))
+            for i in ids:
+                e = miens[i]
+                _creer_page(cx, b, (f"# {e['titre']}\n" if e["titre"] else "") + e["texte"])
+            auditer("livre.recueil", ressource=f"book:{bid}", apres=f"{len(ids)} écrits", cx=cx)
+            cx.valider()
+            return jsonify(livre=_detail(cx, b)), 201
+        finally:
+            cx.fermer()
+
+    @app.get("/api/studio/livres/<slug>/export.docx")
+    @connectee
+    def exporter_livre(slug):
+        """L'auteur reprend SON texte en Word (jamais un lecteur : route du studio)."""
+        import export_docx
+        cx = db.connecter()
+        try:
+            b = _a_moi(cx, slug)
+            if not b:
+                return jsonify(erreur="Introuvable."), 404
+            u = cx.un("SELECT nom FROM users WHERE id = ?", (g.user["id"],))
+            chap = {c["page_de"]: c["titre"] for c in cx.tous("SELECT titre, page_de FROM chapters WHERE book_id = ?", (b["id"],))}
+            sections = []
+            for p in cx.tous("SELECT id, n FROM pages WHERE book_id = ? AND n > 0 ORDER BY n", (b["id"],)):
+                sections.append((chap.get(p["n"]), acces.contenu_courant(cx, p["id"])[0]))
+            auditer("livre.export", ressource=f"book:{b['id']}", cx=cx)
+            cx.valider()
+            octets = export_docx.document(b["titre"], f"{u['nom']} — {len(sections)} page{'s' if len(sections) > 1 else ''}", sections)
+            rep = app.response_class(octets, mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+            rep.headers["Content-Disposition"] = f'attachment; filename="{export_docx.nom_de_fichier(b["titre"])}"'
+            return rep
+        finally:
+            cx.fermer()
+
     @app.post("/api/studio/livres/<slug>/import")
     @connectee
     def importer(slug):

@@ -27,14 +27,24 @@ window.SOZO_PLUME = (() => {
   const emphase = (h) => h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>');
   function enBlocs(texte) {
     const lignes = String(texte || '').split('\n');
+    // 22/10/2026 : « • » et « 1. » en tête de ligne = une liste (lignes consécutives regroupées)
     const html = lignes.map((t) => {
+      let l = /^• (.*)$/.exec(t);
+      if (l) return `\u0001ul<li>${emphase(esc(l[1])) || '<br>'}</li>`;
+      l = /^\d{1,3}\. (.*)$/.exec(t);
+      if (l) return `\u0001ol<li>${emphase(esc(l[1])) || '<br>'}</li>`;
       if (/^\s*(\*\s*){3}\s*$/.test(t)) return '<hr class="pl-sep">';
       let m = /^(#{1,2}) (.*)$/.exec(t);
       if (m) return `<${m[1].length === 2 ? 'h4' : 'h3'}>${emphase(esc(m[2])) || '<br>'}</${m[1].length === 2 ? 'h4' : 'h3'}>`;
       m = /^> (.*)$/.exec(t);
       if (m) return `<blockquote><p>${emphase(esc(m[1])) || '<br>'}</p></blockquote>`;
       return `<p>${emphase(esc(t)) || '<br>'}</p>`;
-    }).join('');
+    }).reduce((acc, h) => {
+      const m = /^\u0001(ul|ol)(.*)$/.exec(h);
+      if (!m) return acc + h;
+      const fin = `</${m[1]}>`;
+      return acc.endsWith(fin) ? acc.slice(0, -fin.length) + m[2] + fin : acc + `<${m[1]}>${m[2]}${fin}`;
+    }, '');
     return html || '<p><br></p>';
   }
   // Une espace insécable que la feuille pose toute seule (fin de ligne, double espace) redevient une espace
@@ -66,11 +76,11 @@ window.SOZO_PLUME = (() => {
       else if (t === 'BLOCKQUOTE') {
         const ps = [...b.children].filter((c) => /^(P|DIV)$/.test(c.tagName));
         (ps.length ? ps : [b]).forEach((p) => pousser('> ', enLigne(p)));
-      } else if (t === 'UL' || t === 'OL') [...b.children].forEach((li) => pousser('', enLigne(li)));
+      } else if (t === 'UL' || t === 'OL') [...b.children].forEach((li, i) => pousser(t === 'UL' ? '• ' : `${i + 1}. `, enLigne(li)));
       else pousser('', enLigne(b));
     });
     // une ligne « > » vide ou un titre vide redeviennent des lignes vides
-    return lignes.map((l) => (/^(# |## |> )\s*$/.test(l) ? '' : l)).join('\n').replace(/\n+$/, '');
+    return lignes.map((l) => (/^(# |## |> |• |\d{1,3}\. )\s*$/.test(l) ? '' : l)).join('\n').replace(/\n+$/, '');
   }
 
   /* ─── le texte tel que l'œil le lit, et sa carte vers la feuille ───
@@ -180,7 +190,7 @@ window.SOZO_PLUME = (() => {
       <div class="pl-g">${bouton('undo', 'annuler', 'Annuler', cmd('Z'))}${bouton('redo', 'refaire', 'Rétablir', MAC ? '⇧⌘Z' : 'Ctrl Y')}</div>
       <div class="pl-g"><label class="sr" for="plStyle">Style du paragraphe</label>
         <select class="pl-sel" id="plStyle" data-pl-style><option value="p">Paragraphe</option><option value="h3">Titre</option><option value="h4">Sous-titre</option><option value="blockquote">Citation</option></select>
-        ${bouton('bold', 'gras', 'Gras', cmd('B'))}${bouton('italic', 'italique', 'Italique', cmd('I'))}</div>
+        ${bouton('bold', 'gras', 'Gras', cmd('B'))}${bouton('italic', 'italique', 'Italique', cmd('I'))}${bouton('puces', 'puces', 'Liste à puces')}${bouton('numeros', 'numeros', 'Liste numérotée')}</div>
       <div class="pl-g">${bouton('sep', 'separateur', 'Séparateur')}${bouton('verset', 'croix', 'Insérer un verset')}
         <div class="pl-menu"><button type="button" class="pl-b pl-b--t" data-pl-menu="car" aria-expanded="false" aria-haspopup="true" title="Caractères spéciaux">« »</button>
           <div class="pl-pop" data-pop="car" hidden>${SPECIAUX.map(([c, l]) => `<button type="button" class="pl-car" data-car="${esc(c)}" title="${esc(l)}">${esc(c.trim())}</button>`).join('')}</div></div></div>
@@ -307,6 +317,7 @@ window.SOZO_PLUME = (() => {
       const k = b.dataset.pl;
       if (k === 'undo' || k === 'redo') { if (!active) return; rendreSel(); exec(k); return; }
       if (k === 'bold' || k === 'italic') { if (!exiger()) return; rendreSel(); exec(k); return; }
+      if (k === 'puces' || k === 'numeros') { if (!exiger()) return; rendreSel(); exec(k === 'puces' ? 'insertUnorderedList' : 'insertOrderedList'); return; }
       if (k === 'sep') { if (!exiger()) return; rendreSel(); exec('insertHTML', '<hr class="pl-sep"><p><br></p>'); return; }
       if (k === 'verset') { if (!exiger()) return; verset(); return; }
       if (k === 'moins' || k === 'plus') { taille = Math.max(15, Math.min(28, taille + (k === 'plus' ? 1 : -1))); poser('sozo-pl-taille', String(taille)); peindreDoc(); return; }

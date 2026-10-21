@@ -70,11 +70,12 @@ window.SOZO_ECRITS = (() => {
       ${e.titre ? `<h3 class="vl-ecrit-titre">${opts.entier ? s.esc(e.titre) : `<a href="ecrit.html?id=${e.id}">${s.esc(e.titre)}</a>`}</h3>` : ''}
       ${corps(e)}
       ${e.long && !opts.entier ? `<a class="vl-suite" href="ecrit.html?id=${e.id}">Lire la suite</a>` : ''}
+      ${e.themes && e.themes.length ? `<p class="vl-themes">${e.themes.map((t) => `<a href="explorer.html?vue=ecrits&theme=${encodeURIComponent(t)}">${s.esc(t)}</a>`).join('')}</p>` : ''}
       ${gestes(e)}
     </article>`;
   }
 
-  async function partager(e) {
+  async function partagerLien(e) {
     const s = S();
     const url = new URL(`ecrit.html?id=${e.id}`, location.href).href;
     const titre = e.titre || `${NATURES[e.nature]} de ${e.auteur.nom}`;
@@ -83,6 +84,82 @@ window.SOZO_ECRITS = (() => {
     }
     try { await navigator.clipboard.writeText(url); s.toast('Lien copié : collez-le où vous voulez le partager.'); }
     catch (er) { s.modal({ title: 'Partager', body: `<p>Copiez ce lien :</p><p><input class="vl-lien" readonly value="${s.esc(url)}" aria-label="Lien de l’écrit"></p>`, actions: [{ label: 'Fermer', primary: true }] }); }
+  }
+
+  /* ─── la carte à partager (22/10/2026) : une IMAGE velours et or, dessinée
+     sur l'appareil (Canvas) — rien ne part chez un service extérieur. Pour
+     WhatsApp, un statut, une impression. 1080 × 1350 (format portrait). ─── */
+  const PLUME_D = 'M20.6 3.2c-6.8.4-12 4.9-13.8 11.6l-1.9 6.3 1.3.4 1.6-4.5c1.5.2 3.3-.2 5-1.3 3.5-2.3 6.4-6.7 7.8-12.5z';
+  const nu = (t) => String(t || '').split('\n').map((l) => l.replace(/^(#{1,2} |> |• |\d{1,3}\. )/, '').replace(/^\s*(\*\s*){3}\s*$/, '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/\*(.+?)\*/g, '$1')).join('\n');
+  async function dessiner(e) {
+    const W = 1080, H = 1350, c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const x = c.getContext('2d');
+    try { await Promise.all(['italic 400 60px "Cormorant Garamond"', '600 60px "Cormorant Garamond"', '500 30px Inter'].map((f) => document.fonts.load(f))); } catch (er) {}
+    let g = x.createLinearGradient(0, 0, W * 0.7, H);
+    g.addColorStop(0, '#5C0E1B'); g.addColorStop(0.55, '#3A0811'); g.addColorStop(1, '#23050A');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    g = x.createRadialGradient(W * 0.15, 0, 0, W * 0.15, 0, W * 1.1);
+    g.addColorStop(0, 'rgba(150, 32, 52, .55)'); g.addColorStop(1, 'rgba(150, 32, 52, 0)');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    x.strokeStyle = 'rgba(212, 175, 55, .6)'; x.lineWidth = 2; x.strokeRect(54, 54, W - 108, H - 108);
+    x.save(); x.translate(W / 2 - 36, 112); x.scale(3, 3); x.fillStyle = '#D4AF37'; x.fill(new Path2D(PLUME_D)); x.restore();
+    x.textAlign = 'center'; x.fillStyle = '#D4AF37'; x.font = '500 28px Inter, sans-serif';
+    x.fillText((e.themes && e.themes.length ? e.themes.join(' · ') : NATURES[e.nature]).toUpperCase(), W / 2, 238);
+    // le texte : la plus grande taille qui tient dans le cadre
+    const titre = e.titre ? nu(e.titre) : '';
+    const corpsT = nu(e.texte).trim();
+    const largeur = W - 240, haut = 300, bas = H - 250;
+    const couper = (txt, police) => {
+      x.font = police;
+      const out = [];
+      txt.split('\n').forEach((para) => {
+        if (!para.trim()) { out.push(''); return; }
+        let l = '';
+        para.split(/\s+/).forEach((m) => { const essai = l ? `${l} ${m}` : m; if (x.measureText(essai).width > largeur && l) { out.push(l); l = m; } else l = essai; });
+        out.push(l);
+      });
+      return out;
+    };
+    let taille = e.nature === 'pensee' ? 64 : 52, lignes, interligne;
+    for (; taille >= 30; taille -= 2) {
+      interligne = taille * 1.38;
+      lignes = couper(corpsT, `italic 400 ${taille}px "Cormorant Garamond", Georgia, serif`);
+      if ((titre ? taille * 1.6 : 0) + lignes.length * interligne <= bas - haut) break;
+    }
+    const max = Math.floor((bas - haut - (titre ? taille * 1.6 : 0)) / interligne);
+    if (lignes.length > max) { lignes = lignes.slice(0, max); lignes[max - 1] = lignes[max - 1].replace(/\s*\S*$/, '') + ' …'; }
+    let y = haut + ((bas - haut) - ((titre ? taille * 1.6 : 0) + lignes.length * interligne)) / 2 + taille;
+    x.fillStyle = '#F8EEDC';
+    if (titre) { x.font = `600 ${Math.round(taille * 1.1)}px "Cormorant Garamond", Georgia, serif`; x.fillText(titre, W / 2, y); y += taille * 1.6; }
+    x.font = `italic 400 ${taille}px "Cormorant Garamond", Georgia, serif`;
+    lignes.forEach((l) => { x.fillText(l, W / 2, y); y += interligne; });
+    x.fillStyle = 'rgba(248, 238, 220, .85)'; x.font = '500 30px Inter, sans-serif';
+    x.fillText(`— ${e.auteur.nom}`, W / 2, H - 170);
+    x.fillStyle = '#D4AF37'; x.font = '600 44px "Cormorant Garamond", Georgia, serif';
+    x.fillText('Sōzō', W / 2, H - 100);
+    return c;
+  }
+  async function partager(e) {
+    const s = S();
+    const m = s.modal({ title: 'Partager', body: `<div class="vl-partage"><button type="button" class="vl-partage-o" data-p="lien">${s.icon('partager')}<span><strong>Le lien</strong><small>Pour WhatsApp, un SMS, un e-mail</small></span></button>
+        <button type="button" class="vl-partage-o" data-p="image">${s.icon('image')}<span><strong>Une image</strong><small>Une carte velours et or, à poster en statut</small></span></button></div>
+        <div id="vlCarte" class="vl-carte-apercu" hidden></div>`, actions: [{ label: 'Fermer', primary: true }] });
+    m.el.addEventListener('click', async (ev) => {
+      const o = ev.target.closest('[data-p]'); if (!o) return;
+      if (o.dataset.p === 'lien') { partagerLien(e); return; }
+      const zone = m.el.querySelector('#vlCarte'); zone.hidden = false;
+      zone.innerHTML = `<p class="ash"><span class="spin" aria-hidden="true"></span> La carte se dessine…</p>`;
+      const c = await dessiner(e);
+      const url = c.toDataURL('image/png');
+      zone.innerHTML = `<img src="${url}" alt="Carte de l’écrit, prête à partager"><div class="vl-carte-a">${navigator.canShare ? `<button class="btn btn--accent btn--sm" type="button" data-envoyer>${s.icon('partager')} Partager l’image</button>` : ''}<a class="btn btn--ghost btn--sm" href="${url}" download="sozo-${e.id}.png">Enregistrer l’image</a></div>`;
+      const env = zone.querySelector('[data-envoyer]');
+      if (env) env.addEventListener('click', () => c.toBlob(async (blob) => {
+        const f = new File([blob], `sozo-${e.id}.png`, { type: 'image/png' });
+        if (navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: 'Sōzō' }); } catch (er) {} }
+        else s.toast('Ce téléphone ne partage pas les images directement : enregistrez-la, puis envoyez-la.');
+      }, 'image/png'));
+    });
   }
 
   /* Branche les gestes de toutes les cartes d'un conteneur. `liste` donne
@@ -114,5 +191,5 @@ window.SOZO_ECRITS = (() => {
     });
   }
 
-  return { NATURES, AIDE, carte, corps, brancher, depuis, partager };
+  return { NATURES, AIDE, carte, corps, brancher, depuis, partager, dessiner };
 })();
