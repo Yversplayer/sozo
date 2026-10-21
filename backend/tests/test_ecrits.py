@@ -247,3 +247,31 @@ class EcritsRls(TestBase):
                 cx.annuler()
                 cx.fermer()
             flask.g.user = None
+
+
+class UnSeulLivre(TestBase):
+    """21/10/2026 : « qu'il n'y ait qu'un seul livre pour l'instant ». Les livres
+    d'EXEMPLE sont retirés (pas effacés), le livre gardé reste, et les livres
+    des vrais auteurs ne sont jamais touchés."""
+
+    def test_reduire_puis_remettre(self):
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
+        import demo
+        vrai = Personne(self.app, "auteur").livre(titre="Livre d'un vrai auteur", pages=1, publier=(1,), payantes=())
+        cx = db.connecter(globale=True)
+        try:
+            uid = cx.inserer("INSERT INTO users (email, nom, role, password_hash, created_at, demo) VALUES ('demo-x@sozo.invalid', 'Exemple', 'auteur', 'x', 'a', 1)")
+            for slug in (demo.GARDE, "un-autre-exemple"):
+                cx.execute("""INSERT INTO books (owner_id, slug, titre, categorie, demo, created_at, updated_at)
+                              VALUES (?, ?, ?, 'Poésie', 1, 'a', 'a')""", (uid, slug, slug))
+            cx.valider()
+            self.assertEqual(demo.reduire(cx), 1)
+            cx.valider()
+            etat = {r["slug"]: r["statut"] for r in cx.tous("SELECT slug, statut FROM books")}
+            self.assertEqual((etat[demo.GARDE], etat["un-autre-exemple"], etat[vrai]), ("actif", "retire", "actif"))
+            self.assertEqual(demo.remettre(cx), 1)
+            cx.valider()
+            self.assertEqual(cx.un("SELECT statut FROM books WHERE slug = 'un-autre-exemple'")["statut"], "actif")
+        finally:
+            cx.fermer()

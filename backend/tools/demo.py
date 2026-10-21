@@ -3,6 +3,15 @@ demo = 1, affichés avec l'étiquette « Exemple » et jamais vendus).
 
     backend_venv/bin/python backend/tools/demo.py                       # base locale
     backend_venv/bin/python backend/tools/demo.py --en-ligne --projet <ref> [--port 6543]
+    backend_venv/bin/python backend/tools/demo.py --un-seul [--en-ligne --projet <ref>]
+    backend_venv/bin/python backend/tools/demo.py --remettre [--en-ligne --projet <ref>]
+
+21/10/2026, le propriétaire : « enlève tous les livres ; dans un premier
+temps, qu'il n'y ait qu'un seul livre ». `--un-seul` RETIRE du catalogue tous
+les livres d'exemple sauf `GARDE` (statut « retire », avec un motif daté) :
+rien n'est effacé, et `--remettre` les fait revenir. Les livres des vrais
+auteurs (demo = 0) ne sont jamais touchés. Une base neuve ne reçoit plus que
+le livre gardé.
 
 Le contenu vient de `demo.json`, écrit par `demo_catalogue.py`.
 
@@ -30,6 +39,8 @@ import db  # noqa: E402
 import security  # noqa: E402
 
 KINSHASA = timezone(timedelta(hours=1))
+GARDE = "psaumes-terre-rouge"           # Poésie, gratuit : le livre que Sōzō garde pour l'instant
+MOTIF_UN_SEUL = "Catalogue réduit à un seul livre (décision du propriétaire, 21/10/2026)"
 FILLER = ("Ce livre est un exemple, écrit pour montrer comment Sōzō présente un livre page par page. "
           "Le texte de cette page n'a pas été écrit.")
 
@@ -62,8 +73,26 @@ def _en_ligne(args):
         url = f"postgresql://postgres.{projet}:{quote(mdp, safe='')}@aws-1-eu-central-1.pooler.supabase.com:{port}/postgres"
     os.environ.update(SOZO_DB_BACKEND="postgres", SOZO_DATABASE_URL=url, SOZO_PG_SCHEMA="public", SOZO_PG_ROLE="sozo_app")
     os.environ.pop("SOZO_MODE_TEST", None)
-    if input("Les 14 livres d'exemple vont entrer dans la base EN LIGNE. Tapez EXEMPLE pour confirmer : ").strip() != "EXEMPLE":
+    if "--un-seul" in args or "--remettre" in args:
+        quoi = "retirer du catalogue tous les livres d'exemple sauf « Psaumes de la terre rouge »" if "--un-seul" in args else "remettre au catalogue les livres d'exemple retirés le 21/10"
+        if input(f"Vous allez {quoi}, dans la base EN LIGNE (rien n'est effacé). Tapez CONFIRMER : ").strip() != "CONFIRMER":
+            sys.exit("Annulé : rien n'a changé.")
+    elif input("Le livre d'exemple va entrer dans la base EN LIGNE. Tapez EXEMPLE pour confirmer : ").strip() != "EXEMPLE":
         sys.exit("Annulé : rien n'a été chargé.")
+
+
+def reduire(cx, garde=GARDE):
+    """Retire du catalogue les livres d'EXEMPLE, sauf `garde`. Rend leur nombre.
+    Les livres des vrais auteurs (demo = 0) ne sont jamais touchés ; rien n'est effacé."""
+    n = cx.execute("UPDATE books SET statut = 'retire', retrait_motif = ?, updated_at = ? WHERE demo = 1 AND slug <> ? AND statut = 'actif'",
+                   (MOTIF_UN_SEUL, security._utc(security.maintenant()), garde)).rowcount
+    return n
+
+
+def remettre(cx):
+    """Annule `reduire` : seuls les livres retirés pour CE motif reviennent."""
+    return cx.execute("UPDATE books SET statut = 'actif', retrait_motif = NULL WHERE demo = 1 AND statut = 'retire' AND retrait_motif = ?",
+                      (MOTIF_UN_SEUL,)).rowcount
 
 
 def main():
@@ -75,6 +104,20 @@ def main():
     with open(os.path.join(os.path.dirname(__file__), "demo.json"), encoding="utf-8") as f:
         D = json.load(f)
     db.appliquer_schema()
+    if "--un-seul" in args or "--remettre" in args:
+        cx = db.connecter(globale=True)
+        try:
+            n = reduire(cx) if "--un-seul" in args else remettre(cx)
+            cx.valider()
+            pl = "s" if n > 1 else ""
+            print(f"{n} livre{pl} d'exemple remis{'' if n > 1 else ''} au catalogue." if "--remettre" in args
+                  else f"{n} livre{pl} d'exemple retiré{pl} du catalogue ; « {GARDE} » reste.")
+        finally:
+            cx.fermer()
+        return
+    # 21/10/2026 : une base neuve ne reçoit plus que le livre gardé (et son auteur)
+    D["books"] = [b for b in D["books"] if b["id"] == GARDE]
+    D["authors"] = {k: a for k, a in D["authors"].items() if any(b["author"] == k for b in D["books"])}
     cx = db.connecter()
     try:
         if cx.un("SELECT id FROM books WHERE demo = 1 LIMIT 1"):
