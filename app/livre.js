@@ -57,6 +57,7 @@ window.SOZO_PRET.then(() => {
       <div class="lv-actions">
         <a class="btn btn--accent lv-lire" href="${pagesLues}">${firstReadable ? (prog ? `Reprendre page ${prog}` : 'Commencer à lire') : 'Voir la première page'}</a>
         <button class="btn lv-plus" type="button" id="follow"></button>
+        <button class="btn btn--ghost lv-plus" type="button" id="partagerLivre" aria-label="Partager ce livre" title="Partager">${S.icon('partager')}</button>
       </div>
       ${allOpt && st.locked ? `<button class="ec-lien lv-tout" type="button" id="buyAll">Tout le contenu payant — ${S.money(allOpt.price)}</button>` : ''}
     </header>
@@ -143,6 +144,14 @@ window.SOZO_PRET.then(() => {
   const ba = $('#buyAll');
   if (ba) ba.addEventListener('click', () => S.buy.recap(b, allOpt));
 
+  /* Lot C : partager un livre (le lien ; la page reste derrière la connexion) */
+  const pl = document.getElementById('partagerLivre');
+  if (pl) pl.addEventListener('click', async () => {
+    const url = new URL(`livre.html?id=${encodeURIComponent(b.id)}`, location.href).href;
+    if (navigator.share) { try { await navigator.share({ title: `${b.title} — Sōzō`, url }); return; } catch (er) { if (er && er.name === 'AbortError') return; } }
+    try { await navigator.clipboard.writeText(url); S.toast('Lien copié : collez-le où vous voulez le partager.'); }
+    catch (er) { S.modal({ title: 'Partager', body: `<p>Copiez ce lien :</p><p><input class="vl-lien" readonly value="${S.esc(url)}" aria-label="Lien du livre"></p>`, actions: [{ label: 'Fermer', primary: true }] }); }
+  });
   /* 22/10/2026 : signaler un livre (le serveur était prêt, l'écran n'avait pas de bouton) */
   const sigL = document.getElementById('signalerLivre');
   if (sigL) sigL.addEventListener('click', () => {

@@ -193,6 +193,11 @@ class Balayage(TestBase):
     EXEMPTES = {
         "fichier": "fichiers statiques du site, sur liste blanche (test_socle)",
         "paiement_webhook": "pas de session : authentifiée par signature HMAC (test_argent)",
+        # lot C : un profil et son abonnement sont PUBLICS par nature ; ce qu'ils montrent
+        # (rien que du public, jamais l'adresse) est tenu par test_lot_c
+        "profil": "profil public : nom, ville, présentation, livres visibles, écrits parus (test_lot_c)",
+        "s_abonner": "suivre un auteur est ouvert à tous ; soi-même refusé (test_lot_c)",
+        "se_desabonner": "ne touche que son propre abonnement (test_lot_c)",
     }
 
     def test_toute_route_parametree_est_balayee(self):

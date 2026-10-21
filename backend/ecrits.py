@@ -21,6 +21,8 @@ from flask import g, jsonify, request
 
 import acces
 import db
+import envois
+import notifications
 import security
 import validation as v
 from app import auditer, connectee
@@ -113,6 +115,13 @@ def _corrigeable(created_at):
     return datetime.now(timezone.utc) - t <= timedelta(minutes=CORRECTION_MINUTES)
 
 
+def _annoncer(cx, e):
+    import communaute
+    n = communaute.annoncer_ecrit(cx, e)
+    cx.valider()
+    return n
+
+
 def _compteurs(cx, ids):
     if not ids:
         return {}, {}, set(), set()
@@ -182,6 +191,16 @@ def enregistrer(app):
                 raise v.Invalide("Auteur inconnu.", "auteur")
             conditions.append("e.user_id = ?")
             params.append(int(auteur[1:]))
+        if request.args.get("abonnements"):
+            conditions.append("e.user_id IN (SELECT auteur_id FROM abonnements WHERE user_id = ?)")
+            params.append(g.user["id"])
+        q = (request.args.get("q") or "").strip()
+        if q:
+            if len(q) < 2 or len(q) > 80:
+                raise v.Invalide("Tapez au moins deux lettres.", "q")
+            motif = "%" + q.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+            conditions.append("(LOWER(e.titre) LIKE ? ESCAPE '\\' OR LOWER(e.texte) LIKE ? ESCAPE '\\' OR LOWER(u.nom) LIKE ? ESCAPE '\\')")
+            params += [motif, motif, motif]
         if theme:
             # liste fermée : la valeur cherchée est l'une des nôtres, entre guillemets JSON
             conditions.append("e.themes LIKE ?")
@@ -270,6 +289,8 @@ def enregistrer(app):
             auditer("ecrit.creation", ressource=f"ecrit:{eid}", apres="publie" if publier else "brouillon", cx=cx)
             cx.valider()
             e = cx.un("SELECT e.*, u.nom AS auteur_nom FROM ecrits e JOIN users u ON u.id = e.user_id WHERE e.id = ?", (eid,))
+            if publier and _annoncer(cx, e):
+                envois.declencher()
             return jsonify(ecrit=_servir(cx, [e], entier=True)[0]), 201
         finally:
             cx.fermer()
@@ -341,6 +362,10 @@ def enregistrer(app):
                 cx.execute("UPDATE ecrits SET corbeille_le = NULL, updated_at = ? WHERE id = ?", (m, eid))
             auditer(f"ecrit.{action}", ressource=f"ecrit:{eid}", cx=cx)
             cx.valider()
+            if action == "publier":
+                pub = cx.un("SELECT * FROM ecrits WHERE id = ?", (eid,))
+                if _annoncer(cx, pub):        # paru maintenant (un écrit programmé sera annoncé par les tâches)
+                    envois.declencher()
             e = cx.un("SELECT e.*, u.nom AS auteur_nom FROM ecrits e JOIN users u ON u.id = e.user_id WHERE e.id = ?", (eid,))
             return jsonify(ecrit=_servir(cx, [e], entier=True)[0])
         finally:
@@ -411,6 +436,11 @@ def enregistrer(app):
             if oui and not existe:
                 cx.execute("INSERT INTO ecrits_gestes (ecrit_id, user_id, nature, created_at) VALUES (?, ?, ?, ?)",
                            (eid, g.user["id"], nature, acces.maintenant()))
+                if nature == "jaime" and e["user_id"] != g.user["id"]:
+                    # regroupés : une notification par écrit et par jour, pas une par cœur
+                    notifications.emettre(cx, e["user_id"], "communaute", f"{g.user['nom']} aime votre {NATURES[e['nature']].lower()}",
+                                          f"« {e['titre']} »" if e["titre"] else "Il touche vos lecteurs.",
+                                          f"/app/ecrit.html?id={eid}", f"jaime:{eid}:{acces.maintenant()[:10]}")
             elif not oui and existe:
                 cx.execute("DELETE FROM ecrits_gestes WHERE ecrit_id = ? AND user_id = ? AND nature = ?", (eid, g.user["id"], nature))
             cx.valider()
@@ -466,7 +496,17 @@ def enregistrer(app):
             cid = cx.inserer("INSERT INTO ecrits_commentaires (ecrit_id, user_id, texte, created_at, parent_id) VALUES (?, ?, ?, ?, ?)",
                              (eid, g.user["id"], texte.strip(), m, parent))
             auditer("ecrit.commentaire", ressource=f"ecrit:{eid}", apres=f"commentaire:{cid}", cx=cx)
+            extrait = texte.strip()[:120]
+            if e["user_id"] != g.user["id"]:
+                notifications.emettre(cx, e["user_id"], "communaute", f"{g.user['nom']} a commenté votre {NATURES[e['nature']].lower()}",
+                                      extrait, f"/app/ecrit.html?id={eid}#commentaires", f"commentaire:{cid}")
+            if parent is not None:
+                pa = cx.un("SELECT user_id FROM ecrits_commentaires WHERE id = ?", (parent,))
+                if pa and pa["user_id"] not in (g.user["id"], e["user_id"]):
+                    notifications.emettre(cx, pa["user_id"], "communaute", f"{g.user['nom']} vous a répondu", extrait,
+                                          f"/app/ecrit.html?id={eid}#commentaires", f"reponse:{cid}")
             cx.valider()
+            envois.declencher()
             return jsonify(commentaire={"id": cid, "texte": texte.strip(), "le": m, "auteur": {"id": f"u{g.user['id']}", "nom": g.user["nom"]},
                                         "parent": parent, "modifie": False, "peut_modifier": True, "peut_retirer": True}), 201
         finally:

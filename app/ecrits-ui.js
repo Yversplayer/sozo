@@ -47,7 +47,7 @@ window.SOZO_ECRITS = (() => {
   function lienAuteur(e) {
     const s = S(), id = e.auteur.id;
     const nom = s.esc(e.auteur.nom);
-    return s.D.authors && s.D.authors[id] ? `<a href="auteur.html?id=${encodeURIComponent(id)}">${nom}</a>` : `<span>${nom}</span>`;
+    return /^u\d+$/.test(id) ? `<a href="auteur.html?id=${encodeURIComponent(id)}">${nom}</a>` : `<span>${nom}</span>`;
   }
 
   function gestes(e) {

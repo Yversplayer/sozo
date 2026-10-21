@@ -5,15 +5,17 @@
 window.SOZO_PRET.then(async () => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
   S.shell('suivis');
-  const ICONES = { parution: 'book', paiement: 'tag', vente: 'star', reversement: 'send', plume: 'feather', moderation: 'shield', securite: 'lock', test: 'bell' };
+  const ICONES = { parution: 'book', paiement: 'tag', vente: 'star', reversement: 'send', plume: 'feather', moderation: 'shield', securite: 'lock', test: 'bell', communaute: 'bulle', abonnements: 'feather' };
   let notifs = [], epingles = null, gardes = null;
   const E = window.SOZO_ECRITS;
   const charger = async () => { const r = await window.SOZO_API('GET', '/api/notifications'); notifs = r.ok ? r.d.liste : null; };
   const chargerEpingles = async () => { const r = await window.SOZO_API('GET', '/api/epingles'); epingles = r.ok ? r.d.epingles : null; };
   // 21/10/2026 : les écrits qu'on « garde » (poèmes, pensées, prières…) ont leur onglet
   const chargerGardes = async () => { const r = await window.SOZO_API('GET', '/api/ecrits/gardes'); gardes = r.ok ? r.d.ecrits : null; };
-  await Promise.all([charger(), chargerEpingles(), chargerGardes()]);
-  const ONGLETS = [['livres', 'En cours', 'book'], ['ecrits', 'Écrits gardés', 'garder'], ['epingles', 'Épingles', 'tag'], ['notifications', 'Notifications', 'bell']];
+  let abonnements = null;
+  const chargerAbos = async () => { const r = await window.SOZO_API('GET', '/api/abonnements'); abonnements = r.ok ? r.d.auteurs : null; };
+  await Promise.all([charger(), chargerEpingles(), chargerGardes(), chargerAbos()]);
+  const ONGLETS = [['livres', 'En cours', 'book'], ['ecrits', 'Écrits gardés', 'garder'], ['abonnements', 'Abonnements', 'user'], ['epingles', 'Épingles', 'tag'], ['notifications', 'Notifications', 'bell']];
   let onglet = (location.hash || '').slice(1);
   if (!ONGLETS.some(([k]) => k === onglet)) onglet = 'livres';
   const main = $('#main');
@@ -36,6 +38,12 @@ window.SOZO_PRET.then(async () => {
         ${gardes === null ? `<p class="warn">${S.icon('x')}<span>Écrits gardés indisponibles pour le moment.</span></p>`
           : gardes.length ? `<div class="vl-fil" id="filGardes">${gardes.map((e) => E.carte(e)).join('')}</div>`
           : `<div class="empty"><strong>Aucun écrit gardé</strong>Sous un poème, une pensée ou une prière qui vous parle, touchez « Garder » : il vous attendra ici.<br><br><a class="btn btn--ghost btn--sm" href="explorer.html?vue=ecrits">Lire des écrits</a></div>`}
+      </section>
+      <section class="sec" id="abonnements" style="padding-top:28px"${onglet === 'abonnements' ? '' : ' hidden'}>
+        ${abonnements === null ? `<p class="warn">${S.icon('x')}<span>Abonnements indisponibles pour le moment.</span></p>`
+          : abonnements.length ? `<ul class="vl-notes-l">${abonnements.map((a) => `<li><a class="vl-note vl-abo" href="auteur.html?id=${encodeURIComponent(a.id)}">${S.monogramme(a.nom, 40)}<span><strong>${S.esc(a.nom)}</strong>${a.ville ? `<small>${S.esc(a.ville)}</small>` : ''}</span></a>
+              <button class="btn btn--ghost btn--sm" type="button" data-desabo="${S.esc(a.id)}">Ne plus suivre</button></li>`).join('')}</ul>`
+          : `<div class="empty"><strong>Vous ne suivez personne</strong>Sur la page d’un auteur, touchez « Suivre » : ses nouveaux écrits vous seront signalés.<br><br><a class="btn btn--ghost btn--sm" href="explorer.html?vue=ecrits">Lire des écrits</a></div>`}
       </section>
       <section class="sec" id="epingles" style="padding-top:28px"${onglet === 'epingles' ? '' : ' hidden'}>
         ${epingles === null ? `<p class="warn">${S.icon('x')}<span>Épingles indisponibles pour le moment.</span></p>`
@@ -99,6 +107,12 @@ window.SOZO_PRET.then(async () => {
       t.addEventListener('click', () => { onglet = t.dataset.bi; history.replaceState(null, '', '#' + onglet); render(); document.getElementById('bi-' + onglet).focus(); });
       t.addEventListener('keydown', (e) => { const k = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!k) return; e.preventDefault(); onglet = tabs[(i + k + tabs.length) % tabs.length].dataset.bi; history.replaceState(null, '', '#' + onglet); render(); document.getElementById('bi-' + onglet).focus(); });
     });
+    document.querySelectorAll('[data-desabo]').forEach((x) => x.addEventListener('click', async () => {
+      x.disabled = true;
+      const r = await window.SOZO_API('DELETE', `/api/profils/${x.dataset.desabo.slice(1)}/abonnement`);
+      if (!r.ok) { x.disabled = false; S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+      abonnements = abonnements.filter((a) => a.id !== x.dataset.desabo); render();
+    }));
     const fg = $('#filGardes');
     if (fg) E.brancher(fg, (id) => gardes.find((e) => e.id === id));
     // 22/10/2026 : une note personnelle sur une épingle ; supprimer une notification

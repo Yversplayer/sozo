@@ -66,6 +66,22 @@ def annoncer_parutions(livre_id=None):
     return total
 
 
+def annoncer_ecrits():
+    """Lot C : un écrit PROGRAMMÉ n'est annoncé aux abonnés de son auteur qu'à
+    son heure (les écrits publiés tout de suite le sont aussitôt, par ecrits.py)."""
+    import communaute
+    total = 0
+    cx = db.connecter(globale=True)
+    try:
+        for e in cx.tous("""SELECT * FROM ecrits WHERE statut = 'publie' AND annonce_le IS NULL AND publie_le <= ?
+                             AND corbeille_le IS NULL AND retire_le IS NULL AND efface_le IS NULL ORDER BY publie_le LIMIT 500""", (maintenant(),)):
+            total += communaute.annoncer_ecrit(cx, e)
+            cx.valider()
+    finally:
+        cx.fermer()
+    return total
+
+
 def rappeler_plume():
     """Trois jours avant la fin de Plume : un rappel, une seule fois par abonnement."""
     m = datetime.now(timezone.utc)
@@ -100,7 +116,7 @@ def expirer_achats():
 def tout():
     """Une passe complète. Rend le bilan, pour le journal de l'hébergeur."""
     import manuscrits
-    return {"parutions": annoncer_parutions(), "plume": rappeler_plume(), "achats_expires": expirer_achats(),
+    return {"parutions": annoncer_parutions(), "ecrits": annoncer_ecrits(), "plume": rappeler_plume(), "achats_expires": expirer_achats(),
             "manuscrits_effaces": manuscrits.purger(), "envois": envois.distribuer(limite=200)}
 
 

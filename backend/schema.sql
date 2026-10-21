@@ -366,7 +366,7 @@ CREATE INDEX IF NOT EXISTS codes_actifs ON codes (user_id, objet, used_at);
 CREATE TABLE IF NOT EXISTS notifications (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users (id),
-  type TEXT NOT NULL CHECK (type IN ('parution', 'paiement', 'vente', 'reversement', 'securite', 'plume', 'moderation', 'test')),
+  type TEXT NOT NULL CHECK (type IN ('parution', 'paiement', 'vente', 'reversement', 'securite', 'plume', 'moderation', 'test', 'communaute', 'abonnements')),
   titre TEXT NOT NULL,
   corps TEXT NOT NULL,
   lien TEXT,
@@ -513,3 +513,13 @@ CREATE TABLE IF NOT EXISTS signalements_ecrits (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS signalements_ecrits_etat ON signalements_ecrits (etat, id);
+
+-- Lot C (22/10/2026) : suivre un AUTEUR (pas seulement un livre). Une ligne par
+-- personne et par auteur ; on ne se suit pas soi-même (refusé par le serveur).
+CREATE TABLE IF NOT EXISTS abonnements (
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  auteur_id INTEGER NOT NULL REFERENCES users (id),
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (user_id, auteur_id)
+);
+CREATE INDEX IF NOT EXISTS abonnements_auteur ON abonnements (auteur_id);

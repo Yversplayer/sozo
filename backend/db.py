@@ -225,6 +225,8 @@ RLS = {
     "ecrits_commentaires": (f"user_id = {_MOI} OR {_ECRITS_PUBLICS} OR ecrit_id IN {_MES_ECRITS}",
                             f"user_id = {_MOI} OR ecrit_id IN {_MES_ECRITS}"),
     "signalements_ecrits": f"user_id = {_MOI}",
+    # Lot C : on voit qui on suit, et qui nous suit ; on ne s'abonne qu'en son nom
+    "abonnements": (f"user_id = {_MOI} OR auteur_id = {_MOI}", f"user_id = {_MOI}"),
 }
 
 
@@ -304,6 +306,44 @@ def _ajouter_colonne(cx, table, colonne, definition):
         cx.execute(f"ALTER TABLE {table} ADD COLUMN {colonne} {definition}")
 
 
+TYPES_NOTIFICATION = ('parution', 'paiement', 'vente', 'reversement', 'securite', 'plume', 'moderation', 'test', 'communaute', 'abonnements')
+
+
+def _types_de_notification(cx):
+    """Lot C (22/10/2026) : deux types de notification de plus (« communaute »,
+    « abonnements »). Une règle CHECK ne s'élargit pas par ALTER … ADD COLUMN :
+    * PostgreSQL (la production) : on remplace la contrainte, rien d'autre ne bouge ;
+    * SQLite (développement, tests) : seule une reconstruction de la table change
+      un CHECK. Toutes les lignes sont recopiées, colonnes nommées, dans une
+      transaction : la table neuve a exactement le contenu de l'ancienne.
+    Idempotent : ne fait rien si la règle connaît déjà les nouveaux types."""
+    voulus = "type IN ('parution', 'paiement', 'vente', 'reversement', 'securite', 'plume', 'moderation', 'test', 'communaute', 'abonnements')"
+    if cx.moteur == "postgres":
+        for r in cx.tous("""SELECT conname, pg_get_constraintdef(oid) AS d FROM pg_constraint
+                             WHERE conrelid = 'notifications'::regclass AND contype = 'c'"""):
+            if "type" in r["d"] and "communaute" not in r["d"]:
+                cx.execute(f'ALTER TABLE notifications DROP CONSTRAINT "{r["conname"]}"')
+                cx.execute(f"ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK ({voulus})")
+        return
+    ligne = cx.un("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'notifications'")
+    if not ligne or "communaute" in ligne["sql"]:
+        return
+    cols = "id, user_id, type, titre, corps, lien, cle, lu_le, created_at"
+    cx.execute(f"""CREATE TABLE notifications_v11 (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users (id),
+      type TEXT NOT NULL CHECK ({voulus}),
+      titre TEXT NOT NULL, corps TEXT NOT NULL, lien TEXT, cle TEXT NOT NULL, lu_le TEXT, created_at TEXT NOT NULL,
+      UNIQUE (user_id, cle))""")
+    avant = cx.un("SELECT COUNT(*) AS n FROM notifications")["n"]
+    cx.execute(f"INSERT INTO notifications_v11 ({cols}) SELECT {cols} FROM notifications")
+    if cx.un("SELECT COUNT(*) AS n FROM notifications_v11")["n"] != avant:
+        raise RuntimeError("Reconstruction des notifications incomplète : rien n'est changé.")
+    cx.execute("DROP TABLE notifications")
+    cx.execute("ALTER TABLE notifications_v11 RENAME TO notifications")
+    cx.execute("CREATE INDEX IF NOT EXISTS notifications_personne ON notifications (user_id, id)")
+
+
 def _migrer(cx):
     """Migrations ADDITIVES, à la suite, sans jamais en retirer une."""
     # v3 : profil public et atelier personnalisé de l'auteur
@@ -354,3 +394,6 @@ def _migrer(cx):
     _ajouter_colonne(cx, "codes", "nouvel_email", "TEXT")
     # lot B : les thèmes d'un écrit (liste fermée, JSON reconstruit par ecrits.py)
     _ajouter_colonne(cx, "ecrits", "themes", "TEXT")
+    # lot C : un écrit n'est annoncé qu'une fois à ceux qui suivent son auteur
+    _ajouter_colonne(cx, "ecrits", "annonce_le", "TEXT")
+    _types_de_notification(cx)

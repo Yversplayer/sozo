@@ -26,10 +26,11 @@ window.SOZO_PRET.then(() => {
     <div id="vueLivres"${vue0 === 'livres' ? '' : ' hidden'}>
     <section class="ex-tete">
       <label class="search ex-cherche"><span class="sr">Rechercher un titre, un auteur, un thème</span>${S.icon('search')}
-        <input type="search" id="q" placeholder="Rechercher un titre, un auteur, un thème…" autocomplete="off"></label>
+        <input type="search" id="q" placeholder="Rechercher un livre, un écrit, un auteur…" autocomplete="off"></label>
       ${cats.length ? `<div class="ex-cats" role="group" aria-label="Catégories"><button class="chip ex-cat" type="button" data-cat="" aria-pressed="true">Toutes <small>${books.length}</small></button>${cats.map((c) => `<button class="chip ex-cat" type="button" data-cat="${S.esc(c)}" aria-pressed="false">${S.esc(c)} <small>${compte[c]}</small></button>`).join('')}</div>
       <div class="vl-tuiles">${cats.slice(0, 6).map((c) => `<button type="button" class="vl-tuile vl-velours" data-cat="${S.esc(c)}">${S.icon(ICONE[c] || 'book')}<strong>${S.esc(c)}</strong><small>${compte[c]} livre${compte[c] > 1 ? 's' : ''}</small></button>`).join('')}</div>` : ''}
     </section>
+    <section class="ex-sec ex-recherche" id="recherche" hidden aria-live="polite"></section>
     <section class="ex-sec" id="catalogue">
       <div class="ex-barre">
         <div class="ex-filtres" role="group" aria-label="Filtres">
@@ -116,7 +117,20 @@ window.SOZO_PRET.then(() => {
     render();
   }
   $('#q').value = state.q;
-  $('#q').addEventListener('input', (e) => { state.q = e.target.value; render(); });
+  /* Lot C : la recherche couvre aussi les écrits et les auteurs (côté serveur) */
+  let tR, nR = 0;
+  async function rechercher(q) {
+    const z = $('#recherche'), n = ++nR;
+    if (q.trim().length < 2) { z.hidden = true; z.innerHTML = ''; return; }
+    const [re, ra] = await Promise.all([window.SOZO_API('GET', `/api/ecrits?q=${encodeURIComponent(q.trim())}`), window.SOZO_API('GET', `/api/profils?q=${encodeURIComponent(q.trim())}`)]);
+    if (n !== nR) return;                               // une frappe plus récente l'emporte
+    const ecr = re.ok ? re.d.ecrits.slice(0, 6) : [], aut = ra.ok ? ra.d.auteurs : [];
+    z.hidden = !ecr.length && !aut.length;
+    z.innerHTML = `${aut.length ? `<h2 class="sec-title">Auteurs</h2><div class="ex-auteurs">${aut.map((a) => `<a class="ex-au" href="auteur.html?id=${encodeURIComponent(a.id)}">${S.monogramme(a.nom, 64)}<strong>${S.esc(a.nom)}</strong>${a.ville ? `<small>${S.esc(a.ville)}</small>` : ''}</a>`).join('')}</div>` : ''}
+      ${ecr.length ? `<h2 class="sec-title" style="margin-top:18px">Écrits</h2><div class="vl-fil" id="filR">${ecr.map((e) => E.carte(e)).join('')}</div>` : ''}`;
+    if (ecr.length) E.brancher($('#filR'), (id) => ecr.find((e) => e.id === id));
+  }
+  $('#q').addEventListener('input', (e) => { state.q = e.target.value; render(); clearTimeout(tR); tR = setTimeout(() => rechercher(state.q), 350); });
   $('#sort').addEventListener('change', (e) => { state.sort = e.target.value; render(); });
   $$('[data-access]').forEach((c) => c.addEventListener('click', () => { state.access = c.dataset.access; $$('[data-access]').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); render(); }));
   $$('[data-run]').forEach((c) => c.addEventListener('click', () => { state.run = c.dataset.run; $$('[data-run]').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); render(); }));
@@ -125,6 +139,7 @@ window.SOZO_PRET.then(() => {
     if (c.classList.contains('vl-tuile')) $('#catalogue').scrollIntoView({ behavior: S.reduced ? 'auto' : 'smooth' });
   }));
   render();
+  if (state.q) rechercher(state.q);
   S.inkAll(); S.prepAll(); S.reveals(); S.footer();
   if (location.hash === '#q') setTimeout(() => $('#q').focus(), 60);
   else if (S.q('cat')) setTimeout(() => $('#catalogue').scrollIntoView(), 60);

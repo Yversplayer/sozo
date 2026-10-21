@@ -79,6 +79,7 @@ window.SOZO_PRET.then(() => {
 
     <section class="sec ac-sec" aria-labelledby="ecritsT">
       <div class="sec-head"><h2 class="sec-title" id="ecritsT">Écrits du jour</h2><a class="sec-link" href="explorer.html?vue=ecrits">Tous les écrits ${S.icon('right')}</a></div>
+      <div class="ex-cats" role="group" aria-label="Quels écrits"><button class="chip chip--sm" type="button" data-fil="" aria-pressed="true">Tous</button><button class="chip chip--sm" type="button" data-fil="1" aria-pressed="false">Mes abonnements</button></div>
       <div class="vl-fil" id="fil" aria-busy="true"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement des écrits…</p></div>
     </section>
 
@@ -102,15 +103,19 @@ window.SOZO_PRET.then(() => {
 
   /* Écrits du jour : la réponse du serveur, ou un état honnête */
   let ecrits = [];
-  (async () => {
+  const chargerFil = async (abos) => {
     const fil = $('#fil');
-    const r = await window.SOZO_API('GET', '/api/ecrits');
+    fil.setAttribute('aria-busy', 'true');
+    const r = await window.SOZO_API('GET', abos ? '/api/ecrits?abonnements=1' : '/api/ecrits');
     fil.removeAttribute('aria-busy');
     if (!r.ok) { fil.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'Les écrits n’ont pas pu se charger.')}</span></p>`; return; }
     ecrits = r.d.ecrits.slice(0, 8);
     fil.innerHTML = ecrits.length ? ecrits.map((e) => E.carte(e)).join('')
+      : abos ? `<div class="empty"><strong>Rien de neuf chez vos abonnements</strong>Suivez les auteurs qui vous touchent : touchez leur nom, puis « Suivre ».</div>`
       : `<div class="empty"><strong>Aucun écrit pour l’instant</strong>Le premier peut être le vôtre : une phrase suffit.<br><br><a class="btn" href="ecrits.html?nouveau=pensee">${S.icon('feather')} Écrire une pensée</a></div>`;
-  })();
+  };
+  chargerFil(false);
+  $$('[data-fil]').forEach((c) => c.addEventListener('click', () => { $$('[data-fil]').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); chargerFil(!!c.dataset.fil); }));
   E.brancher($('#fil'), (id) => ecrits.find((e) => e.id === id));
 
   const px = $('#pasX');

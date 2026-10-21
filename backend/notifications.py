@@ -35,6 +35,9 @@ TYPES = {
     "plume": ("Mon abonnement Plume", True, True),
     "moderation": ("Décisions de modération", False, True),
     "securite": ("Sécurité du compte", True, True),
+    # Lot C (22/10/2026)
+    "communaute": ("Commentaires, réponses, j’aime et abonnés", True, False),
+    "abonnements": ("Écrits des auteurs que je suis", True, False),
 }
 TOUJOURS_PAR_EMAIL = {"securite"}
 
