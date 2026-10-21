@@ -68,18 +68,31 @@ def _lisible(cx, eid):
     jeté, pas retiré, auteur actif) — ou le sien, quel que soit son état."""
     e = cx.un("""SELECT e.*, u.nom AS auteur_nom, u.actif AS auteur_actif
                    FROM ecrits e JOIN users u ON u.id = e.user_id WHERE e.id = ?""", (eid,))
-    if not e:
+    if not e or e["efface_le"]:
         return None
     if e["user_id"] == g.user["id"]:
         return e
     if e["statut"] != "publie" or e["corbeille_le"] or e["retire_le"] or not e["auteur_actif"]:
         return None
+    if e["publie_le"] and e["publie_le"] > acces.maintenant():
+        return None          # programmé (22/10/2026) : il n'existe pas encore pour les lecteurs
     return e
 
 
 def _a_moi(cx, eid):
-    e = cx.un("SELECT * FROM ecrits WHERE id = ? AND user_id = ?", (eid, g.user["id"]))
-    return e
+    return cx.un("SELECT * FROM ecrits WHERE id = ? AND user_id = ? AND efface_le IS NULL", (eid, g.user["id"]))
+
+
+CORRECTION_MINUTES = 15
+
+
+def _corrigeable(created_at):
+    from datetime import datetime, timedelta, timezone
+    try:
+        t = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except (TypeError, ValueError):
+        return False
+    return datetime.now(timezone.utc) - t <= timedelta(minutes=CORRECTION_MINUTES)
 
 
 def _compteurs(cx, ids):
@@ -111,6 +124,7 @@ def _servir(cx, lignes, *, entier=False):
             "id": e["id"], "nature": e["nature"], "nature_nom": NATURES[e["nature"]], "titre": e["titre"], "texte": texte,
             "long": long, "apparence": _apparence_lue(e), "statut": e["statut"], "publie_le": e["publie_le"],
             "maj": e["updated_at"], "corbeille_le": e["corbeille_le"], "retire": bool(e["retire_le"]),
+            "programme": bool(e["statut"] == "publie" and e["publie_le"] and e["publie_le"] > acces.maintenant()),
             "auteur": {"id": f"u{e['user_id']}", "nom": e["auteur_nom"]}, "mien": e["user_id"] == g.user["id"],
             "jaime": jaime.get(e["id"], 0), "commentaires": coms.get(e["id"], 0),
             "moi": {"jaime": e["id"] in j_moi, "garde": e["id"] in g_moi},
@@ -137,8 +151,8 @@ def enregistrer(app):
             raise v.Invalide("Nature inconnue.", "nature")
         auteur = request.args.get("auteur") or ""
         avant = request.args.get("avant") or ""
-        conditions = ["e.statut = 'publie'", "e.corbeille_le IS NULL", "e.retire_le IS NULL", "u.actif = 1"]
-        params = []
+        conditions = ["e.statut = 'publie'", "e.corbeille_le IS NULL", "e.retire_le IS NULL", "u.actif = 1", "e.publie_le <= ?"]
+        params = [acces.maintenant()]
         if nature:
             conditions.append("e.nature = ?")
             params.append(nature)
@@ -168,7 +182,7 @@ def enregistrer(app):
         cx = db.connecter()
         try:
             lignes = cx.tous("""SELECT e.*, u.nom AS auteur_nom FROM ecrits e JOIN users u ON u.id = e.user_id
-                                 WHERE e.user_id = ? ORDER BY e.updated_at DESC, e.id DESC LIMIT 500""", (g.user["id"],))
+                                 WHERE e.user_id = ? AND e.efface_le IS NULL ORDER BY e.updated_at DESC, e.id DESC LIMIT 500""", (g.user["id"],))
             return jsonify(ecrits=_servir(cx, lignes), natures=NATURES)
         finally:
             cx.fermer()
@@ -180,9 +194,9 @@ def enregistrer(app):
         try:
             lignes = cx.tous("""SELECT e.*, u.nom AS auteur_nom FROM ecrits_gestes x
                                   JOIN ecrits e ON e.id = x.ecrit_id JOIN users u ON u.id = e.user_id
-                                 WHERE x.user_id = ? AND x.nature = 'garde' AND e.corbeille_le IS NULL AND e.retire_le IS NULL
-                                   AND (e.statut = 'publie' AND u.actif = 1 OR e.user_id = ?)
-                                 ORDER BY x.created_at DESC LIMIT 500""", (g.user["id"], g.user["id"]))
+                                 WHERE x.user_id = ? AND x.nature = 'garde' AND e.corbeille_le IS NULL AND e.retire_le IS NULL AND e.efface_le IS NULL
+                                   AND (e.statut = 'publie' AND u.actif = 1 AND e.publie_le <= ? OR e.user_id = ?)
+                                 ORDER BY x.created_at DESC LIMIT 500""", (g.user["id"], acces.maintenant(), g.user["id"]))
             return jsonify(ecrits=_servir(cx, lignes))
         finally:
             cx.fermer()
@@ -195,12 +209,14 @@ def enregistrer(app):
             e = _lisible(cx, eid)
             if not e:
                 return jsonify(erreur="Introuvable."), 404
-            coms = cx.tous("""SELECT c.id, c.texte, c.created_at, c.user_id, u.nom FROM ecrits_commentaires c
+            coms = cx.tous("""SELECT c.id, c.texte, c.created_at, c.user_id, c.parent_id, c.modifie_le, u.nom FROM ecrits_commentaires c
                                 JOIN users u ON u.id = c.user_id
                                WHERE c.ecrit_id = ? AND c.retire_le IS NULL AND u.actif = 1 ORDER BY c.id LIMIT 300""", (eid,))
             moi = g.user["id"]
             return jsonify(ecrit=_servir(cx, [e], entier=True)[0], commentaires=[
                 {"id": c["id"], "texte": c["texte"], "le": c["created_at"], "auteur": {"id": f"u{c['user_id']}", "nom": c["nom"]},
+                 "parent": c["parent_id"], "modifie": bool(c["modifie_le"]),
+                 "peut_modifier": c["user_id"] == moi and _corrigeable(c["created_at"]),
                  "peut_retirer": c["user_id"] == moi or e["user_id"] == moi} for c in coms])
         finally:
             cx.fermer()
@@ -262,7 +278,7 @@ def enregistrer(app):
         finally:
             cx.fermer()
 
-    def _changer_etat(eid, action):
+    def _changer_etat(eid, action, date=None):
         cx = db.connecter()
         try:
             e = _a_moi(cx, eid)
@@ -274,7 +290,15 @@ def enregistrer(app):
             if action == "publier":
                 if e["corbeille_le"]:
                     return jsonify(erreur="Cet écrit est dans la corbeille : récupérez-le d’abord."), 409
-                cx.execute("UPDATE ecrits SET statut = 'publie', publie_le = COALESCE(publie_le, ?), updated_at = ? WHERE id = ?", (m, m, eid))
+                if date:
+                    # Programmer (22/10/2026) : seulement un brouillon, et dans le futur
+                    if e["statut"] == "publie" and e["publie_le"] and e["publie_le"] <= m:
+                        return jsonify(erreur="Cet écrit est déjà publié."), 409
+                    cx.execute("UPDATE ecrits SET statut = 'publie', publie_le = ?, updated_at = ? WHERE id = ?", (date, m, eid))
+                else:
+                    # « Publier maintenant » avance aussi un écrit programmé
+                    cx.execute("""UPDATE ecrits SET statut = 'publie', updated_at = ?,
+                                  publie_le = CASE WHEN publie_le IS NULL OR publie_le > ? THEN ? ELSE publie_le END WHERE id = ?""", (m, m, m, eid))
             elif action == "depublier":
                 cx.execute("UPDATE ecrits SET statut = 'brouillon', updated_at = ? WHERE id = ?", (m, eid))
             elif action == "corbeille":
@@ -295,7 +319,37 @@ def enregistrer(app):
     @app.post("/api/ecrits/<int:eid>/publier")
     @connectee
     def ecrit_publier(eid):
-        return _changer_etat(eid, "publier")
+        d = v.corps_json(request) if request.data else {}
+        date = v.date_heure(d, "date", requis=False)
+        if date and date <= acces.maintenant():
+            raise v.Invalide("La date de parution doit être dans le futur (ou publiez maintenant).", "date")
+        return _changer_etat(eid, "publier", date)
+
+    @app.delete("/api/ecrits/<int:eid>/definitif")
+    @connectee
+    def ecrit_effacer(eid):
+        """Effacer pour de bon un écrit de SA corbeille : le texte et le titre sont
+        vidés, ses j'aime retirés ; la ligne reste (les commentaires et le journal
+        y sont rattachés). Refusé tant qu'un signalement est en cours d'examen :
+        effacer ne doit pas servir à faire disparaître une preuve."""
+        cx = db.connecter()
+        try:
+            e = _a_moi(cx, eid)
+            if not e:
+                return jsonify(erreur="Introuvable."), 404
+            if not e["corbeille_le"]:
+                return jsonify(erreur="Mettez d’abord l’écrit à la corbeille."), 409
+            if cx.un("SELECT id FROM signalements_ecrits WHERE ecrit_id = ? AND etat = 'ouvert' LIMIT 1", (eid,)):
+                return jsonify(erreur="Un signalement de cet écrit est en cours d’examen : il ne peut pas être effacé pour l’instant.", code="signalement_ouvert"), 409
+            m = acces.maintenant()
+            cx.execute("UPDATE ecrits SET titre = '', texte = '', apparence = NULL, efface_le = ?, updated_at = ? WHERE id = ?", (m, m, eid))
+            cx.execute("DELETE FROM ecrits_gestes WHERE ecrit_id = ?", (eid,))
+            cx.execute("UPDATE ecrits_commentaires SET retire_le = COALESCE(retire_le, ?), retire_par = COALESCE(retire_par, 'auteur') WHERE ecrit_id = ?", (m, eid))
+            auditer("ecrit.efface", ressource=f"ecrit:{eid}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
 
     @app.post("/api/ecrits/<int:eid>/depublier")
     @connectee
@@ -359,7 +413,9 @@ def enregistrer(app):
     @app.post("/api/ecrits/<int:eid>/commentaires")
     @connectee
     def ecrit_commenter(eid):
-        texte = v.texte(v.corps_json(request), "texte", mini=1, maxi=1000, multiligne=True)
+        d = v.corps_json(request)
+        texte = v.texte(d, "texte", mini=1, maxi=1000, multiligne=True)
+        parent = v.entier(d, "parent", mini=1, requis=False)
         if not texte.strip():
             raise v.Invalide("Le commentaire est vide.", "texte")
         cx = db.connecter()
@@ -367,16 +423,44 @@ def enregistrer(app):
             e = _lisible(cx, eid)
             if not e or e["statut"] != "publie" or e["corbeille_le"] or e["retire_le"]:
                 return jsonify(erreur="Introuvable."), 404
+            if parent is not None:
+                # Une réponse vise un commentaire de CET écrit, visible, et de premier niveau
+                pc = cx.un("SELECT id, parent_id FROM ecrits_commentaires WHERE id = ? AND ecrit_id = ? AND retire_le IS NULL", (parent, eid))
+                if not pc:
+                    return jsonify(erreur="Introuvable."), 404
+                parent = pc["parent_id"] or pc["id"]
             if security.depasse(cx, "commentaire:compte", str(g.user["id"])):
                 cx.valider()
                 return jsonify(erreur="Beaucoup de commentaires en peu de temps : réessayez dans une heure."), 429
             m = acces.maintenant()
-            cid = cx.inserer("INSERT INTO ecrits_commentaires (ecrit_id, user_id, texte, created_at) VALUES (?, ?, ?, ?)",
-                             (eid, g.user["id"], texte.strip(), m))
+            cid = cx.inserer("INSERT INTO ecrits_commentaires (ecrit_id, user_id, texte, created_at, parent_id) VALUES (?, ?, ?, ?, ?)",
+                             (eid, g.user["id"], texte.strip(), m, parent))
             auditer("ecrit.commentaire", ressource=f"ecrit:{eid}", apres=f"commentaire:{cid}", cx=cx)
             cx.valider()
             return jsonify(commentaire={"id": cid, "texte": texte.strip(), "le": m, "auteur": {"id": f"u{g.user['id']}", "nom": g.user["nom"]},
-                                        "peut_retirer": True}), 201
+                                        "parent": parent, "modifie": False, "peut_modifier": True, "peut_retirer": True}), 201
+        finally:
+            cx.fermer()
+
+    @app.patch("/api/commentaires/<int:cid>")
+    @connectee
+    def commentaire_modifier(cid):
+        """Corriger SON commentaire, dans les 15 minutes : une faute de frappe se
+        corrige, une conversation déjà lue ne se réécrit pas."""
+        texte = v.texte(v.corps_json(request), "texte", mini=1, maxi=1000, multiligne=True)
+        if not texte.strip():
+            raise v.Invalide("Le commentaire est vide.", "texte")
+        cx = db.connecter()
+        try:
+            c = cx.un("SELECT * FROM ecrits_commentaires WHERE id = ? AND user_id = ? AND retire_le IS NULL", (cid, g.user["id"]))
+            if not c:
+                return jsonify(erreur="Introuvable."), 404
+            if not _corrigeable(c["created_at"]):
+                return jsonify(erreur="Un commentaire se corrige dans les 15 minutes qui suivent sa publication.", code="trop_tard"), 409
+            cx.execute("UPDATE ecrits_commentaires SET texte = ?, modifie_le = ? WHERE id = ?", (texte.strip(), acces.maintenant(), cid))
+            auditer("ecrit.commentaire_modifie", ressource=f"commentaire:{cid}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True, texte=texte.strip())
         finally:
             cx.fermer()
 

@@ -151,8 +151,71 @@ def _slug(cx, titre):
 
 
 def _a_moi(cx, slug):
-    """Le livre SI il appartient à la personne connectée ; sinon None → 404."""
-    return cx.un("SELECT * FROM books WHERE slug = ? AND owner_id = ?", (slug, g.user["id"]))
+    """Le livre SI il appartient à la personne connectée ; sinon None → 404.
+    Un livre à la corbeille n'existe plus pour le studio : seules les routes de
+    la corbeille (_a_moi_jete) l'atteignent."""
+    return cx.un("SELECT * FROM books WHERE slug = ? AND owner_id = ? AND corbeille_le IS NULL", (slug, g.user["id"]))
+
+
+def _a_moi_jete(cx, slug):
+    return cx.un("SELECT * FROM books WHERE slug = ? AND owner_id = ? AND corbeille_le IS NOT NULL", (slug, g.user["id"]))
+
+
+class HorsFile(Exception):
+    """Une page sortie (ou glissée entre des pages sorties) ne bouge pas."""
+
+
+def _file(cx, b):
+    """Les pages du livre (hors corbeille) et le numéro de la dernière page SORTIE.
+    Seuls les brouillons placés après elle peuvent changer de numéro : les
+    droits d'achat sont attachés aux numéros."""
+    pages = cx.tous("SELECT id, n, statut, publie_le FROM pages WHERE book_id = ? AND n > 0 ORDER BY n", (b["id"],))
+    sortie = max([p["n"] for p in pages if acces.statut_effectif(p) != "draft"], default=0)
+    return pages, sortie
+
+
+def _creer_page(cx, b, contenu, apres=None, source="editor"):
+    """Crée un brouillon, à la fin ou juste après la page `apres` (22/10/2026).
+    Insérer entre deux pages décale les brouillons qui suivent : refusé si
+    l'insertion tomberait avant une page sortie."""
+    pages, sortie = _file(cx, b)
+    dernier = pages[-1]["n"] if pages else 0
+    if apres is None or apres >= dernier:
+        n = dernier + 1
+    else:
+        if apres < sortie:
+            raise HorsFile()
+        # du dernier vers le premier : la place visée est toujours libre
+        for x in sorted((x for x in pages if x["n"] > apres), key=lambda x: -x["n"]):
+            cx.execute("UPDATE pages SET n = ? WHERE id = ?", (x["n"] + 1, x["id"]))
+        n = apres + 1
+    pid = cx.inserer("INSERT INTO pages (book_id, n, acces, statut, source, created_at) VALUES (?, ?, ?, 'draft', ?, ?)",
+                     (b["id"], n, "free" if b["acces"] == "free" else "paid", source, acces.maintenant()))
+    _nouvelle_version(cx, pid, contenu)
+    return n
+
+
+def _jeter(cx, b, p):
+    """Met un brouillon de fin de livre à la corbeille ; les brouillons qui le
+    suivent reculent d'un cran. Rend un message d'erreur, ou None."""
+    pages, sortie = _file(cx, b)
+    if acces.statut_effectif(p) != "draft":
+        return "page_sortie"
+    if sortie and p["n"] < sortie:
+        return "hors_queue"
+    m = acces.maintenant()
+    cx.execute("UPDATE pages SET n = ?, n_avant = ?, corbeille_le = ? WHERE id = ?", (-p["id"], p["n"], m, p["id"]))
+    for x in pages:
+        if x["n"] > p["n"]:
+            cx.execute("UPDATE pages SET n = ? WHERE id = ?", (x["n"] - 1, x["id"]))
+    return None
+
+
+def _sans_lecteur(cx, book_id):
+    """Vrai si personne n'a jamais payé, reçu ni acheté quoi que ce soit de ce livre."""
+    return not (cx.un("SELECT id FROM payments WHERE book_id = ? LIMIT 1", (book_id,))
+                or cx.un("SELECT id FROM entitlements WHERE book_id = ? LIMIT 1", (book_id,))
+                or cx.un("SELECT id FROM dons WHERE book_id = ? LIMIT 1", (book_id,)))
 
 
 def _prix(d, champ):
@@ -188,6 +251,7 @@ def _detail(cx, b):
         "couverture": b["couverture"], "style": b["style"], "format": b["format"], "mode": b["mode"], "acces": b["acces"],
         "prix": {"page": b["prix_page"], "chapitre": b["prix_chapitre"], "livre": b["prix_livre"]},
         "statut": b["statut"], "retrait_motif": b["retrait_motif"], "fichier_source": b["fichier_source"],
+        "cache": bool(b["cache_le"]),
         "apparence": apparence_lue(b), "image": empreinte_couverture(cx, b["id"]),
         "chapitres": cx.tous("SELECT titre, page_de, page_a FROM chapters WHERE book_id = ? ORDER BY page_de", (b["id"],)),
         "pages": pages,
@@ -216,17 +280,18 @@ def enregistrer(app):
             except ValueError:
                 reglages = {}
             livres = []
-            for b in cx.tous("SELECT * FROM books WHERE owner_id = ? ORDER BY updated_at DESC", (g.user["id"],)):
+            for b in cx.tous("SELECT * FROM books WHERE owner_id = ? AND corbeille_le IS NULL ORDER BY updated_at DESC", (g.user["id"],)):
                 st = cx.un("""SELECT SUM(CASE WHEN statut = 'draft' THEN 1 ELSE 0 END) AS brouillons,
                                      SUM(CASE WHEN statut <> 'draft' THEN 1 ELSE 0 END) AS sorties, COUNT(*) AS total
                                 FROM pages WHERE book_id = ? AND n > 0""", (b["id"],))
                 livres.append({"id": b["slug"], "titre": b["titre"], "categorie": b["categorie"], "couverture": b["couverture"],
                                "style": b["style"], "acces": b["acces"], "statut": b["statut"], "total": st["total"] or 0,
                                "apparence": apparence_lue(b), "image": empreinte_couverture(cx, b["id"]),
-                               "maj": b["updated_at"],
+                               "maj": b["updated_at"], "cache": bool(b["cache_le"]),
                                "brouillons": st["brouillons"] or 0, "sorties": st["sorties"] or 0})
             gagne, verse, solde = argent.solde_auteur(cx, g.user["id"])
-            return jsonify(role=u["role"], nom=u["nom"], atelier=reglages, livres=livres, solde=solde, gagne=gagne,
+            jetes = cx.un("SELECT COUNT(*) AS n FROM books WHERE owner_id = ? AND corbeille_le IS NOT NULL", (g.user["id"],))["n"]
+            return jsonify(role=u["role"], nom=u["nom"], atelier=reglages, livres=livres, solde=solde, gagne=gagne, livres_jetes=jetes,
                            plume=argent.plume_actif(cx, g.user["id"]), images=sorted(_images_permises()),
                            categories=sorted(CATEGORIES))
         finally:
@@ -480,15 +545,16 @@ def enregistrer(app):
     def nouvelle_page(slug):
         d = v.corps_json(request)
         contenu = v.texte(d, "contenu", requis=False, maxi=60_000, multiligne=True) or ""
+        apres = v.entier(d, "apres", mini=0, maxi=100000, requis=False)
         cx = db.connecter()
         try:
             b = _a_moi(cx, slug)
             if not b:
                 return jsonify(erreur="Introuvable."), 404
-            n = (cx.un("SELECT MAX(n) AS m FROM pages WHERE book_id = ? AND n > 0", (b["id"],))["m"] or 0) + 1
-            pid = cx.inserer("INSERT INTO pages (book_id, n, acces, statut, source, created_at) VALUES (?, ?, ?, 'draft', 'editor', ?)",
-                             (b["id"], n, "free" if b["acces"] == "free" else "paid", acces.maintenant()))
-            _nouvelle_version(cx, pid, contenu)
+            try:
+                n = _creer_page(cx, b, contenu, apres)
+            except HorsFile:
+                return jsonify(erreur="Une page ne s'insère qu'après la dernière page sortie : les numéros des pages sorties ne bougent jamais.", code="hors_queue"), 409
             cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (acces.maintenant(), b["id"]))
             cx.valider()
             return jsonify(n=n), 201
@@ -657,20 +723,14 @@ def enregistrer(app):
             p = b and cx.un("SELECT * FROM pages WHERE book_id = ? AND n = ? AND n > 0", (b["id"], n))
             if not p:
                 return jsonify(erreur="Introuvable."), 404
-            pages = cx.tous("SELECT id, n, statut, publie_le FROM pages WHERE book_id = ? AND n > 0 ORDER BY n", (b["id"],))
-            sorties = [x["n"] for x in pages if acces.statut_effectif(x) != "draft"]
-            if acces.statut_effectif(p) != "draft":
+            refus = _jeter(cx, b, p)
+            if refus == "page_sortie":
                 return jsonify(erreur="Cette page est sortie (ou programmée) : des lecteurs y ont peut-être droit. Elle ne va pas à la corbeille.",
                                code="page_sortie"), 409
-            if sorties and n < max(sorties):
+            if refus == "hors_queue":
                 return jsonify(erreur="Ce brouillon est placé entre des pages sorties : le jeter décalerait leurs numéros, donc ce que des lecteurs ont payé.",
                                code="hors_queue"), 409
             m = acces.maintenant()
-            cx.execute("UPDATE pages SET n = ?, n_avant = ?, corbeille_le = ? WHERE id = ?", (-p["id"], n, m, p["id"]))
-            # Les brouillons qui suivaient reculent d'un cran (dans l'ordre : la place libérée est toujours devant)
-            for x in pages:
-                if x["n"] > n:
-                    cx.execute("UPDATE pages SET n = ? WHERE id = ?", (x["n"] - 1, x["id"]))
             cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (m, b["id"]))
             auditer("page.corbeille", ressource=f"book:{b['id']}:page:{p['id']}", avant=f"n={n}", cx=cx)
             cx.valider()
@@ -713,6 +773,240 @@ def enregistrer(app):
             auditer("page.restauree", ressource=f"book:{b['id']}:page:{pid}", apres=f"n={n}", cx=cx)
             cx.valider()
             return jsonify(ok=True, n=n)
+        finally:
+            cx.fermer()
+
+    # ═══ Lot A (22/10/2026) : compléter ce qui existe ═══════════════════════
+    # « On pouvait créer une page, pas la supprimer » : chaque objet du studio
+    # a désormais son cycle complet. Mêmes règles partout : une page SORTIE ne
+    # bouge jamais (des lecteurs y ont peut-être droit), rien de ce qui a été
+    # vendu ne s'efface, et chaque changement de texte crée une version.
+    def _page(cx, slug, n):
+        b = _a_moi(cx, slug)
+        p = b and cx.un("SELECT * FROM pages WHERE book_id = ? AND n = ? AND n > 0", (b["id"], n))
+        return b, p
+
+    @app.post("/api/studio/livres/<slug>/pages/<int:n>/dupliquer")
+    @connectee
+    def page_dupliquer(slug, n):
+        cx = db.connecter()
+        try:
+            b, p = _page(cx, slug, n)
+            if not p:
+                return jsonify(erreur="Introuvable."), 404
+            contenu, _ = acces.contenu_courant(cx, p["id"])
+            _, sortie = _file(cx, b)
+            # juste après l'original s'il est dans la file des brouillons, sinon à la fin
+            nouvelle = _creer_page(cx, b, contenu, n if n >= sortie else None)
+            cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (acces.maintenant(), b["id"]))
+            auditer("page.dupliquee", ressource=f"book:{b['id']}:page:{p['id']}", apres=f"n={nouvelle}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True, n=nouvelle), 201
+        finally:
+            cx.fermer()
+
+    @app.post("/api/studio/livres/<slug>/pages/<int:n>/couper")
+    @connectee
+    def page_couper(slug, n):
+        """Coupe un brouillon en deux à la position donnée (dans le texte enregistré)."""
+        d = v.corps_json(request)
+        pos = v.entier(d, "position", mini=1, maxi=60_000)
+        cx = db.connecter()
+        try:
+            b, p = _page(cx, slug, n)
+            if not p:
+                return jsonify(erreur="Introuvable."), 404
+            _, sortie = _file(cx, b)
+            if acces.statut_effectif(p) != "draft" or n < sortie:
+                return jsonify(erreur="Seul un brouillon placé après la dernière page sortie se coupe en deux.", code="hors_queue"), 409
+            contenu, _ = acces.contenu_courant(cx, p["id"])
+            if pos >= len(contenu):
+                raise v.Invalide("Placez le curseur à l'intérieur du texte.", "position")
+            avant, apres = contenu[:pos].rstrip("\n "), contenu[pos:].lstrip("\n ")
+            if not avant.strip() or not apres.strip():
+                raise v.Invalide("Chaque moitié doit garder du texte.", "position")
+            _nouvelle_version(cx, p["id"], avant)
+            nouvelle = _creer_page(cx, b, apres, n)
+            cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (acces.maintenant(), b["id"]))
+            auditer("page.coupee", ressource=f"book:{b['id']}:page:{p['id']}", apres=f"n={nouvelle}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True, n=nouvelle), 201
+        finally:
+            cx.fermer()
+
+    @app.post("/api/studio/livres/<slug>/pages/<int:n>/fusionner")
+    @connectee
+    def page_fusionner(slug, n):
+        """Ajoute la page suivante à celle-ci ; la suivante va à la corbeille (rien n'est perdu)."""
+        cx = db.connecter()
+        try:
+            b, p = _page(cx, slug, n)
+            suivante = p and cx.un("SELECT * FROM pages WHERE book_id = ? AND n = ?", (b["id"], n + 1))
+            if not p or not suivante:
+                return jsonify(erreur="Introuvable."), 404
+            _, sortie = _file(cx, b)
+            if acces.statut_effectif(p) != "draft" or acces.statut_effectif(suivante) != "draft" or n < sortie:
+                return jsonify(erreur="Seuls deux brouillons placés après la dernière page sortie se fusionnent.", code="hors_queue"), 409
+            a_txt, _ = acces.contenu_courant(cx, p["id"])
+            b_txt, _ = acces.contenu_courant(cx, suivante["id"])
+            _nouvelle_version(cx, p["id"], (a_txt.rstrip("\n") + "\n" + b_txt.lstrip("\n")).strip("\n"))
+            _jeter(cx, b, suivante)
+            cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (acces.maintenant(), b["id"]))
+            auditer("page.fusionnee", ressource=f"book:{b['id']}:page:{p['id']}", apres=f"avec:{suivante['id']}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    @app.get("/api/studio/livres/<slug>/pages/<int:n>/versions/<int:ver>")
+    @connectee
+    def page_version(slug, n, ver):
+        cx = db.connecter()
+        try:
+            b, p = _page(cx, slug, n)
+            vv = p and cx.un("SELECT version, contenu, created_at, remplacee_le FROM page_versions WHERE page_id = ? AND version = ?", (p["id"], ver))
+            if not vv:
+                return jsonify(erreur="Introuvable."), 404
+            return jsonify(version=vv)
+        finally:
+            cx.fermer()
+
+    @app.post("/api/studio/livres/<slug>/pages/<int:n>/versions/<int:ver>/restaurer")
+    @connectee
+    def page_version_restaurer(slug, n, ver):
+        """Restaurer, c'est créer une NOUVELLE version avec l'ancien texte :
+        l'historique ne s'écrase pas, la version abandonnée reste aussi."""
+        cx = db.connecter()
+        try:
+            b, p = _page(cx, slug, n)
+            vv = p and cx.un("SELECT contenu FROM page_versions WHERE page_id = ? AND version = ?", (p["id"], ver))
+            if not vv:
+                return jsonify(erreur="Introuvable."), 404
+            cx.execute("UPDATE pages SET id = id WHERE id = ?", (p["id"],))
+            actuel, ver_actuelle = acces.contenu_courant(cx, p["id"])
+            if acces.statut_effectif(p) == "scheduled" and not vv["contenu"].strip():
+                return jsonify(erreur="Cette page est programmée : elle ne peut pas redevenir vide.", code="programmee_vide"), 409
+            if acces.statut_effectif(p) == "published" and not argent.plume_actif(cx, g.user["id"])["actif"]:
+                return jsonify(erreur="Cette page est publiée : la corriger demande Plume.", code="plume_requis"), 403
+            if actuel == vv["contenu"]:
+                return jsonify(ok=True, version=ver_actuelle, inchange=True)
+            nouvelle = _nouvelle_version(cx, p["id"], vv["contenu"])
+            auditer("page.version_restauree", ressource=f"book:{b['id']}:page:{n}", avant=f"version {ver}", apres=f"version {nouvelle}", cx=cx)
+            cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (acces.maintenant(), b["id"]))
+            cx.valider()
+            return jsonify(ok=True, version=nouvelle)
+        finally:
+            cx.fermer()
+
+    @app.delete("/api/studio/livres/<slug>/corbeille/<int:pid>")
+    @connectee
+    def page_effacer(slug, pid):
+        """Supprimer DÉFINITIVEMENT une page de la corbeille. Elle n'a jamais été
+        sortie (seuls les brouillons y vont) : personne n'y a droit."""
+        cx = db.connecter()
+        try:
+            b = _a_moi(cx, slug)
+            p = b and cx.un("SELECT * FROM pages WHERE id = ? AND book_id = ? AND corbeille_le IS NOT NULL", (pid, b["id"]))
+            if not p:
+                return jsonify(erreur="Introuvable."), 404
+            cx.execute("DELETE FROM page_versions WHERE page_id = ?", (pid,))
+            cx.execute("DELETE FROM pages WHERE id = ?", (pid,))
+            auditer("page.effacee", ressource=f"book:{b['id']}:page:{pid}", avant=f"n={p['n_avant']}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    # ── un livre entier ────────────────────────────────────────────────────
+    @app.post("/api/studio/livres/<slug>/catalogue")
+    @connectee
+    def livre_catalogue(slug):
+        """Retirer son livre du catalogue, ou l'y remettre. Ceux qui en ont acheté
+        des pages les gardent (acces.hors_catalogue) : un droit acquis reste."""
+        visible = v.corps_json(request).get("visible")
+        if not isinstance(visible, bool):
+            raise v.Invalide("« visible » doit valoir vrai ou faux.", "visible")
+        cx = db.connecter()
+        try:
+            b = _a_moi(cx, slug)
+            if not b:
+                return jsonify(erreur="Introuvable."), 404
+            m = acces.maintenant()
+            cx.execute("UPDATE books SET cache_le = ?, updated_at = ? WHERE id = ?", (None if visible else m, m, b["id"]))
+            auditer("livre.catalogue", ressource=f"book:{b['id']}", apres="visible" if visible else "retire_par_auteur", cx=cx)
+            cx.valider()
+            catalogue.invalider_vitrine()
+            return jsonify(ok=True, cache=not visible)
+        finally:
+            cx.fermer()
+
+    @app.delete("/api/studio/livres/<slug>")
+    @connectee
+    def livre_corbeille(slug):
+        cx = db.connecter()
+        try:
+            b = _a_moi(cx, slug)
+            if not b:
+                return jsonify(erreur="Introuvable."), 404
+            if cx.un("SELECT id FROM pages WHERE book_id = ? AND n > 0 AND statut <> 'draft' LIMIT 1", (b["id"],)) or not _sans_lecteur(cx, b["id"]):
+                return jsonify(erreur="Ce livre a déjà paru (ou des lecteurs y ont droit) : il ne va pas à la corbeille. Vous pouvez le retirer du catalogue.",
+                               code="deja_paru"), 409
+            m = acces.maintenant()
+            cx.execute("UPDATE books SET corbeille_le = ?, updated_at = ? WHERE id = ?", (m, m, b["id"]))
+            auditer("livre.corbeille", ressource=f"book:{b['id']}", cx=cx)
+            cx.valider()
+            catalogue.invalider_vitrine()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    @app.get("/api/studio/corbeille")
+    @connectee
+    def livres_jetes():
+        cx = db.connecter()
+        try:
+            return jsonify(livres=[{"id": b["slug"], "titre": b["titre"], "categorie": b["categorie"], "jete_le": b["corbeille_le"],
+                                    "pages": cx.un("SELECT COUNT(*) AS n FROM pages WHERE book_id = ? AND n > 0", (b["id"],))["n"]}
+                                   for b in cx.tous("SELECT * FROM books WHERE owner_id = ? AND corbeille_le IS NOT NULL ORDER BY corbeille_le DESC", (g.user["id"],))])
+        finally:
+            cx.fermer()
+
+    @app.post("/api/studio/corbeille/<slug>/restaurer")
+    @connectee
+    def livre_restaurer(slug):
+        cx = db.connecter()
+        try:
+            b = _a_moi_jete(cx, slug)
+            if not b:
+                return jsonify(erreur="Introuvable."), 404
+            cx.execute("UPDATE books SET corbeille_le = NULL, updated_at = ? WHERE id = ?", (acces.maintenant(), b["id"]))
+            auditer("livre.restaure", ressource=f"book:{b['id']}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    @app.delete("/api/studio/corbeille/<slug>")
+    @connectee
+    def livre_effacer(slug):
+        """Effacer DÉFINITIVEMENT un livre de la corbeille. Il n'a jamais paru et
+        personne ne l'a acheté : rien de ce qui a été vendu ne s'efface."""
+        cx = db.connecter()
+        try:
+            b = _a_moi_jete(cx, slug)
+            if not b:
+                return jsonify(erreur="Introuvable."), 404
+            if not _sans_lecteur(cx, b["id"]):
+                return jsonify(erreur="Des lecteurs ont un droit sur ce livre : il ne s'efface pas.", code="deja_paru"), 409
+            bid = b["id"]
+            manuscrits._effacer(cx, cx.tous("SELECT id, empreinte, nature FROM imports WHERE book_id = ? AND efface_le IS NULL", (bid,)))
+            cx.execute("DELETE FROM page_versions WHERE page_id IN (SELECT id FROM pages WHERE book_id = ?)", (bid,))
+            for t in ("pages", "chapters", "imports", "follows", "progress", "signalements", "couvertures", "epingles"):
+                cx.execute(f"DELETE FROM {t} WHERE book_id = ?", (bid,))      # noms de tables : liste fermée ci-dessus
+            cx.execute("DELETE FROM books WHERE id = ?", (bid,))
+            auditer("livre.efface", ressource=f"book:{bid}", avant=b["titre"][:100], cx=cx)
+            cx.valider()
+            return jsonify(ok=True)
         finally:
             cx.fermer()
 

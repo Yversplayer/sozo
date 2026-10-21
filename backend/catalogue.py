@@ -54,6 +54,7 @@ def serialiser_livre(cx, b, user, plages=None, a=None, toutes_pages=None, chapit
         "cover": {"img": b["couverture"], "style": b["style"]}, "mode": b["mode"], "access": b["acces"],
         "format": "planche" if b["format"] == "planche" else None, "verse": b["format"] == "vers",
         "desc": b["description"], "demo": bool(b["demo"]), "owner": bool(user and b["owner_id"] == user["id"]),
+        "cache": bool(b.get("cache_le")),
         "apparence": studio.apparence_lue(b),
         "image": (images if images is not None else images_des(cx, [b["id"]])).get(b["id"]),
         "price": None if b["acces"] == "free" else {"page": _dollars(b["prix_page"]), "chapter": _dollars(b["prix_chapitre"]), "all": _dollars(b["prix_livre"])},
@@ -88,7 +89,7 @@ def vitrine(cx):
     d = _VITRINE["d"]
     if d is not None and _VITRINE.get("base") == base and time.monotonic() - _VITRINE["t"] < DUREE_VITRINE:
         return d
-    livres = cx.tous("""SELECT * FROM books b WHERE b.statut = 'actif'
+    livres = cx.tous("""SELECT * FROM books b WHERE b.statut = 'actif' AND b.cache_le IS NULL AND b.corbeille_le IS NULL
                         AND EXISTS (SELECT 1 FROM pages p WHERE p.book_id = b.id AND p.statut <> 'draft') ORDER BY b.id""")
     ids = [b["id"] for b in livres]
     pages, chapitres, auteurs = {}, {}, {}
@@ -151,7 +152,7 @@ def enregistrer(app):
                 plages.setdefault(r["book_id"], []).append((1, None))        # livre offert
             # Vitrine publique (en cache court) + livres de la personne (toujours frais)
             vit = vitrine(cx)
-            miens = cx.tous("SELECT * FROM books WHERE owner_id = ? ORDER BY id", (uid,))
+            miens = cx.tous("SELECT * FROM books WHERE owner_id = ? AND corbeille_le IS NULL ORDER BY id", (uid,))
             pages_par, chap_par = dict(vit["pages"]), dict(vit["chapitres"])
             if miens:
                 ids = [b["id"] for b in miens]
@@ -302,6 +303,20 @@ def enregistrer(app):
                              (g.user["id"], b["id"], n, extrait, note, acces.maintenant()))
             cx.valider()
             return jsonify(epingle={"id": eid, "n": n, "extrait": extrait, "note": note, "livre": slug}), 201
+        finally:
+            cx.fermer()
+
+    @app.patch("/api/epingles/<int:eid>")
+    @connectee
+    def epingle_note(eid):
+        """La note personnelle d'une épingle (22/10/2026) : visible par soi seul."""
+        note = v.texte(v.corps_json(request), "note", requis=False, maxi=500, multiligne=True)
+        cx = db.connecter()
+        try:
+            if cx.execute("UPDATE epingles SET note = ? WHERE id = ? AND user_id = ?", (note, eid, g.user["id"])).rowcount != 1:
+                return jsonify(erreur="Introuvable."), 404
+            cx.valider()
+            return jsonify(ok=True, note=note)
         finally:
             cx.fermer()
 

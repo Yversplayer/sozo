@@ -127,6 +127,19 @@ def enregistrer(app):
         finally:
             cx.fermer()
 
+    @app.delete("/api/notifications/<int:nid>")
+    @connectee
+    def notification_supprimer(nid):
+        """Supprimer une de SES notifications (22/10/2026)."""
+        cx = db.connecter()
+        try:
+            if cx.execute("DELETE FROM notifications WHERE id = ? AND user_id = ?", (nid, g.user["id"])).rowcount != 1:
+                return jsonify(erreur="Introuvable."), 404
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
     @app.get("/api/notifications/preferences")
     @connectee
     def notifications_preferences():

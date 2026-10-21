@@ -37,6 +37,11 @@ def statut_effectif(page, a=None):
     return page["statut"]
 
 
+def hors_catalogue(b):
+    """Retiré par la modération, retiré par son auteur (22/10/2026), ou à la corbeille."""
+    return b["statut"] != "actif" or bool(b.get("cache_le")) or bool(b.get("corbeille_le"))
+
+
 def livre(cx, user, book_id):
     """Le livre, s'il est visible pour cette personne ; sinon None (→ 404).
     Visible : par son propriétaire toujours ; par les autres s'il n'est pas
@@ -50,7 +55,7 @@ def livre(cx, user, book_id):
         return None
     if user and b["owner_id"] == user["id"]:
         return b
-    if b["statut"] != "actif":
+    if hors_catalogue(b):
         # Livre retiré : il disparaît du catalogue, MAIS celui qui en a acheté
         # des pages les garde — un droit acquis n'est jamais retiré.
         if user and (cx.un("SELECT id FROM entitlements WHERE user_id = ? AND book_id = ? AND revoque_le IS NULL LIMIT 1", (user["id"], book_id))
@@ -82,7 +87,7 @@ def etat_page(book, page, user, plages, a=None):
     """État d'une page — la règle, en un seul endroit."""
     if user and book["owner_id"] == user["id"]:
         return "auteur"
-    if book["statut"] != "actif":
+    if hors_catalogue(book):
         # retiré : seules les pages déjà acquises restent lisibles
         return "owned" if page["acces"] == "paid" and statut_effectif(page, a) == "published" and couverte(plages, page["n"]) else None
     s = statut_effectif(page, a)

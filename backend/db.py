@@ -17,7 +17,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 10   # v10 (21/10/2026) : écrits, corbeille des pages ; v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
+VERSION_SCHEMA = 11   # v11 (22/10/2026) : corbeille et retrait des livres, réponses, e-mail ; v10 : écrits ; v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
 _verrou = threading.Lock()
 
 
@@ -338,3 +338,17 @@ def _migrer(cx):
     # pour libérer UNIQUE(book_id, n)) et se récupère depuis la corbeille.
     _ajouter_colonne(cx, "pages", "corbeille_le", "TEXT")
     _ajouter_colonne(cx, "pages", "n_avant", "INTEGER")
+    # v11 (22/10/2026), lot A « compléter ce qui existe » :
+    # un livre se RETIRE du catalogue par son auteur (cache_le : ses lecteurs
+    # gardent leurs pages) ou va à la CORBEILLE (corbeille_le : seulement s'il
+    # n'a jamais rien publié) ;
+    _ajouter_colonne(cx, "books", "cache_le", "TEXT")
+    _ajouter_colonne(cx, "books", "corbeille_le", "TEXT")
+    # un écrit effacé pour de bon par son auteur (texte vidé, ligne gardée) ;
+    _ajouter_colonne(cx, "ecrits", "efface_le", "TEXT")
+    # un commentaire peut répondre à un autre, et se corriger quelques minutes ;
+    _ajouter_colonne(cx, "ecrits_commentaires", "parent_id", "INTEGER")
+    _ajouter_colonne(cx, "ecrits_commentaires", "modifie_le", "TEXT")
+    # un code peut servir à confirmer une NOUVELLE adresse e-mail (but = 'email')
+    _ajouter_colonne(cx, "codes", "but", "TEXT")
+    _ajouter_colonne(cx, "codes", "nouvel_email", "TEXT")

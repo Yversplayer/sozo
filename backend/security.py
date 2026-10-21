@@ -160,17 +160,23 @@ def _empreinte_code(user_id, objet, code):
     return empreinte(f"code:{objet}:{user_id}:{code}")
 
 
-def creer_code(cx, user_id, objet):
-    """Un code neuf ; l'ancien, s'il en restait un, cesse de valoir."""
+def creer_code(cx, user_id, objet, but=None, nouvel_email=None):
+    """Un code neuf ; l'ancien, s'il en restait un, cesse de valoir.
+
+    `but` (22/10/2026) distingue un code de changement d'ADRESSE (envoyé à la
+    nouvelle adresse) d'un code de changement de mot de passe (envoyé à
+    l'ancienne) : sans lui, un code reçu sur une adresse choisie par un voleur
+    de session aurait suffi à changer le mot de passe."""
     m = maintenant()
-    cx.execute("UPDATE codes SET used_at = ? WHERE user_id = ? AND objet = ? AND used_at IS NULL", (_utc(m), user_id, objet))
+    cx.execute("UPDATE codes SET used_at = ? WHERE user_id = ? AND objet = ? AND COALESCE(but, '') = ? AND used_at IS NULL",
+               (_utc(m), user_id, objet, but or ""))
     code = f"{secrets.randbelow(10 ** 6):06d}"
-    cx.execute("INSERT INTO codes (user_id, objet, empreinte, expires_at, created_at) VALUES (?, ?, ?, ?, ?)",
-               (user_id, objet, _empreinte_code(user_id, objet, code), _utc(m + DUREE_CODE), _utc(m)))
+    cx.execute("INSERT INTO codes (user_id, objet, empreinte, expires_at, created_at, but, nouvel_email) VALUES (?, ?, ?, ?, ?, ?, ?)",
+               (user_id, objet, _empreinte_code(user_id, f"{objet}:{but}" if but else objet, code), _utc(m + DUREE_CODE), _utc(m), but, nouvel_email))
     return code
 
 
-def verifier_code(cx, user_id, objet, code):
+def verifier_code(cx, user_id, objet, code, but=None):
     """Vrai si le code est le bon, encore valable, et consommé PAR CET APPEL.
 
     Chaque essai est compté AVANT la comparaison, par une mise à jour atomique
@@ -180,14 +186,14 @@ def verifier_code(cx, user_id, objet, code):
     if not code or not str(code).isdigit() or len(str(code)) != 6:
         return False
     m = _utc(maintenant())
-    c = cx.un("SELECT id FROM codes WHERE user_id = ? AND objet = ? AND used_at IS NULL AND expires_at > ? ORDER BY id DESC LIMIT 1",
-              (user_id, objet, m))
+    c = cx.un("""SELECT id FROM codes WHERE user_id = ? AND objet = ? AND COALESCE(but, '') = ? AND used_at IS NULL AND expires_at > ?
+                 ORDER BY id DESC LIMIT 1""", (user_id, objet, but or "", m))
     if not c:
         return False
     if cx.execute("UPDATE codes SET essais = essais + 1 WHERE id = ? AND essais < ?", (c["id"], ESSAIS_CODE)).rowcount != 1:
         return False
     bon = cx.un("SELECT empreinte FROM codes WHERE id = ?", (c["id"],))["empreinte"]
-    if not secrets.compare_digest(bon, _empreinte_code(user_id, objet, str(code))):
+    if not secrets.compare_digest(bon, _empreinte_code(user_id, f"{objet}:{but}" if but else objet, str(code))):
         return False
     return cx.execute("UPDATE codes SET used_at = ? WHERE id = ? AND used_at IS NULL", (m, c["id"])).rowcount == 1
 

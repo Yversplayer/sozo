@@ -157,6 +157,154 @@ def enregistrer(app):
                                     raison="Message de sécurité, envoyé à chaque changement de mot de passe.")
         mailer.preparer(cx, u["email"], "Votre mot de passe Sōzō a changé", texte, html, user_id=u["id"])
 
+    # ═══ Lot A (22/10/2026) : adresse e-mail, appareils, mes données ═══════
+    @app.post("/api/moi/email/code")
+    @connectee
+    def code_email():
+        """Changer d'adresse : le mot de passe actuel, puis un code envoyé à la
+        NOUVELLE adresse (on prouve qu'on la lit). Si l'adresse est déjà prise,
+        la réponse est la même et rien ne part : on ne révèle pas qui est inscrit."""
+        d = v.corps_json(request)
+        mdp = v.texte(d, "mot_de_passe", maxi=MDP_MAX)
+        nouvelle = v.email(d, "email")
+        cx = db.connecter()
+        try:
+            if security.depasse(cx, "mdp:compte", str(g.user["id"])) or security.depasse(cx, "codemdp:compte", str(g.user["id"])):
+                cx.valider()
+                return _limite()
+            u = cx.un("SELECT id, nom, email, password_hash FROM users WHERE id = ?", (g.user["id"],))
+            if not security.verifier_mot_de_passe(mdp, u["password_hash"]):
+                auditer("compte.email_code", ressource=f"user:{u['id']}", resultat="refus", cx=cx)
+                cx.valider()
+                return jsonify(erreur="Mot de passe incorrect.", champ="mot_de_passe"), 403
+            if nouvelle == u["email"]:
+                raise v.Invalide("C’est déjà votre adresse.", "email")
+            minutes = int(security.DUREE_CODE.total_seconds() // 60)
+            if not cx.un("SELECT id FROM users WHERE email = ?", (nouvelle,)):
+                code = security.creer_code(cx, u["id"], "changement", but="email", nouvel_email=nouvelle)
+                html, texte = gabarits.page("Confirmez votre nouvelle adresse", [f"Bonjour {u['nom']},", "Voici votre code pour confirmer cette adresse sur Sōzō :"],
+                                            code=code, note=f"Il est valable {minutes} minutes et ne sert qu’une fois. Si vous n’avez rien demandé, ignorez ce message.",
+                                            raison="Vous recevez ce message parce que cette adresse a été proposée pour un compte Sōzō.")
+                mailer.preparer(cx, nouvelle, f"{code} — Confirmez votre nouvelle adresse", texte, html, user_id=u["id"], sensible=True)
+            auditer("compte.email_code", ressource=f"user:{u['id']}", cx=cx)
+            cx.valider()
+        finally:
+            cx.fermer()
+        envois.declencher()
+        return jsonify(ok=True, envoye_a=_masquer(nouvelle), minutes=minutes, email=config.email_mode() != "capture" and "envoi" or "capture"), 202
+
+    @app.post("/api/moi/email")
+    @connectee
+    def changer_email():
+        code = v.texte(v.corps_json(request), "code", maxi=6)
+        cx = db.connecter()
+        try:
+            if security.depasse(cx, "code:compte", str(g.user["id"])):
+                cx.valider()
+                return _limite()
+            if not security.verifier_code(cx, g.user["id"], "changement", code, but="email"):
+                auditer("compte.email", ressource=f"user:{g.user['id']}", resultat="refus", cx=cx)
+                cx.valider()
+                return jsonify(erreur="Code incorrect ou expiré.", champ="code"), 403
+            c = cx.un("SELECT nouvel_email FROM codes WHERE user_id = ? AND but = 'email' AND used_at IS NOT NULL ORDER BY id DESC LIMIT 1", (g.user["id"],))
+            ancien = cx.un("SELECT email, nom FROM users WHERE id = ?", (g.user["id"],))
+            if not c or cx.un("SELECT id FROM users WHERE email = ? AND id <> ?", (c["nouvel_email"], g.user["id"])):
+                cx.valider()
+                return jsonify(erreur="Cette adresse n’est plus disponible.", champ="code"), 409
+            m = v.maintenant()
+            cx.execute("UPDATE users SET email = ?, email_verifie_at = ? WHERE id = ?", (c["nouvel_email"], m, g.user["id"]))
+            security.revoquer_toutes(cx, g.user["id"], sauf=g.user["session_id"])
+            # L'ANCIENNE adresse est prévenue : si ce n'est pas la personne, elle le sait
+            html, texte = gabarits.page("L’adresse de votre compte a changé", [f"Bonjour {ancien['nom']},",
+                                        f"L’adresse de votre compte Sōzō est désormais {_masquer(c['nouvel_email'])}. Vos autres sessions ont été fermées."],
+                                        note="Si ce n’est pas vous, répondez immédiatement à ce message : nous bloquerons le compte.",
+                                        raison="Message de sécurité, envoyé à chaque changement d’adresse.")
+            mailer.preparer(cx, ancien["email"], "L’adresse de votre compte Sōzō a changé", texte, html, user_id=g.user["id"])
+            auditer("compte.email", ressource=f"user:{g.user['id']}", cx=cx)
+            cx.valider()
+        finally:
+            cx.fermer()
+        envois.declencher()
+        return jsonify(ok=True)
+
+    @app.get("/api/moi/sessions")
+    @connectee
+    def mes_sessions():
+        cx = db.connecter()
+        try:
+            lignes = cx.tous("""SELECT id, created_at, last_seen, agent, ip FROM sessions
+                                 WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ? ORDER BY COALESCE(last_seen, created_at) DESC LIMIT 50""",
+                             (g.user["id"], v.maintenant()))
+            masque = lambda ip: (".".join(ip.split(".")[:2]) + ".•.•") if ip and "." in ip else ("•" if ip else None)
+            return jsonify(sessions=[{"id": x["id"], "depuis": x["created_at"], "vu": x["last_seen"], "appareil": (x["agent"] or "")[:160],
+                                      "ip": masque(x["ip"]), "courante": x["id"] == g.user["session_id"]} for x in lignes])
+        finally:
+            cx.fermer()
+
+    @app.delete("/api/moi/sessions/<int:sid>")
+    @connectee
+    def fermer_session(sid):
+        cx = db.connecter()
+        try:
+            if cx.execute("UPDATE sessions SET revoked_at = ? WHERE id = ? AND user_id = ? AND revoked_at IS NULL",
+                          (v.maintenant(), sid, g.user["id"])).rowcount != 1:
+                return jsonify(erreur="Introuvable."), 404
+            auditer("session.fermeture_distante", ressource=f"user:{g.user['id']}", apres=f"session:{sid}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    @app.post("/api/moi/sessions/autres")
+    @connectee
+    def fermer_autres():
+        cx = db.connecter()
+        try:
+            security.revoquer_toutes(cx, g.user["id"], sauf=g.user["session_id"])
+            auditer("session.fermeture_partout", ressource=f"user:{g.user['id']}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    @app.get("/api/moi/donnees")
+    @connectee
+    def mes_donnees():
+        """Tout ce que Sōzō garde de la personne, en un fichier (droit d'accès,
+        portabilité). Jamais les empreintes de mot de passe ni de session."""
+        import json as _json
+        cx = db.connecter()
+        try:
+            uid = g.user["id"]
+            if security.depasse(cx, "import:compte", f"export:{uid}"):
+                cx.valider()
+                return _limite()
+            livres = []
+            for b in cx.tous("SELECT id, slug, titre, categorie, description, acces, created_at FROM books WHERE owner_id = ?", (uid,)):
+                pages = [{"n": p["n"], "statut": p["statut"], "texte": (cx.un("SELECT contenu FROM page_versions WHERE page_id = ? AND is_current = 1", (p["id"],)) or {}).get("contenu", "")}
+                         for p in cx.tous("SELECT id, n, statut FROM pages WHERE book_id = ? AND n > 0 ORDER BY n", (b["id"],))]
+                livres.append({**{k: b[k] for k in ("slug", "titre", "categorie", "description", "acces", "created_at")}, "pages": pages})
+            d = {
+                "genere_le": v.maintenant(),
+                "compte": cx.un("SELECT nom, email, role, bio, ville, theme, created_at FROM users WHERE id = ?", (uid,)),
+                "livres": livres,
+                "ecrits": cx.tous("SELECT nature, titre, texte, statut, publie_le, created_at FROM ecrits WHERE user_id = ? AND efface_le IS NULL", (uid,)),
+                "commentaires": cx.tous("SELECT ecrit_id, texte, created_at, retire_le FROM ecrits_commentaires WHERE user_id = ?", (uid,)),
+                "epingles": cx.tous("""SELECT b.titre AS livre, e.n AS page, e.extrait, e.note, e.created_at FROM epingles e
+                                         JOIN books b ON b.id = e.book_id WHERE e.user_id = ?""", (uid,)),
+                "achats": cx.tous("""SELECT p.objet, p.montant, p.devise, p.etat, p.created_at, p.confirme_le, b.titre AS livre
+                                       FROM payments p LEFT JOIN books b ON b.id = p.book_id WHERE p.user_id = ?""", (uid,)),
+                "suivis": [r["titre"] for r in cx.tous("SELECT b.titre FROM follows f JOIN books b ON b.id = f.book_id WHERE f.user_id = ?", (uid,))],
+                "notifications": cx.tous("SELECT type, titre, corps, created_at, lu_le FROM notifications WHERE user_id = ? ORDER BY id DESC LIMIT 500", (uid,)),
+            }
+            auditer("compte.export", ressource=f"user:{uid}", cx=cx)
+            cx.valider()
+        finally:
+            cx.fermer()
+        rep = app.response_class(_json.dumps(d, ensure_ascii=False, indent=2), mimetype="application/json")
+        rep.headers["Content-Disposition"] = 'attachment; filename="mes-donnees-sozo.json"'
+        return rep
+
     @app.post("/api/moi/mot-de-passe/code")
     @connectee
     def code_mot_de_passe():

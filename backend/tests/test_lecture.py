@@ -170,6 +170,22 @@ class Balayage(TestBase):
         "page_corbeille": [("DELETE", "/api/studio/livres/{slug}/pages/1", {404})],
         "studio_corbeille": [("GET", "/api/studio/livres/{slug}/corbeille", {404})],
         "page_restaurer": [("POST", "/api/studio/livres/{slug}/corbeille/{pgid}/restaurer", {404})],
+        # 22/10/2026 — lot A
+        "page_dupliquer": [("POST", "/api/studio/livres/{slug}/pages/1/dupliquer", {404})],
+        "page_couper": [("POST", "/api/studio/livres/{slug}/pages/1/couper", {404}, {"position": 3})],
+        "page_fusionner": [("POST", "/api/studio/livres/{slug}/pages/1/fusionner", {404})],
+        "page_version": [("GET", "/api/studio/livres/{slug}/pages/1/versions/1", {404})],
+        "page_version_restaurer": [("POST", "/api/studio/livres/{slug}/pages/1/versions/1/restaurer", {404})],
+        "page_effacer": [("DELETE", "/api/studio/livres/{slug}/corbeille/{pgid}", {404})],
+        "livre_catalogue": [("POST", "/api/studio/livres/{slug}/catalogue", {404}, {"visible": False})],
+        "livre_corbeille": [("DELETE", "/api/studio/livres/{slug}", {404})],
+        "livre_restaurer": [("POST", "/api/studio/corbeille/{slug}/restaurer", {404})],
+        "livre_effacer": [("DELETE", "/api/studio/corbeille/{slug}", {404})],
+        "ecrit_effacer": [("DELETE", "/api/ecrits/{ecid}/definitif", {404})],
+        "commentaire_modifier": [("PATCH", "/api/commentaires/{cmid}", {404}, {"texte": "Volé"})],
+        "epingle_note": [("PATCH", "/api/epingles/{eid}", {404}, {"note": "Volée"})],
+        "notification_supprimer": [("DELETE", "/api/notifications/{nid}", {404})],
+        "fermer_session": [("DELETE", "/api/moi/sessions/{sid}", {404})],
     }
     # Routes paramétrées hors balayage, avec la raison :
     EXEMPTES = {
@@ -198,6 +214,9 @@ class Balayage(TestBase):
                        (bid, "iVBORw0KGgowMDAwMDAw", "e" * 64, "2026-10-19T00:00:00Z"))
             eid = cx.inserer("INSERT INTO epingles (user_id, book_id, n, extrait, created_at) VALUES (?, ?, 1, 'Texte secret', ?)",
                              (a.id, bid, "2026-10-19T00:00:00Z"))
+            nid = cx.inserer("INSERT INTO notifications (user_id, type, titre, corps, cle, created_at) VALUES (?, 'test', 'Texte secret', 'Texte secret', 'balayage', ?)",
+                             (a.id, "2026-10-22T00:00:00Z"))
+            sid = cx.un("SELECT id FROM sessions WHERE user_id = ? ORDER BY id DESC LIMIT 1", (a.id,))["id"]
             cx.valider()
         finally:
             cx.fermer()
@@ -207,7 +226,7 @@ class Balayage(TestBase):
         a.post(f"/api/studio/livres/{slug}/pages", {"contenu": "Texte secret jeté."})
         n_jete = a.get(f"/api/studio/livres/{slug}").get_json()["livre"]["pages"][-1]["n"]
         pgid = a.delete(f"/api/studio/livres/{slug}/pages/{n_jete}").get_json()["page"]
-        cle = {"slug": slug, "slug_brouillon": slug, "pid": pid, "rid": 1, "n": 1, "aid": aid, "eid": eid, "ecid": ecid, "cmid": cmid, "pgid": pgid}
+        cle = {"slug": slug, "slug_brouillon": slug, "pid": pid, "rid": 1, "n": 1, "aid": aid, "eid": eid, "ecid": ecid, "cmid": cmid, "pgid": pgid, "nid": nid, "sid": sid}
         for ep, essais in self.ROUTES.items():
             for essai in essais:
                 meth, url, attendus = essai[:3]
