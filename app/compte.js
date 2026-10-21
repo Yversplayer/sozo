@@ -46,7 +46,8 @@ window.SOZO_PRET.then(() => {
                   ${a.etat === 'FAILED' && a.motif_refus ? `<br><small>Motif : ${S.esc(a.motif_refus)}</small>` : ''}${a.rembourse_le ? `<br><small>Remboursé le ${S.esc(S.dateLong(a.rembourse_le))} : ${S.esc(a.motif_remboursement)}. L’accès a été retiré.</small>` : ''}</div>
                 <div class="cp-pay-r"><strong>${S.money(a.montant / 100)}</strong><span class="badge badge--${e[1]}">${e[0]}</span>
                   ${a.etat === 'CREATED' ? `<button class="btn btn--sm" type="button" data-reprendre="${a.id}">Payer et déclarer</button>` : ''}
-                  ${a.etat === 'CONFIRMED' && !a.rembourse_le && a.slug ? `<a class="btn btn--ghost btn--sm" href="livre.html?id=${encodeURIComponent(a.slug)}">Lire</a>` : ''}</div>
+                  ${a.etat === 'CONFIRMED' && !a.rembourse_le && a.slug ? `<a class="btn btn--ghost btn--sm" href="livre.html?id=${encodeURIComponent(a.slug)}">Lire</a>` : ''}
+                  ${a.recu ? `<a class="btn btn--ghost btn--sm" href="recu.html?id=${a.id}" target="_blank" rel="noopener">${S.icon('file')} Reçu</a>` : ''}</div>
               </div>`;
             }).join('') : `<div class="empty"><strong>Aucun achat</strong>Les livres gratuits se lisent sans rien acheter. Un achat apparaîtra ici, avec son état et son reçu.</div>`}
             <p class="note">${S.icon('shield')} Un achat « en vérification » s’ouvre dès que Sōzō a confirmé votre paiement Mobile Money. Ce que vous avez payé reste à vous, même si l’auteur modifie son livre.</p>
@@ -91,6 +92,32 @@ window.SOZO_PRET.then(() => {
             <button class="btn" type="submit">Changer le mot de passe</button>
             <p class="note">${S.icon('lock')} Le code prouve que c’est bien vous, même si quelqu’un a accès à cet appareil. Vos autres sessions seront fermées.</p>
           </form>
+          <form class="panel at-form" id="fEmail" novalidate>
+            <h2>Adresse e-mail</h2>
+            <p class="ash">Actuelle : <strong>${S.esc(u.email)}</strong></p>
+            <div id="emailEtape1">
+              <label class="cx-field">Nouvelle adresse<input type="email" name="email" autocomplete="email" required></label>
+              <label class="cx-field">Mot de passe actuel<input type="password" name="mdp" autocomplete="current-password" required></label>
+              <button class="btn btn--ghost" type="button" id="emailCode">${S.icon('send')} Recevoir un code à la nouvelle adresse</button>
+            </div>
+            <div id="emailEtape2" hidden>
+              <p class="note" id="emailEnvoi" aria-live="polite"></p>
+              <label class="cx-field">Code reçu <small>6 chiffres</small><input name="code" class="cx-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"></label>
+              <button class="btn" type="submit">Confirmer la nouvelle adresse</button>
+            </div>
+            <p class="cx-err" id="eEmail" role="alert"></p>
+            <p class="note">${S.icon('shield')} Votre ancienne adresse sera prévenue, et vos autres sessions fermées.</p>
+          </form>
+          <section class="panel" aria-labelledby="hApp">
+            <h2 id="hApp">Mes appareils</h2>
+            <div id="appareils"><p class="ash" role="status">Chargement…</p></div>
+            <button class="btn btn--ghost btn--sm" type="button" id="partout" style="margin-top:12px">${S.icon('lock')} Me déconnecter de tous les autres appareils</button>
+          </section>
+          <section class="panel" aria-labelledby="hDon">
+            <h2 id="hDon">Mes données</h2>
+            <p class="ash">Tout ce que Sōzō garde de vous, en un fichier : votre profil, vos livres et leurs pages, vos écrits, vos commentaires, vos épingles, vos achats.</p>
+            <a class="btn btn--ghost btn--sm" href="/api/moi/donnees" download="mes-donnees-sozo.json" style="margin-top:12px">${S.icon('upload')} Télécharger mes données</a>
+          </section>
           <form class="panel at-form cp-danger" id="fSuppr" novalidate>
             <h2>Supprimer mon compte</h2>
             <p class="ash">Votre nom, votre adresse, vos suivis et votre progression sont effacés, et vous êtes déconnecté. Les paiements restent enregistrés, sans votre nom (obligation comptable).</p>
@@ -101,7 +128,65 @@ window.SOZO_PRET.then(() => {
         </div>
       </div>
     </div>`;
-    lier();
+    lier(); lierCompte(); appareils();
+  }
+
+  /* ─── 22/10/2026 : appareils, adresse e-mail ─── */
+  async function appareils() {
+    const z = $('#appareils'); if (!z) return;
+    const r = await window.SOZO_API('GET', '/api/moi/sessions');
+    if (!r.ok) { z.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'Liste indisponible.')}</span></p>`; return; }
+    const nom = (ua) => (/iPhone|iPad/.test(ua) ? 'iPhone ou iPad' : /Android/.test(ua) ? 'Téléphone Android' : /Mac/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'PC Windows' : /Linux/.test(ua) ? 'Linux' : 'Appareil') + (/Edg\//.test(ua) ? ' · Edge' : /Chrome\//.test(ua) ? ' · Chrome' : /Safari\//.test(ua) ? ' · Safari' : /Firefox\//.test(ua) ? ' · Firefox' : '');
+    z.innerHTML = `<ul class="cp-app">${r.d.sessions.map((x) => `<li><div><strong>${S.esc(nom(x.appareil))}</strong>${x.courante ? ' <span class="badge badge--free">cet appareil</span>' : ''}
+        <br><small class="ash">depuis le ${S.esc(S.dateLong(x.depuis))}${x.vu ? ` · vu le ${S.esc(S.dateLong(x.vu))}` : ''}${x.ip ? ` · ${S.esc(x.ip)}` : ''}</small></div>
+        ${x.courante ? '' : `<button class="btn btn--ghost btn--sm" type="button" data-fermer="${x.id}">Déconnecter</button>`}</li>`).join('')}</ul>`;
+  }
+  function lierCompte() {
+    const z = $('#appareils');
+    if (z) z.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-fermer]'); if (!b) return;
+      b.disabled = true;
+      const r = await window.SOZO_API('DELETE', `/api/moi/sessions/${b.dataset.fermer}`);
+      if (!r.ok) { b.disabled = false; S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+      S.toast('Cet appareil est déconnecté.'); appareils();
+    });
+    const pt = $('#partout');
+    if (pt) pt.addEventListener('click', async () => {
+      pt.disabled = true;
+      const r = await window.SOZO_API('POST', '/api/moi/sessions/autres');
+      pt.disabled = false;
+      if (!r.ok) { S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+      S.toast('Tous vos autres appareils sont déconnectés.'); appareils();
+    });
+    const fe = $('#fEmail');
+    if (!fe) return;
+    $('#emailCode').addEventListener('click', async () => {
+      const err = $('#eEmail'); err.textContent = '';
+      const email = fe.elements.email.value.trim(), mdp = fe.elements.mdp.value;
+      if (!email || !mdp) { err.textContent = 'La nouvelle adresse et votre mot de passe, s’il vous plaît.'; return; }
+      const b = $('#emailCode'); b.disabled = true;
+      const r = await window.SOZO_API('POST', '/api/moi/email/code', { email, mot_de_passe: mdp });
+      b.disabled = false;
+      if (!r.ok) { err.textContent = r.d.erreur || 'Le serveur a refusé.'; return; }
+      $('#emailEtape2').hidden = false;
+      $('#emailEnvoi').innerHTML = r.d.email === 'capture'
+        ? `${S.icon('bell')} L’envoi des e-mails n’est pas encore branché sur Sōzō : le code est préparé pour ${S.esc(r.d.envoye_a)}, mais il ne part pas encore.`
+        : `${S.icon('send')} Un code vient de partir vers ${S.esc(r.d.envoye_a)}. Il est valable ${r.d.minutes} minutes.`;
+      fe.elements.code.focus();
+    });
+    fe.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = $('#eEmail'); err.textContent = '';
+      const code = fe.elements.code.value.trim();
+      if (!/^\d{6}$/.test(code)) { err.textContent = 'Saisissez le code à 6 chiffres.'; return; }
+      occupe(fe, true);
+      const r = await window.SOZO_API('POST', '/api/moi/email', { code });
+      occupe(fe, false);
+      if (!r.ok) { err.textContent = r.d.erreur || 'Le serveur a refusé.'; return; }
+      try { localStorage.removeItem('sozo-moi'); } catch (er) {}
+      S.toast('Votre nouvelle adresse est enregistrée.');
+      setTimeout(() => location.reload(), 900);
+    });
   }
 
   function occupe(f, on) { const b = f.querySelector('[type=submit]'); b.disabled = on; b.setAttribute('aria-busy', String(on)); }

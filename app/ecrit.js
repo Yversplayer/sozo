@@ -37,12 +37,16 @@ window.SOZO_PRET.then(async () => {
   </div>`;
   E.brancher($('#ecrit'), () => e);
 
+  /* 22/10/2026 : des fils (un commentaire et ses réponses), et la correction
+     de son propre commentaire dans les 15 minutes. */
+  const unCom = (c) => `<li class="vl-com${c.parent ? ' vl-com--rep' : ''}" data-com="${c.id}">${S.monogramme(c.auteur.nom, c.parent ? 26 : 32)}
+      <div><p class="vl-com-h"><strong>${S.esc(c.auteur.nom)}</strong> <small class="ash">${S.esc(E.depuis(c.le))}${c.modifie ? ' · modifié' : ''}</small></p>
+      <p class="vl-com-t">${S.esc(c.texte).replace(/\n/g, '<br>')}</p>
+      <p class="vl-com-acts">${e.statut === 'publie' ? `<button class="ec-lien" type="button" data-repondre="${c.parent || c.id}" data-a="${S.esc(c.auteur.nom)}">Répondre</button>` : ''}${c.peut_modifier ? `<button class="ec-lien" type="button" data-modifier="${c.id}">Modifier</button>` : ''}${c.peut_retirer ? `<button class="ec-lien" type="button" data-retirer="${c.id}">Retirer</button>` : ''}${c.auteur.id !== `u${S.sess().id}` ? `<button class="ec-lien" type="button" data-signaler-com="${c.id}">Signaler</button>` : ''}</p></div></li>`;
   function peindre() {
     $('#nbCom').textContent = coms.length ? `(${coms.length})` : '';
-    $('#comL').innerHTML = coms.length ? coms.map((c) => `<li class="vl-com" data-com="${c.id}">${S.monogramme(c.auteur.nom, 32)}
-      <div><p class="vl-com-h"><strong>${S.esc(c.auteur.nom)}</strong> <small class="ash">${S.esc(E.depuis(c.le))}</small></p>
-      <p class="vl-com-t">${S.esc(c.texte).replace(/\n/g, '<br>')}</p>
-      <p class="vl-com-acts">${c.peut_retirer ? `<button class="ec-lien" type="button" data-retirer="${c.id}">Retirer</button>` : ''}${c.auteur.id !== `u${S.sess().id}` ? `<button class="ec-lien" type="button" data-signaler-com="${c.id}">Signaler</button>` : ''}</p></div></li>`).join('')
+    const tetes = coms.filter((c) => !c.parent || !coms.some((x) => x.id === c.parent));
+    $('#comL').innerHTML = coms.length ? tetes.map((c) => unCom(c) + coms.filter((x) => x.parent === c.id).map(unCom).join('')).join('')
       : `<li class="ash vl-com-vide">${e.statut === 'publie' ? 'Pas encore de commentaire. Le premier peut être le vôtre.' : ''}</li>`;
   }
   peindre();
@@ -60,7 +64,44 @@ window.SOZO_PRET.then(async () => {
     coms.push(rr.d.commentaire); $('#comTexte').value = ''; e.commentaires = coms.length; peindre();
     const nb = $('#ecrit .vl-geste[href*="commentaires"] span'); if (nb) nb.textContent = coms.length;
   });
-  $('#comL').addEventListener('click', (ev) => {
+  $('#comL').addEventListener('click', async (ev) => {
+    const rep = ev.target.closest('[data-repondre]'), mod = ev.target.closest('[data-modifier]');
+    if (rep) {
+      document.querySelectorAll('.vl-com-reponse').forEach((x) => x.remove());
+      const li = rep.closest('li');
+      li.insertAdjacentHTML('afterend', `<li class="vl-com-reponse"><form class="vl-com-form" novalidate><label class="sr" for="repTexte">Votre réponse</label>
+        <textarea id="repTexte" rows="2" maxlength="1000" placeholder="Répondre à ${S.esc(rep.dataset.a)}…"></textarea>
+        <div class="vl-com-a"><button class="ec-lien" type="button" data-annuler>Annuler</button><button class="btn btn--sm" type="submit">Répondre</button></div><p class="cx-err" role="alert"></p></form></li>`);
+      const fr = li.nextElementSibling.querySelector('form');
+      fr.querySelector('textarea').focus();
+      fr.querySelector('[data-annuler]').addEventListener('click', () => fr.closest('li').remove());
+      fr.addEventListener('submit', async (e2) => {
+        e2.preventDefault();
+        const t = fr.querySelector('textarea').value.trim(); if (!t) return;
+        const bt = fr.querySelector('[type=submit]'); bt.disabled = true;
+        const r = await API('POST', `/api/ecrits/${e.id}/commentaires`, { texte: t, parent: +rep.dataset.repondre });
+        bt.disabled = false;
+        if (!r.ok) { fr.querySelector('.cx-err').textContent = r.d.erreur || 'La réponse n’a pas été publiée.'; return; }
+        coms.push(r.d.commentaire); peindre();
+      });
+      return;
+    }
+    if (mod) {
+      const c = coms.find((x) => x.id === +mod.dataset.modifier), li = mod.closest('li'), zone = li.querySelector('.vl-com-t');
+      zone.outerHTML = `<form class="vl-com-edit"><textarea rows="2" maxlength="1000" aria-label="Corriger votre commentaire">${S.esc(c.texte)}</textarea>
+        <div class="vl-com-a"><button class="ec-lien" type="button" data-annuler>Annuler</button><button class="btn btn--sm" type="submit">Enregistrer</button></div></form>`;
+      const fe = li.querySelector('.vl-com-edit');
+      fe.querySelector('textarea').focus();
+      fe.querySelector('[data-annuler]').addEventListener('click', peindre);
+      fe.addEventListener('submit', async (e2) => {
+        e2.preventDefault();
+        const t = fe.querySelector('textarea').value.trim(); if (!t) return;
+        const r = await API('PATCH', `/api/commentaires/${c.id}`, { texte: t });
+        if (!r.ok) { S.toast(r.d.erreur || 'Le serveur a refusé.'); peindre(); return; }
+        c.texte = r.d.texte; c.modifie = true; peindre();
+      });
+      return;
+    }
     const ret = ev.target.closest('[data-retirer]'), sig = ev.target.closest('[data-signaler-com]');
     if (ret) {
       S.modal({ title: 'Retirer ce commentaire ?', body: '<p>Il disparaît de la page pour tout le monde.</p>', actions: [{ label: 'Annuler' }, { label: 'Retirer', primary: true, onClick: async (close) => {

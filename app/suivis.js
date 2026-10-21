@@ -41,7 +41,11 @@ window.SOZO_PRET.then(async () => {
         ${epingles === null ? `<p class="warn">${S.icon('x')}<span>Épingles indisponibles pour le moment.</span></p>`
           : epingles.length ? (() => { const par = {}; epingles.forEach((e) => (par[e.livre] = par[e.livre] || { titre: e.titre, l: [] }).l.push(e)); return Object.entries(par).map(([slug, g]) => `<div class="panel bi-pins">
               <h2>${S.esc(g.titre)}</h2>
-              ${g.l.map((e) => `<div class="bi-pin"><blockquote>« ${S.esc(e.extrait)} »</blockquote><div class="row-acts"><a class="btn btn--ghost btn--sm" href="lire.html?id=${encodeURIComponent(slug)}&p=${e.n}">Page ${e.n} ${S.icon('right')}</a><button class="btn btn--ghost btn--sm" type="button" data-desep="${e.id}">Retirer</button></div></div>`).join('')}
+              ${g.l.map((e) => `<div class="bi-pin" data-pin="${e.id}"><blockquote>« ${S.esc(e.extrait)} »</blockquote>
+                ${e.note ? `<p class="bi-note">${S.icon('edit')} ${S.esc(e.note)}</p>` : ''}
+                <div class="row-acts"><a class="btn btn--ghost btn--sm" href="lire.html?id=${encodeURIComponent(slug)}&p=${e.n}">Page ${e.n} ${S.icon('right')}</a>
+                <button class="btn btn--ghost btn--sm" type="button" data-note="${e.id}">${e.note ? 'Modifier la note' : 'Ajouter une note'}</button>
+                <button class="btn btn--ghost btn--sm" type="button" data-desep="${e.id}">Retirer</button></div></div>`).join('')}
             </div>`).join(''); })()
           : `<div class="empty"><strong>Aucune épingle pour l’instant</strong>Dans la liseuse, sélectionnez une phrase qui vous parle, puis touchez « Épingler ». Elle vous attendra ici, sur tous vos appareils.</div>`}
       </section>
@@ -51,10 +55,11 @@ window.SOZO_PRET.then(async () => {
             <div class="sec-head" style="margin-bottom:10px"><h2 style="margin:0">Notifications</h2>
               ${notifs && notifs.some((x) => !x.lu_le) ? `<button class="btn btn--ghost btn--sm" type="button" id="markAll">Tout marquer comme lu</button>` : ''}</div>
             ${notifs === null ? `<p class="warn">${S.icon('x')}<span>Notifications indisponibles pour le moment.</span></p>`
-              : notifs.length ? `<div class="notifs">${notifs.map((x) => `<a class="nt${x.lu_le ? '' : ' is-new'}" href="${S.esc(x.lien || '#')}" data-nid="${x.id}">
+              : notifs.length ? `<div class="notifs">${notifs.map((x) => `<div class="nt-l"><a class="nt${x.lu_le ? '' : ' is-new'}" href="${S.esc(x.lien || '#')}" data-nid="${x.id}">
                 <span class="nt-ic">${S.icon(ICONES[x.type] || 'bell')}</span>
                 <span><strong>${S.esc(x.titre)}</strong><p>${S.esc(x.corps)}</p></span>
-                <time datetime="${S.esc(x.created_at)}">${x.lu_le ? '' : '<span class="dot">Nouveau</span> '}${ago(x.created_at)}</time></a>`).join('')}</div>`
+                <time datetime="${S.esc(x.created_at)}">${x.lu_le ? '' : '<span class="dot">Nouveau</span> '}${ago(x.created_at)}</time>
+                </a><button class="icon-btn nt-x" type="button" data-suppr-notif="${x.id}" aria-label="Supprimer cette notification" title="Supprimer">${S.icon('x')}</button></div>`).join('')}</div>`
             : `<div class="empty"><strong>Rien de nouveau</strong>Parutions des livres suivis, paiements, ventes et alertes de sécurité apparaîtront ici.</div>`}
             <p class="note">${S.icon('bell')} Recevez-les aussi sur votre téléphone ou par e-mail : <a href="compte.html#notifications">régler mes notifications</a>.</p>
           </div>
@@ -96,6 +101,26 @@ window.SOZO_PRET.then(async () => {
     });
     const fg = $('#filGardes');
     if (fg) E.brancher(fg, (id) => gardes.find((e) => e.id === id));
+    // 22/10/2026 : une note personnelle sur une épingle ; supprimer une notification
+    document.querySelectorAll('[data-note]').forEach((x) => x.addEventListener('click', () => {
+      const e = epingles.find((y) => y.id === +x.dataset.note);
+      const m = S.modal({ title: 'Ma note', body: `<blockquote class="bi-pin-cit">« ${S.esc(e.extrait)} »</blockquote>
+        <label class="cx-field">Note <small>visible par vous seul</small><textarea id="pinNote" rows="4" maxlength="500">${S.esc(e.note || '')}</textarea></label><p class="cx-err" id="pinErr" role="alert"></p>`,
+        actions: [{ label: 'Annuler' }, { label: 'Enregistrer', primary: true, onClick: async (close) => {
+          const note = m.el.querySelector('#pinNote').value.trim();
+          const r = await window.SOZO_API('PATCH', `/api/epingles/${e.id}`, { note: note || null });
+          if (!r.ok) { m.el.querySelector('#pinErr').textContent = r.d.erreur || 'Le serveur a refusé.'; return; }
+          e.note = r.d.note; close(); render();
+        } }] });
+      setTimeout(() => m.el.querySelector('#pinNote').focus(), 50);
+    }));
+    document.querySelectorAll('[data-suppr-notif]').forEach((x) => x.addEventListener('click', async (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      x.disabled = true;
+      const r = await window.SOZO_API('DELETE', `/api/notifications/${x.dataset.supprNotif}`);
+      if (!r.ok) { x.disabled = false; S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+      notifs = notifs.filter((n) => n.id !== +x.dataset.supprNotif); render(); S.majCloche();
+    }));
     document.querySelectorAll('[data-desep]').forEach((x) => x.addEventListener('click', async () => {
       x.disabled = true;
       const r = await window.SOZO_API('DELETE', `/api/epingles/${+x.dataset.desep}`);

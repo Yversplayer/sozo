@@ -96,7 +96,8 @@ window.SOZO_PRET.then(() => {
           <div class="at-acts">
             ${lecteur ? `<button class="btn btn--accent" type="button" id="devenir">${S.icon('feather')} Ouvrir mon atelier d’auteur</button>`
               : `<button class="btn btn--accent" type="button" id="nouveau">${S.icon('plus')} Nouveau livre</button>
-                 <button class="btn at-btn-ghost" type="button" id="perso">${S.icon('sliders')} Personnaliser l’atelier</button>`}
+                 <button class="btn at-btn-ghost" type="button" id="perso">${S.icon('sliders')} Personnaliser l’atelier</button>
+                 ${at.livres_jetes ? `<button class="btn at-btn-ghost" type="button" id="corbLivres">${S.icon('corbeille')} Corbeille des livres (${at.livres_jetes})</button>` : ''}`}
           </div>
         </div>
         ${lecteur ? `<div class="at-stage" aria-hidden="true"><div class="at-shelf"><div class="at-books">${['couv-pages', 'couv-plafond', 'couv-spirale'].map((c, i) => `<span class="at-book is-ghost" style="--i:${i}">${couv({ couverture: c, style: 'abd'[i], titre: ['Votre premier livre', 'Un recueil', 'Un roman'][i], categorie: '' }, { d3: false })}</span>`).join('')}</div><div class="at-plank"><i></i></div></div></div>`
@@ -405,6 +406,15 @@ window.SOZO_PRET.then(() => {
           <p class="cx-err" id="errChap" role="alert"></p>
           <button class="btn" type="submit">Enregistrer les chapitres</button>
         </form>
+        <section class="panel at-visible" aria-labelledby="hVis">
+          <h3 class="at-h3" id="hVis">Le livre dans le catalogue</h3>
+          ${livre.cache ? `<p class="warn">${S.icon('eyeOff')}<span>Retiré du catalogue par vous : les nouveaux lecteurs ne le voient plus ; ceux qui ont acheté des pages les gardent.</span></p>
+            <button class="btn btn--sm" type="button" data-visible="1">${S.icon('eye')} Remettre dans le catalogue</button>`
+            : `<p class="ash">Vous pouvez le retirer du catalogue à tout moment. Ce que des lecteurs ont acheté reste à eux.</p>
+            <button class="btn btn--ghost btn--sm" type="button" data-visible="0">${S.icon('eyeOff')} Retirer du catalogue</button>`}
+          ${livre.pages.some((x) => x.statut !== 'draft') ? '' : `<hr class="at-sep"><p class="ash">Ce livre n’a encore rien publié : il peut aller à la corbeille, et se récupérer ensuite.</p>
+            <button class="btn btn--ghost btn--sm" type="button" data-jeter-livre>${S.icon('corbeille')} Mettre ce livre à la corbeille</button>`}
+        </section>
       </div>
     </div>`;
   }
@@ -504,11 +514,21 @@ window.SOZO_PRET.then(() => {
       if (!r.ok) { zone.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'La corbeille n’a pas pu s’ouvrir.')}</span></p>`; return; }
       zone.innerHTML = r.d.pages.length ? `<ul class="at-corb">${r.d.pages.map((p) => `<li><div><strong>Ancienne page ${p.n_avant}</strong> <small class="ash">jetée ${S.esc(S.dateLong(p.jetee_le))} · ${p.mots} mot${p.mots > 1 ? 's' : ''} · ${p.version} version${p.version > 1 ? 's' : ''}</small>
           <p>${p.extrait ? S.esc(p.extrait.slice(0, 160)) : '<span class="ash">Page vide</span>'}</p></div>
-          <button class="btn btn--ghost btn--sm" type="button" data-rendre="${p.id}">${S.icon('restaurer')} Récupérer</button></li>`).join('')}</ul>
+          <span class="row-acts"><button class="btn btn--ghost btn--sm" type="button" data-rendre="${p.id}">${S.icon('restaurer')} Récupérer</button>
+          <button class="btn btn--ghost btn--sm" type="button" data-effacer="${p.id}">Supprimer définitivement</button></span></li>`).join('')}</ul>
           <p class="note">${S.icon('shield')} Une page récupérée revient en brouillon, à la fin du livre ; remettez-la à sa place avec les flèches du tableau.</p>`
         : `<div class="empty"><strong>La corbeille est vide</strong>Dans l’éditeur, l’icône corbeille d’un brouillon le range ici. Rien n’est jamais effacé.</div>`;
     };
     zone.addEventListener('click', async (e) => {
+      const ef = e.target.closest('[data-effacer]');
+      if (ef) {
+        if (ef.dataset.sur !== '1') { ef.dataset.sur = '1'; ef.textContent = 'Confirmer : effacer pour toujours'; return; }   // deux temps : rien ne part sur un clic distrait
+        ef.disabled = true;
+        const r = await API('DELETE', `/api/studio/livres/${enc(livre.id)}/corbeille/${ef.dataset.effacer}`);
+        if (!r.ok) { ef.disabled = false; S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+        S.toast('Page effacée définitivement.'); peindre();
+        return;
+      }
       const b = e.target.closest('[data-rendre]'); if (!b) return;
       b.disabled = true;
       const r = await API('POST', `/api/studio/livres/${enc(livre.id)}/corbeille/${b.dataset.rendre}/restaurer`);
@@ -519,6 +539,38 @@ window.SOZO_PRET.then(() => {
     peindre();
   }
   document.addEventListener('click', (e) => { if (e.target.closest('[data-corbeille]') && livre) corbeille(); });
+
+  /* La corbeille des LIVRES (22/10/2026) : récupérer, ou effacer pour de bon
+     un livre qui n'a jamais paru et que personne n'a acheté. */
+  function corbeilleLivres() {
+    const m = S.modal({ title: 'Corbeille des livres', body: '<div id="corbL" aria-live="polite"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>', actions: [{ label: 'Fermer', primary: true, onClick: (close) => { close(); relireLivre(); } }] });
+    const zone = m.el.querySelector('#corbL');
+    const peindre = async () => {
+      const r = await API('GET', '/api/studio/corbeille');
+      if (!r.ok) { zone.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'La corbeille n’a pas pu s’ouvrir.')}</span></p>`; return; }
+      zone.innerHTML = r.d.livres.length ? `<ul class="at-corb">${r.d.livres.map((b) => `<li><div><strong>${S.esc(b.titre)}</strong> <small class="ash">${S.esc(b.categorie)} · ${b.pages} page${b.pages > 1 ? 's' : ''} · jeté ${S.esc(S.dateLong(b.jete_le))}</small></div>
+          <span class="row-acts"><button class="btn btn--ghost btn--sm" type="button" data-rendre-livre="${S.esc(b.id)}">${S.icon('restaurer')} Récupérer</button>
+          <button class="btn btn--ghost btn--sm" type="button" data-effacer-livre="${S.esc(b.id)}">Supprimer définitivement</button></span></li>`).join('')}</ul>`
+        : '<div class="empty"><strong>La corbeille est vide</strong></div>';
+    };
+    zone.addEventListener('click', async (e) => {
+      const rl = e.target.closest('[data-rendre-livre]'), el = e.target.closest('[data-effacer-livre]');
+      if (rl) {
+        rl.disabled = true;
+        const r = await API('POST', `/api/studio/corbeille/${enc(rl.dataset.rendreLivre)}/restaurer`);
+        if (!r.ok) { rl.disabled = false; S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+        S.toast('Livre récupéré.'); peindre();
+      }
+      if (el) {
+        if (el.dataset.sur !== '1') { el.dataset.sur = '1'; el.textContent = 'Confirmer : effacer pour toujours'; return; }
+        el.disabled = true;
+        const r = await API('DELETE', `/api/studio/corbeille/${enc(el.dataset.effacerLivre)}`);
+        if (!r.ok) { el.disabled = false; S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+        S.toast('Livre effacé définitivement.'); peindre();
+      }
+    });
+    peindre();
+  }
 
   /* ═══════════ FENÊTRES : personnaliser, nouveau livre ═══════════ */
   function personnaliser() {
@@ -851,6 +903,7 @@ window.SOZO_PRET.then(() => {
     $$('#nouveau, [data-nouveau]').forEach((b) => b.addEventListener('click', nouveauLivre));
     $$('[data-act]').forEach((b) => b.addEventListener('click', () => action(b.dataset.act)));
     const perso = $('#perso'); if (perso) perso.addEventListener('click', personnaliser);
+    const cl = $('#corbLivres'); if (cl) cl.addEventListener('click', corbeilleLivres);
     $$('[data-prolonger]').forEach((b) => b.addEventListener('click', () => S.buy.plume(at.plume.prix, at.plume)));
     $$('[data-livre]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); filtre = 'all'; ouvrirLivre(a.dataset.livre); }));
     if (!livre) return;
@@ -916,6 +969,22 @@ window.SOZO_PRET.then(() => {
       drop.addEventListener('drop', (e) => envoyer(e.dataTransfer.files[0]));
     }
     if (onglet === 'reglages') {
+      $$('[data-visible]').forEach((b) => b.addEventListener('click', async () => {
+        b.disabled = true;
+        const r = await API('POST', `/api/studio/livres/${enc(livre.id)}/catalogue`, { visible: b.dataset.visible === '1' });
+        if (!r.ok) { b.disabled = false; erreur(r); return; }
+        S.toast(r.d.cache ? 'Livre retiré du catalogue. Ses lecteurs gardent ce qu’ils ont acheté.' : 'Le livre est de nouveau dans le catalogue.');
+        await relireLivre();
+      }));
+      const jl = $('[data-jeter-livre]');
+      if (jl) jl.addEventListener('click', () => S.modal({ title: `Mettre « ${S.esc(livre.titre)} » à la corbeille ?`, body: '<p>Le livre quitte vos livres, avec toutes ses pages. Il reste dans la corbeille des livres : vous pourrez le récupérer.</p>',
+        actions: [{ label: 'Annuler' }, { label: 'Mettre à la corbeille', primary: true, onClick: async (close) => {
+          const r = await API('DELETE', `/api/studio/livres/${enc(livre.id)}`);
+          close();
+          if (!r.ok) { erreur(r); return; }
+          S.toast('Livre mis à la corbeille.');
+          location.href = 'studio.html';
+        } }] }));
       const fl = $('#formLivre');
       fl.addEventListener('change', () => { $('[data-prix]', fl).hidden = fl.elements.acces.value === 'free'; });
       fl.addEventListener('submit', async (e) => {

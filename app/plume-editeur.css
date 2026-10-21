@@ -113,3 +113,8 @@ body.ecriture { --pl-haut: 57px; }
 }
 .pl-page { scroll-margin-top: calc(var(--pl-haut, 56px) + 70px); }
 @media (max-width: 760px) { .pl-barre:has(.pl-chercher) { flex-wrap: wrap; } }
+.pl-page-a .pl-menu { position: relative; }
+.pl-page-a .pl-pop { top: calc(100% + 4px); }
+.ed-hist li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; padding: 4px 0; }
+.ed-hist .row-acts { margin-left: auto; display: inline-flex; gap: 10px; }
+.ec-version { max-height: 55vh; overflow: auto; padding: 4px 2px; font-family: var(--serif); font-size: 18px; line-height: 1.6; }

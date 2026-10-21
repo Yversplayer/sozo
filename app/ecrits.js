@@ -52,13 +52,24 @@ window.SOZO_PRET.then(async () => {
       zone.innerHTML = l.length ? `<ul class="vl-notes-l">${l.map((e) => `<li><a class="vl-note" href="ecrits.html?id=${e.id}">
           <span class="vl-note-n">${S.esc(E.NATURES[e.nature])}</span>
           <strong>${S.esc(premiere(e).slice(0, 90)) || '(sans texte)'}</strong>
-          <small>${e.retire ? 'Retiré par la modération · ' : ''}${S.esc(E.depuis(e.maj))}${e.statut === 'publie' && !e.corbeille_le ? ` · ${e.jaime} j’aime · ${e.commentaires} commentaire${e.commentaires > 1 ? 's' : ''}` : ''}</small>
-        </a>${vue === 'corbeille' ? `<button class="btn btn--ghost btn--sm" type="button" data-restaurer="${e.id}">${S.icon('restaurer')} Récupérer</button>` : ''}</li>`).join('')}</ul>`
+          <small>${e.retire ? 'Retiré par la modération · ' : ''}${e.programme ? `Programmé pour le ${S.esc(S.dateLong(e.publie_le))} · ` : ''}${S.esc(E.depuis(e.maj))}${e.statut === 'publie' && !e.corbeille_le ? ` · ${e.jaime} j’aime · ${e.commentaires} commentaire${e.commentaires > 1 ? 's' : ''}` : ''}</small>
+        </a>${vue === 'corbeille' ? `<span class="row-acts"><button class="btn btn--ghost btn--sm" type="button" data-restaurer="${e.id}">${S.icon('restaurer')} Récupérer</button><button class="btn btn--ghost btn--sm" type="button" data-effacer="${e.id}">Supprimer définitivement</button></span>` : ''}</li>`).join('')}</ul>`
         : `<div class="empty"><strong>${{ brouillon: 'Aucun brouillon', publie: 'Rien de publié pour l’instant', corbeille: 'La corbeille est vide' }[vue]}</strong>${vue === 'corbeille' ? 'Un écrit jeté arrive ici ; il se récupère quand vous voulez.' : 'Choisissez ci-dessus ce que vous voulez écrire.'}</div>`;
     };
     peindre();
     $$('[data-vue]').forEach((b) => b.addEventListener('click', () => { vue = b.dataset.vue; peindre(); }));
     zone.addEventListener('click', async (e) => {
+      const ef = e.target.closest('[data-effacer]');
+      if (ef) {
+        if (ef.dataset.sur !== '1') { ef.dataset.sur = '1'; ef.textContent = 'Confirmer : effacer pour toujours'; return; }   // deux temps
+        ef.disabled = true;
+        const rr = await API('DELETE', `/api/ecrits/${ef.dataset.effacer}/definitif`);
+        if (!rr.ok) { ef.disabled = false; S.toast(rr.d.erreur || 'Le serveur a refusé.'); return; }
+        const i = tous.findIndex((x) => x.id === +ef.dataset.effacer); tous.splice(i, 1);
+        ['brouillon', 'publie', 'corbeille'].forEach((k) => { const n = tous.filter((x) => groupe(x) === k).length; $(`[data-n="${k}"]`).textContent = n || ''; });
+        peindre(); S.toast('Effacé pour de bon.');
+        return;
+      }
       const b = e.target.closest('[data-restaurer]'); if (!b) return;
       b.disabled = true;
       const rr = await API('POST', `/api/ecrits/${b.dataset.restaurer}/restaurer`);
@@ -99,7 +110,7 @@ window.SOZO_PRET.then(async () => {
       <div class="ec-outils">
         ${ecrit && ecrit.statut === 'publie' && !lectureSeule ? `<a class="btn btn--ghost btn--sm" href="ecrit.html?id=${ecrit.id}">${S.icon('eye')} <span class="ec-l">Voir</span></a>` : ''}
         ${ecrit && !lectureSeule ? `<button class="icon-btn" type="button" id="cJeter" aria-label="Mettre à la corbeille" title="Mettre à la corbeille">${S.icon('corbeille')}</button>` : ''}
-        ${lectureSeule ? '' : `<button class="btn btn--sm" type="button" id="cPublier"></button>`}
+        ${lectureSeule ? '' : `<button class="btn btn--ghost btn--sm" type="button" id="cProgrammer">${S.icon('clock')} <span class="ec-l">Programmer</span></button><button class="btn btn--sm" type="button" id="cPublier"></button>`}
       </div>
     </header>
     <div class="ec vl-compo">
@@ -139,8 +150,11 @@ window.SOZO_PRET.then(async () => {
     function peindreEtat() {
       const pub = ecrit && ecrit.statut === 'publie';
       $('#cTitreBarre').textContent = `${E.NATURES[etat.nature]}${pub ? ' publié' + (etat.nature === 'pensee' || etat.nature === 'priere' ? 'e' : '') : ''}`;
+      const pg = $('#cProgrammer');
+      if (pg) pg.hidden = !!(pub && !(ecrit && ecrit.programme));
       const b = $('#cPublier');
-      if (b) { b.textContent = pub ? 'Dépublier' : 'Publier'; b.setAttribute('aria-label', pub ? 'Retirer de la publication (il redevient un brouillon)' : 'Publier'); b.className = pub ? 'btn btn--ghost btn--sm' : 'btn btn--accent btn--sm'; }
+      if (b && ecrit && ecrit.programme) { b.textContent = 'Publier maintenant'; b.setAttribute('aria-label', 'Publier maintenant, sans attendre la date prévue'); b.className = 'btn btn--accent btn--sm'; }
+      else if (b) { b.textContent = pub ? 'Dépublier' : 'Publier'; b.setAttribute('aria-label', pub ? 'Retirer de la publication (il redevient un brouillon)' : 'Publier'); b.className = pub ? 'btn btn--ghost btn--sm' : 'btn btn--accent btn--sm'; }
       $$('[data-nature]').forEach((x) => { x.setAttribute('aria-checked', String(x.dataset.nature === etat.nature)); x.setAttribute('aria-pressed', String(x.dataset.nature === etat.nature)); });
       $$('[data-fond]').forEach((x) => x.setAttribute('aria-checked', String((etat.apparence.fond || 'ivoire') === x.dataset.fond)));
     }
@@ -198,7 +212,7 @@ window.SOZO_PRET.then(async () => {
       pub.disabled = true;
       const ok = await enregistrer();
       if (!ok || !ecrit) { pub.disabled = false; if (!ed.texte(f).trim()) S.toast('Écrivez d’abord quelque chose.'); return; }
-      const vers = ecrit.statut === 'publie' ? 'depublier' : 'publier';
+      const vers = ecrit.programme ? 'publier' : ecrit.statut === 'publie' ? 'depublier' : 'publier';   // un écrit programmé se publie tout de suite
       const r = await API('POST', `/api/ecrits/${ecrit.id}/${vers}`);
       pub.disabled = false;
       if (!r.ok) { S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
@@ -208,6 +222,25 @@ window.SOZO_PRET.then(async () => {
         S.modal({ title: 'C’est publié', body: `<p>Votre ${E.NATURES[ecrit.nature].toLowerCase()} est maintenant lisible par tous les membres de Sōzō, qui peuvent l’aimer, le garder et le commenter.</p>`,
           actions: [{ label: 'Continuer d’écrire' }, { label: 'Partager', onClick: (close) => { close(); E.partager(ecrit); } }, { label: 'Le voir', primary: true, onClick: () => { location.href = `ecrit.html?id=${ecrit.id}`; } }] });
       }
+    });
+    /* Programmer la parution (22/10/2026) : l'heure choisie est celle de
+       l'appareil ; elle part au serveur en temps universel. */
+    const prog = $('#cProgrammer');
+    if (prog) prog.addEventListener('click', async () => {
+      const ok = await enregistrer();
+      if (!ok || !ecrit) { if (!ed.texte(f).trim()) S.toast('Écrivez d’abord quelque chose.'); return; }
+      const demain = new Date(Date.now() + 864e5); demain.setMinutes(0, 0, 0);
+      const val = new Date(demain - demain.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+      const m = S.modal({ title: 'Programmer la parution', body: `<p>Votre ${E.NATURES[ecrit.nature].toLowerCase()} restera invisible jusqu’à la date choisie, puis paraîtra tout seul.</p>
+        <label class="cx-field">Date et heure<input type="datetime-local" id="cDate" value="${val}"></label><p class="cx-err" id="cDateErr" role="alert"></p>`,
+        actions: [{ label: 'Annuler' }, { label: 'Programmer', primary: true, onClick: async (close) => {
+          const v = m.el.querySelector('#cDate').value, d = v ? new Date(v) : null;
+          if (!d || isNaN(d) || d <= new Date()) { m.el.querySelector('#cDateErr').textContent = 'Choisissez une date à venir.'; return; }
+          const r = await API('POST', `/api/ecrits/${ecrit.id}/publier`, { date: d.toISOString().slice(0, 19) + 'Z' });
+          if (!r.ok) { m.el.querySelector('#cDateErr').textContent = r.d.erreur || 'Le serveur a refusé.'; return; }
+          close(); ecrit = r.d.ecrit; peindreEtat();
+          marque(`programmé pour le ${S.dateLong(ecrit.publie_le)}`);
+        } }] });
     });
     const jeter = $('#cJeter');
     if (jeter) jeter.addEventListener('click', () => S.modal({ title: 'Mettre à la corbeille ?', body: '<p>L’écrit quitte la publication et vos brouillons. Il reste dans la corbeille : vous pourrez le récupérer.</p>',
@@ -229,7 +262,7 @@ window.SOZO_PRET.then(async () => {
     addEventListener('beforeunload', (e) => { if (!lectureSeule && courant() !== enregistre && ed.texte(f).trim()) { e.preventDefault(); e.returnValue = ''; } });
 
     peindreEtat(); compter(); apercu();
-    marque(ecrit ? (ecrit.statut === 'publie' ? 'publié' : 'brouillon visible par vous seul') : 'nouveau · rien n’est publié sans vous');
+    marque(ecrit ? (ecrit.programme ? `programmé pour le ${S.dateLong(ecrit.publie_le)}` : ecrit.statut === 'publie' ? 'publié' : 'brouillon visible par vous seul') : 'nouveau · rien n’est publié sans vous');
     if (!lectureSeule) setTimeout(() => f.el.focus(), 60);
   }
 }).catch(window.SOZO_ERREUR);

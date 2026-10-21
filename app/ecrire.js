@@ -113,6 +113,13 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
       <span class="pl-page-a">
         <a class="icon-btn" href="lire.html?id=${enc(id)}&p=${p.n}" target="_blank" rel="noopener" data-apercu="${p.n}" aria-label="Aperçu lecteur de la page ${p.n}" title="Aperçu lecteur">${S.icon('eye')}</a>
         ${jetable(p.n) ? `<button class="icon-btn" type="button" data-jeter="${p.n}" aria-label="Mettre la page ${p.n} à la corbeille" title="Mettre à la corbeille">${S.icon('corbeille')}</button>` : ''}
+        <span class="pl-menu"><button class="icon-btn" type="button" data-menu-page="${p.n}" aria-haspopup="true" aria-expanded="false" aria-label="Plus d’actions sur la page ${p.n}" title="Plus d’actions">${S.icon('dots')}</button>
+          <span class="pl-pop pl-pop--d" data-pop-page="${p.n}" hidden>
+            ${p.n >= derniereSortie() ? `<button type="button" data-pg="inserer">${S.icon('plus')} Insérer une page après <small>un brouillon vide, juste après celle-ci</small></button>` : ''}
+            <button type="button" data-pg="dupliquer">${S.icon('file')} Dupliquer la page <small>${p.n >= derniereSortie() ? 'la copie vient juste après' : 'la copie va à la fin du livre'}</small></button>
+            ${jetable(p.n) ? `<button type="button" data-pg="couper">${S.icon('separateur')} Couper avant ce paragraphe <small>placez d’abord le curseur dans le paragraphe</small></button>` : ''}
+            ${jetable(p.n) && jetable(p.n + 1) ? `<button type="button" data-pg="fusionner">${S.icon('down')} Fusionner avec la page suivante <small>la suivante va à la corbeille</small></button>` : ''}
+          </span></span>
       </span>`;
   }
   function creerFeuille(p, avant) {
@@ -268,8 +275,37 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
     const r = await window.SOZO_API('GET', `${URL_LIVRE}/pages/${f.n}`);
     if (!r.ok || corrigee !== f || r.d.versions.length < 2) return;
     $('#histT').textContent = `Historique de la page ${f.n} : ${r.d.versions.length} versions`;
-    $('#histL').innerHTML = r.d.versions.map((v) => `<li><strong>Version ${v.version}</strong> <span class="ash">${S.esc(S.dateLong(v.created_at))}${v.remplacee_le ? '' : ' · courante'}</span></li>`).join('');
+    $('#histL').innerHTML = r.d.versions.map((v) => `<li><strong>Version ${v.version}</strong> <span class="ash">${S.esc(S.dateLong(v.created_at))}${v.remplacee_le ? '' : ' · courante'}</span>
+      ${v.remplacee_le ? `<span class="row-acts"><button class="ec-lien" type="button" data-voir-v="${v.version}">Voir</button><button class="ec-lien" type="button" data-restaurer-v="${v.version}">Restaurer</button></span>` : ''}</li>`).join('');
     $('#hist').hidden = false;
+  }
+  /* Revenir à une ancienne version (22/10/2026) : le serveur crée une NOUVELLE
+     version avec l'ancien texte — rien n'est écrasé, pas même ce qu'on quitte. */
+  $('#histL').addEventListener('click', async (e) => {
+    const vv = e.target.closest('[data-voir-v]'), rv = e.target.closest('[data-restaurer-v]');
+    const f = corrigee; if (!f || (!vv && !rv)) return;
+    const ver = +(vv || rv).dataset[vv ? 'voirV' : 'restaurerV'];
+    if (vv) {
+      const r = await window.SOZO_API('GET', `${URL_LIVRE}/pages/${f.n}/versions/${ver}`);
+      if (!r.ok) { S.toast(r.d.erreur || 'Version introuvable.'); return; }
+      S.modal({ title: `Page ${f.n} · version ${ver}`, body: `<p class="ash">${S.esc(S.dateLong(r.d.version.created_at))}</p><div class="rd-text ec-version">${S.mise.paragraphes(r.d.version.contenu, {}, (t) => S.esc(t) || '&nbsp;')}</div>`,
+        actions: [{ label: 'Fermer' }, { label: 'Restaurer cette version', primary: true, onClick: (close) => { close(); restaurerVersion(f, ver); } }] });
+      return;
+    }
+    restaurerVersion(f, ver);
+  });
+  async function restaurerVersion(f, ver) {
+    if (sale(f) && !confirm(`La page ${f.n} a des modifications non enregistrées : elles seront remplacées par la version ${ver}. Continuer ?`)) return;
+    const r = await window.SOZO_API('POST', `${URL_LIVRE}/pages/${f.n}/versions/${ver}/restaurer`);
+    if (!r.ok) { S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+    const pg = await window.SOZO_API('GET', `${URL_LIVRE}/pages/${f.n}`);
+    if (pg.ok) {
+      ed.remplacerTout(f, pg.d.contenu); f.enregistre = ed.texte(f); f.version = pg.d.version;
+      try { localStorage.removeItem(clefSecours(f.n)); } catch (er) {}
+      marque(f, `version ${ver} restaurée · version ${f.version}`);
+    }
+    S.toast(r.d.inchange ? 'C’est déjà le texte actuel.' : `Version ${ver} restaurée (nouvelle version ${r.d.version}). Rien n’est effacé.`);
+    histoire(f); verifier();
   }
   function list() {
     if (!corrigee) return;
@@ -447,8 +483,55 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
     // l'aperçu montre ce que le SERVEUR a : on enregistre d'abord
     if (ap && sale(f)) { e.preventDefault(); await enregistrer(f); if (!sale(f)) open(ap.href, '_blank', 'noopener'); return; }
     if (e.target.closest('[data-plume]')) { const r = await window.SOZO_API('GET', '/api/studio'); if (r.ok) S.buy.plume(r.d.plume.prix); else S.toast(r.d.erreur || 'Plume est indisponible pour le moment.'); return; }
-    if (e.target.closest('[data-jeter]')) jeter(f);
+    if (e.target.closest('[data-jeter]')) { jeter(f); return; }
+    const mb = e.target.closest('[data-menu-page]');
+    if (mb) {
+      const pop = bloc.querySelector('[data-pop-page]'), ouvrir = pop.hidden;
+      document.querySelectorAll('[data-pop-page]').forEach((x) => { x.hidden = true; });
+      document.querySelectorAll('[data-menu-page]').forEach((x) => x.setAttribute('aria-expanded', 'false'));
+      pop.hidden = !ouvrir; mb.setAttribute('aria-expanded', String(ouvrir));
+      return;
+    }
+    const act = e.target.closest('[data-pg]');
+    if (act) { bloc.querySelector('[data-pop-page]').hidden = true; actionPage(f, act.dataset.pg); }
   });
+  // le curseur garde sa place quand on ouvre le menu d'une page
+  $('#doc').addEventListener('mousedown', (e) => { if (e.target.closest('[data-pg], [data-menu-page]')) e.preventDefault(); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.pl-page-a .pl-menu')) document.querySelectorAll('[data-pop-page]').forEach((x) => { x.hidden = true; }); });
+
+  /* Insérer, dupliquer, couper, fusionner (22/10/2026). Tout part du texte
+     ENREGISTRÉ : on enregistre d'abord, et le serveur refuse ce qui ferait
+     bouger une page sortie. */
+  function positionCoupe(f) {
+    const sl = getSelection();
+    if (!sl.rangeCount || !f.el.contains(sl.anchorNode)) return null;
+    let blocC = sl.anchorNode;
+    while (blocC && blocC.parentNode !== f.el) blocC = blocC.parentNode;
+    const blocs = [...f.el.children], i = blocs.indexOf(blocC);
+    if (i <= 0) return 0;
+    const copie = f.el.cloneNode(true);
+    [...copie.children].slice(i).forEach((x) => x.remove());
+    return window.SOZO_PLUME.versTexte(copie).length + 1;
+  }
+  async function actionPage(f, k) {
+    let pos = null;
+    if (k === 'couper') {
+      pos = positionCoupe(f);
+      if (!pos) { S.toast('Placez le curseur dans le paragraphe qui doit commencer la nouvelle page (pas le premier).'); return; }
+    }
+    await toutEnregistrer();
+    if (ed.feuilles.some(sale)) { S.toast('Des pages ne sont pas enregistrées : rien n’a changé.'); return; }
+    const base = `${URL_LIVRE}/pages/${f.n}`;
+    const r = k === 'inserer' ? await window.SOZO_API('POST', `${URL_LIVRE}/pages`, { contenu: '', apres: f.n })
+      : k === 'dupliquer' ? await window.SOZO_API('POST', `${base}/dupliquer`)
+      : k === 'couper' ? await window.SOZO_API('POST', `${base}/couper`, { position: pos })
+      : await window.SOZO_API('POST', `${base}/fusionner`);
+    if (!r.ok) { S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+    const cible = r.d.n || f.n;
+    await reconstruire(cible);
+    aller(cible, true);
+    S.toast({ inserer: `Page ${cible} insérée.`, dupliquer: `Copie créée : page ${cible}.`, couper: `La page est coupée : la suite est maintenant la page ${cible}.`, fusionner: 'Pages fusionnées. L’ancienne page suivante est dans la corbeille.' }[k]);
+  }
   async function relireLivre() {
     const r = await window.SOZO_API('GET', URL_LIVRE);
     if (r.ok) livre = r.d.livre;

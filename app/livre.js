@@ -82,6 +82,7 @@ window.SOZO_PRET.then(() => {
       }).join('')}</div>` : ''}
       <h2>L’auteur</h2>
       <a class="author-card lv-carte" href="auteur.html?id=${encodeURIComponent(a.id)}">${S.monogramme(a.name, 48)}<div><strong>${S.esc(a.name)}</strong>${a.city ? `<span class="ash"> · ${S.esc(a.city)}</span>` : ''}<p>${S.esc(a.bio)}</p></div></a>
+      ${b.owner ? '' : `<button class="ec-lien vl-signaler" type="button" id="signalerLivre">${S.icon('shield')} Signaler ce livre</button>`}
     </section>
 
     <section class="lv-panneau" id="lp-sommaire" role="tabpanel" aria-labelledby="lo-sommaire" hidden>
@@ -142,5 +143,19 @@ window.SOZO_PRET.then(() => {
   const ba = $('#buyAll');
   if (ba) ba.addEventListener('click', () => S.buy.recap(b, allOpt));
 
+  /* 22/10/2026 : signaler un livre (le serveur était prêt, l'écran n'avait pas de bouton) */
+  const sigL = document.getElementById('signalerLivre');
+  if (sigL) sigL.addEventListener('click', () => {
+    const m = S.modal({ title: 'Signaler ce livre', body: `<p>Dites en quelques mots ce qui ne va pas. L’équipe de modération de Sōzō lit chaque signalement.</p>
+      <label class="cx-field">Motif<textarea id="sigMotif" rows="3" maxlength="1000"></textarea></label><p class="cx-err" id="sigErr" role="alert"></p>`,
+      actions: [{ label: 'Annuler' }, { label: 'Envoyer le signalement', primary: true, onClick: async (close) => {
+        const motif = m.el.querySelector('#sigMotif').value.trim();
+        if (motif.length < 5) { m.el.querySelector('#sigErr').textContent = 'Quelques mots, au moins cinq lettres.'; return; }
+        const r = await window.SOZO_API('POST', '/api/signalements', { livre: b.id, motif });
+        if (!r.ok) { m.el.querySelector('#sigErr').textContent = r.d.erreur || 'Le signalement n’est pas parti.'; return; }
+        close(); S.toast('Merci : le signalement a été transmis à la modération.');
+      } }] });
+    setTimeout(() => m.el.querySelector('#sigMotif').focus(), 50);
+  });
   S.reveals(); S.footer();
 }).catch(window.SOZO_ERREUR);

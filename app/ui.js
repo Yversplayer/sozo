@@ -614,12 +614,12 @@ window.SOZO = (() => {
     const f = document.createElement('footer');
     f.className = 'foot';
     f.innerHTML = `<div class="foot-in">
-      <div class="foot-brand">${window.SOZO_LOGO || ''}<p>Publier et lire, à son rythme. Gratuit, payant ou mixte : l'auteur décide, le lecteur sait.</p><p class="foot-tag">Heal your heart · Grown your faith · Glow your spirit</p></div>
-      <div><p class="mono ash">LIRE</p><a href="decouvrir.html">Accueil</a><a href="explorer.html">Explorer le catalogue</a><a href="suivis.html">Ma bibliothèque</a></div>
-      <div><p class="mono ash">ÉCRIRE</p><a href="studio.html">Mon atelier</a><a href="studio.html?action=ecrire">Écrire une page</a><a href="studio.html?action=importer">Importer un manuscrit</a><a href="studio.html#revenus">Revenus</a></div>
-      <div><p class="mono ash">Sōzō</p><a href="compte.html">Mon compte</a><a href="bible.html">La Bible intégrée</a><a href="${root}index.html">La plateforme</a><a href="${root}index.html#pages">Gratuit, payant, programmé</a></div>
+      <div class="foot-brand">${window.SOZO_LOGO || ''}<p>Écrire et lire, calmement : une pensée, une prière, un poème, un livre. Gratuit, payant ou mixte : l'auteur décide, le lecteur sait.</p><p class="foot-tag">Heal your heart · Grown your faith · Glow your spirit</p></div>
+      <div><p class="mono ash">ÉCRIRE</p><a href="ecrits.html?nouveau=pensee">Une pensée, un poème</a><a href="ecrits.html">Mes écrits</a><a href="studio.html">Mes livres</a><a href="studio.html?action=importer">Importer un manuscrit</a></div>
+      <div><p class="mono ash">LIRE</p><a href="decouvrir.html">Accueil</a><a href="explorer.html">Explorer</a><a href="suivis.html">Ma bibliothèque</a><a href="bible.html">La Bible intégrée</a></div>
+      <div><p class="mono ash">Sōzō</p><a href="compte.html">Mon compte</a><a href="${root}index.html">La plateforme</a></div>
     </div>
-    <p class="foot-legal mono ash">© 2026 Sōzō — PLUS QU’UNE APPLICATION, UN CHEMIN · PHOTOS LIBRES (CC0)</p>`;
+    <p class="foot-legal mono ash">© 2026 Sōzō — PLUS QU’UNE APPLICATION, UN CHEMIN</p>`;
     document.body.appendChild(f);
   }
 
