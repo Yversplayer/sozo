@@ -99,7 +99,7 @@ class Personne:
         return self.c.delete(url, headers=self._h())
 
     def livre(self, titre="Livre", acces="mixed", prix=(25, 75, 300), pages=6, publier=(1, 2, 3, 4), payantes=(3, 4, 5, 6)):
-        r = self.post("/api/studio/livres", {"titre": titre, "categorie": "Roman", "mode": "progressive", "acces": acces,
+        r = self.post("/api/studio/livres", {"titre": titre, "categorie": "Foi", "mode": "progressive", "acces": acces,
                                             "prix_page": prix[0], "prix_chapitre": prix[1], "prix_livre": prix[2], "couverture": "couv-mer"})
         assert r.status_code == 201, r.get_json()
         slug = r.get_json()["livre"]["id"]

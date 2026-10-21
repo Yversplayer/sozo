@@ -8,6 +8,7 @@ import config
 import db
 import security
 import studio
+import texte
 import validation as v
 from app import auditer, connectee
 
@@ -38,7 +39,7 @@ def serialiser_livre(cx, b, user, plages=None, a=None, toutes_pages=None, chapit
     if plages is None:
         plages = acces.droits(cx, user["id"] if user else None, b["id"])
     if toutes_pages is None:
-        toutes_pages = cx.tous("SELECT * FROM pages WHERE book_id = ? ORDER BY n", (b["id"],))
+        toutes_pages = cx.tous("SELECT * FROM pages WHERE book_id = ? AND n > 0 ORDER BY n", (b["id"],))   # n < 0 : corbeille
     if chapitres is None:
         chapitres = cx.tous("SELECT titre, page_de, page_a FROM chapters WHERE book_id = ? ORDER BY page_de", (b["id"],))
     pages = []
@@ -95,7 +96,7 @@ def vitrine(cx):
         marques = ",".join("?" * len(ids))
         for i in ids:
             pages[i], chapitres[i] = [], []
-        for p in cx.tous(f"SELECT * FROM pages WHERE book_id IN ({marques}) ORDER BY book_id, n", ids):
+        for p in cx.tous(f"SELECT * FROM pages WHERE book_id IN ({marques}) AND n > 0 ORDER BY book_id, n", ids):
             pages[p["book_id"]].append(p)
         for c in cx.tous(f"SELECT book_id, titre, page_de, page_a FROM chapters WHERE book_id IN ({marques}) ORDER BY book_id, page_de", ids):
             chapitres[c["book_id"]].append(c)
@@ -157,7 +158,7 @@ def enregistrer(app):
                 marques = ",".join("?" * len(ids))       # uniquement des « ? » : les ids restent des paramètres
                 for i in ids:
                     pages_par[i], chap_par[i] = [], []
-                for p in cx.tous(f"SELECT * FROM pages WHERE book_id IN ({marques}) ORDER BY book_id, n", ids):
+                for p in cx.tous(f"SELECT * FROM pages WHERE book_id IN ({marques}) AND n > 0 ORDER BY book_id, n", ids):
                     pages_par[p["book_id"]].append(p)
                 for c in cx.tous(f"SELECT book_id, titre, page_de, page_a FROM chapters WHERE book_id IN ({marques}) ORDER BY book_id, page_de", ids):
                     chap_par[c["book_id"]].append(c)
@@ -290,7 +291,7 @@ def enregistrer(app):
             # Les caractères invisibles du filigrane (acces.marquer) ne comptent pas
             invisibles = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff"))
             norme = lambda t: " ".join(t.translate(invisibles).replace("'", "’").split())
-            if norme(extrait) not in norme(contenu):
+            if norme(extrait) not in norme(texte.nu(contenu)) and norme(extrait) not in norme(contenu):
                 raise v.Invalide("Ce passage ne figure pas dans la page.", "extrait")
             # Une page achetée : une citation, pas une copie (même limite que la liseuse)
             if e == "owned" and len(extrait) > 300:
@@ -468,6 +469,12 @@ def enregistrer(app):
             cx.execute("DELETE FROM progress WHERE user_id = ?", (uid,))
             cx.execute("DELETE FROM epingles WHERE user_id = ?", (uid,))
             cx.execute("DELETE FROM ia_usages WHERE user_id = ?", (uid,))
+            # Ses écrits et ses commentaires quittent l'écran (retirés, pas effacés :
+            # un signalement en cours garde sa trace) ; ses j'aime ne comptent plus.
+            m = acces.maintenant()
+            cx.execute("UPDATE ecrits SET retire_le = COALESCE(retire_le, ?), retrait_motif = COALESCE(retrait_motif, 'compte supprimé') WHERE user_id = ?", (m, uid))
+            cx.execute("UPDATE ecrits_commentaires SET retire_le = COALESCE(retire_le, ?), retire_par = COALESCE(retire_par, 'commentateur') WHERE user_id = ?", (m, uid))
+            cx.execute("DELETE FROM ecrits_gestes WHERE user_id = ?", (uid,))
             security.revoquer_toutes(cx, uid)
             auditer("compte.suppression", ressource=f"user:{uid}", cx=cx)
             cx.valider()

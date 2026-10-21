@@ -212,6 +212,11 @@ LIMITES = {
     "admin:ip": (10, 15),
     "admin:compte": (5, 15),
     "admin:reauth": (5, 15),     # codes de confirmation, comptés à part de la connexion
+    # 21/10/2026 — écrits : de quoi écrire et échanger librement, pas de quoi inonder
+    "ecrit:compte": (60, 60),
+    "commentaire:compte": (40, 60),
+    "geste:compte": (300, 10),
+    "signalement:compte": (15, 60),
 }
 
 

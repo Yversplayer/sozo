@@ -152,6 +152,24 @@ class Balayage(TestBase):
         "couverture_livre": [("GET", "/api/livres/{slug_brouillon}/couverture", {404})],
         "desepingler": [("DELETE", "/api/epingles/{eid}", {404})],
         "retirer_don": [("POST", "/api/admin/dons/1/retirer", {401}, {"motif": "essai"})],
+        # 21/10/2026 : écrits de A (brouillon), commentaire de A, corbeille des pages de A
+        "ecrit_lire": [("GET", "/api/ecrits/{ecid}", {404})],
+        "ecrit_modifier": [("PATCH", "/api/ecrits/{ecid}", {404}, {"texte": "Volé"})],
+        "ecrit_publier": [("POST", "/api/ecrits/{ecid}/publier", {404})],
+        "ecrit_depublier": [("POST", "/api/ecrits/{ecid}/depublier", {404})],
+        "ecrit_corbeille": [("DELETE", "/api/ecrits/{ecid}", {404})],
+        "ecrit_restaurer": [("POST", "/api/ecrits/{ecid}/restaurer", {404})],
+        "ecrit_jaime": [("POST", "/api/ecrits/{ecid}/jaime", {404})],
+        "ecrit_jaime_retirer": [("DELETE", "/api/ecrits/{ecid}/jaime", {404})],
+        "ecrit_garder": [("POST", "/api/ecrits/{ecid}/garde", {404})],
+        "ecrit_garde_retirer": [("DELETE", "/api/ecrits/{ecid}/garde", {404})],
+        "ecrit_commenter": [("POST", "/api/ecrits/{ecid}/commentaires", {404}, {"texte": "Bonjour"})],
+        "ecrit_signaler": [("POST", "/api/ecrits/{ecid}/signaler", {404}, {"motif": "Pour essayer"})],
+        "commentaire_retirer": [("DELETE", "/api/commentaires/{cmid}", {404})],
+        "traiter_signalement_ecrit": [("POST", "/api/admin/signalements-ecrits/1", {401}, {"decision": "rejeter"})],
+        "page_corbeille": [("DELETE", "/api/studio/livres/{slug}/pages/1", {404})],
+        "studio_corbeille": [("GET", "/api/studio/livres/{slug}/corbeille", {404})],
+        "page_restaurer": [("POST", "/api/studio/livres/{slug}/corbeille/{pgid}/restaurer", {404})],
     }
     # Routes paramétrées hors balayage, avec la raison :
     EXEMPTES = {
@@ -183,7 +201,13 @@ class Balayage(TestBase):
             cx.valider()
         finally:
             cx.fermer()
-        cle = {"slug": slug, "slug_brouillon": slug, "pid": pid, "rid": 1, "n": 1, "aid": aid, "eid": eid}
+        ecid = a.post("/api/ecrits", {"nature": "pensee", "texte": "Texte secret d'un brouillon."}).get_json()["ecrit"]["id"]
+        public = a.post("/api/ecrits", {"nature": "pensee", "texte": "Publié.", "publier": True}).get_json()["ecrit"]["id"]
+        cmid = a.post(f"/api/ecrits/{public}/commentaires", {"texte": "Texte secret d'un commentaire."}).get_json()["commentaire"]["id"]
+        a.post(f"/api/studio/livres/{slug}/pages", {"contenu": "Texte secret jeté."})
+        n_jete = a.get(f"/api/studio/livres/{slug}").get_json()["livre"]["pages"][-1]["n"]
+        pgid = a.delete(f"/api/studio/livres/{slug}/pages/{n_jete}").get_json()["page"]
+        cle = {"slug": slug, "slug_brouillon": slug, "pid": pid, "rid": 1, "n": 1, "aid": aid, "eid": eid, "ecid": ecid, "cmid": cmid, "pgid": pgid}
         for ep, essais in self.ROUTES.items():
             for essai in essais:
                 meth, url, attendus = essai[:3]

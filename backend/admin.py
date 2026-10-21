@@ -491,6 +491,10 @@ def enregistrer(app):
         finally:
             cx.fermer()
 
+    # 21/10/2026 : signalements des écrits et des commentaires (ecrits.py)
+    import ecrits
+    ecrits.enregistrer_admin(app, admin_requis, role_requis, _trace)
+
     @app.get("/api/admin/utilisateurs")
     @admin_requis
     def admin_utilisateurs():

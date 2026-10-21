@@ -29,8 +29,12 @@ import security
 import validation as v
 from app import auditer, connectee
 
-CATEGORIES = {"Roman", "Poésie", "Polar", "Jeunesse", "Essai", "Histoire", "Foi", "Manga", "Roman graphique",
-              "Nouvelles", "Fantasy", "Recueil", "Développement personnel", "Spiritualité", "Théâtre", "Biographie"}
+# 21/10/2026, le propriétaire : « enlève tout ce qui est roman, etc. ; on reste sur
+# poésie, foi… ». Sōzō devient un lieu calme d'écriture chrétienne. Un livre créé
+# AVANT garde son ancien genre (ANCIENNES) tant que l'auteur ne le change pas.
+CATEGORIES = {"Poésie", "Foi", "Prière", "Méditation", "Louange", "Témoignage", "Spiritualité", "Recueil", "Récit", "Conte"}
+ANCIENNES = {"Roman", "Polar", "Jeunesse", "Essai", "Histoire", "Manga", "Roman graphique", "Nouvelles", "Fantasy",
+             "Développement personnel", "Théâtre", "Biographie"}
 AMBIANCES = {"nuit", "parchemin", "or", "aube"}
 DOSSIER_STOCKAGE = os.path.join(config.RACINE_BACKEND, "stockage", "manuscrits")
 
@@ -57,7 +61,7 @@ _COUV = {
 }
 _PAGE = {
     "police": ("choix", POLICES), "accent": ("couleur",),
-    "lettrine": ("choix", {"aucune", "simple", "ornee"}), "alignement": ("choix", {"gauche", "justifie"}),
+    "lettrine": ("choix", {"aucune", "simple", "ornee"}), "alignement": ("choix", {"gauche", "justifie", "centre"}),
     "interligne": ("entier", 130, 230), "separateur": ("choix", {"aucun", "etoiles", "fleuron", "croix", "trait"}),
     "titre_chapitre": ("choix", {"classique", "capitales", "italique"}),
 }
@@ -173,8 +177,8 @@ def _detail(cx, b):
     # brouillons (façon « Notes », 19/10/2026) les range par date de travail.
     maj = {r["page_id"]: r["created_at"] for r in cx.tous(
         """SELECT v.page_id, v.created_at FROM page_versions v JOIN pages p ON p.id = v.page_id
-           WHERE p.book_id = ? AND v.is_current = 1""", (b["id"],))}
-    for p in cx.tous("SELECT * FROM pages WHERE book_id = ? ORDER BY n", (b["id"],)):
+           WHERE p.book_id = ? AND p.n > 0 AND v.is_current = 1""", (b["id"],))}
+    for p in cx.tous("SELECT * FROM pages WHERE book_id = ? AND n > 0 ORDER BY n", (b["id"],)):      # n < 0 : corbeille
         txt, ver = acces.contenu_courant(cx, p["id"])
         pages.append({"n": p["n"], "acces": p["acces"], "statut": acces.statut_effectif(p, a), "publie_le": p["publie_le"],
                       "source": p["source"], "version": ver, "extrait": txt[:140], "mots": len(txt.split()),
@@ -215,7 +219,7 @@ def enregistrer(app):
             for b in cx.tous("SELECT * FROM books WHERE owner_id = ? ORDER BY updated_at DESC", (g.user["id"],)):
                 st = cx.un("""SELECT SUM(CASE WHEN statut = 'draft' THEN 1 ELSE 0 END) AS brouillons,
                                      SUM(CASE WHEN statut <> 'draft' THEN 1 ELSE 0 END) AS sorties, COUNT(*) AS total
-                                FROM pages WHERE book_id = ?""", (b["id"],))
+                                FROM pages WHERE book_id = ? AND n > 0""", (b["id"],))
                 livres.append({"id": b["slug"], "titre": b["titre"], "categorie": b["categorie"], "couverture": b["couverture"],
                                "style": b["style"], "acces": b["acces"], "statut": b["statut"], "total": st["total"] or 0,
                                "apparence": apparence_lue(b), "image": empreinte_couverture(cx, b["id"]),
@@ -306,7 +310,7 @@ def enregistrer(app):
                 return jsonify(erreur="Introuvable."), 404
             ch = {}
             if "titre" in d: ch["titre"] = v.texte(d, "titre", maxi=120)
-            if "categorie" in d: ch["categorie"] = v.choix(d, "categorie", CATEGORIES)
+            if "categorie" in d: ch["categorie"] = v.choix(d, "categorie", CATEGORIES | ({b["categorie"]} & ANCIENNES))
             if "description" in d: ch["description"] = v.texte(d, "description", requis=False, maxi=1500, multiligne=True) or ""
             if "mode" in d: ch["mode"] = v.choix(d, "mode", {"integral", "progressive"})
             if "acces" in d: ch["acces"] = v.choix(d, "acces", {"free", "paid", "mixed"})
@@ -481,7 +485,7 @@ def enregistrer(app):
             b = _a_moi(cx, slug)
             if not b:
                 return jsonify(erreur="Introuvable."), 404
-            n = (cx.un("SELECT MAX(n) AS m FROM pages WHERE book_id = ?", (b["id"],))["m"] or 0) + 1
+            n = (cx.un("SELECT MAX(n) AS m FROM pages WHERE book_id = ? AND n > 0", (b["id"],))["m"] or 0) + 1
             pid = cx.inserer("INSERT INTO pages (book_id, n, acces, statut, source, created_at) VALUES (?, ?, ?, 'draft', 'editor', ?)",
                              (b["id"], n, "free" if b["acces"] == "free" else "paid", acces.maintenant()))
             _nouvelle_version(cx, pid, contenu)
@@ -562,7 +566,7 @@ def enregistrer(app):
             b = _a_moi(cx, slug)
             if not b:
                 return jsonify(erreur="Introuvable."), 404
-            pages = {p["n"]: p for p in cx.tous("SELECT * FROM pages WHERE book_id = ?", (b["id"],))}
+            pages = {p["n"]: p for p in cx.tous("SELECT * FROM pages WHERE book_id = ? AND n > 0", (b["id"],))}
             manquantes = sorted(set(ns) - set(pages))
             if manquantes:
                 return jsonify(erreur=f"Pages inexistantes : {manquantes[:10]}"), 400
@@ -616,7 +620,7 @@ def enregistrer(app):
             b = _a_moi(cx, slug)
             if not b:
                 return jsonify(erreur="Introuvable."), 404
-            pages = cx.tous("SELECT id, n, statut, publie_le FROM pages WHERE book_id = ? ORDER BY n", (b["id"],))
+            pages = cx.tous("SELECT id, n, statut, publie_le FROM pages WHERE book_id = ? AND n > 0 ORDER BY n", (b["id"],))
             sorties = [p["n"] for p in pages if acces.statut_effectif(p) != "draft"]
             queue = [p for p in pages if p["n"] > (max(sorties) if sorties else 0)]
             if sorted(ordre) != [p["n"] for p in queue]:
@@ -633,6 +637,82 @@ def enregistrer(app):
             auditer("pages.ordre", ressource=f"book:{b['id']}", apres=",".join(map(str, ordre))[:200], cx=cx)
             cx.valider()
             return jsonify(ok=True)
+        finally:
+            cx.fermer()
+
+    # ── Corbeille des pages (21/10/2026) ───────────────────────────────────
+    # « Il faut que l'utilisateur puisse supprimer la page, la placer dans la
+    # corbeille, ensuite la récupérer s'il veut » (le propriétaire). Rien ne
+    # s'efface : la page garde sa ligne et TOUTES ses versions. Même règle que
+    # le réordonnancement : seuls les brouillons de fin de livre (après la
+    # dernière page sortie) se jettent — une page sortie ou glissée entre des
+    # pages vendues porte peut-être un droit de lecture, et les numéros qui la
+    # suivent ne doivent pas bouger.
+    @app.delete("/api/studio/livres/<slug>/pages/<int:n>")
+    @connectee
+    def page_corbeille(slug, n):
+        cx = db.connecter()
+        try:
+            b = _a_moi(cx, slug)
+            p = b and cx.un("SELECT * FROM pages WHERE book_id = ? AND n = ? AND n > 0", (b["id"], n))
+            if not p:
+                return jsonify(erreur="Introuvable."), 404
+            pages = cx.tous("SELECT id, n, statut, publie_le FROM pages WHERE book_id = ? AND n > 0 ORDER BY n", (b["id"],))
+            sorties = [x["n"] for x in pages if acces.statut_effectif(x) != "draft"]
+            if acces.statut_effectif(p) != "draft":
+                return jsonify(erreur="Cette page est sortie (ou programmée) : des lecteurs y ont peut-être droit. Elle ne va pas à la corbeille.",
+                               code="page_sortie"), 409
+            if sorties and n < max(sorties):
+                return jsonify(erreur="Ce brouillon est placé entre des pages sorties : le jeter décalerait leurs numéros, donc ce que des lecteurs ont payé.",
+                               code="hors_queue"), 409
+            m = acces.maintenant()
+            cx.execute("UPDATE pages SET n = ?, n_avant = ?, corbeille_le = ? WHERE id = ?", (-p["id"], n, m, p["id"]))
+            # Les brouillons qui suivaient reculent d'un cran (dans l'ordre : la place libérée est toujours devant)
+            for x in pages:
+                if x["n"] > n:
+                    cx.execute("UPDATE pages SET n = ? WHERE id = ?", (x["n"] - 1, x["id"]))
+            cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (m, b["id"]))
+            auditer("page.corbeille", ressource=f"book:{b['id']}:page:{p['id']}", avant=f"n={n}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True, page=p["id"])
+        finally:
+            cx.fermer()
+
+    @app.get("/api/studio/livres/<slug>/corbeille")
+    @connectee
+    def studio_corbeille(slug):
+        cx = db.connecter()
+        try:
+            b = _a_moi(cx, slug)
+            if not b:
+                return jsonify(erreur="Introuvable."), 404
+            out = []
+            for p in cx.tous("SELECT * FROM pages WHERE book_id = ? AND corbeille_le IS NOT NULL ORDER BY corbeille_le DESC", (b["id"],)):
+                txt, ver = acces.contenu_courant(cx, p["id"])
+                out.append({"id": p["id"], "n_avant": p["n_avant"], "jetee_le": p["corbeille_le"], "version": ver,
+                            "extrait": txt[:200], "mots": len(txt.split())})
+            return jsonify(pages=out)
+        finally:
+            cx.fermer()
+
+    @app.post("/api/studio/livres/<slug>/corbeille/<int:pid>/restaurer")
+    @connectee
+    def page_restaurer(slug, pid):
+        """La page revient en BROUILLON, à la fin du livre (sa place d'avant a pu
+        être prise) ; l'auteur la remet où il veut avec le réordonnancement."""
+        cx = db.connecter()
+        try:
+            b = _a_moi(cx, slug)
+            p = b and cx.un("SELECT * FROM pages WHERE id = ? AND book_id = ? AND corbeille_le IS NOT NULL", (pid, b["id"]))
+            if not p:
+                return jsonify(erreur="Introuvable."), 404
+            n = (cx.un("SELECT MAX(n) AS m FROM pages WHERE book_id = ? AND n > 0", (b["id"],))["m"] or 0) + 1
+            m = acces.maintenant()
+            cx.execute("UPDATE pages SET n = ?, corbeille_le = NULL, statut = 'draft', publie_le = NULL WHERE id = ?", (n, pid))
+            cx.execute("UPDATE books SET updated_at = ? WHERE id = ?", (m, b["id"]))
+            auditer("page.restauree", ressource=f"book:{b['id']}:page:{pid}", apres=f"n={n}", cx=cx)
+            cx.valider()
+            return jsonify(ok=True, n=n)
         finally:
             cx.fermer()
 
@@ -664,7 +744,7 @@ def enregistrer(app):
             os.makedirs(DOSSIER_STOCKAGE, exist_ok=True)
             with open(os.path.join(DOSSIER_STOCKAGE, f"{empreinte}.{nature}"), "wb") as h:
                 h.write(octets)
-            depart = cx.un("SELECT MAX(n) AS m FROM pages WHERE book_id = ?", (b["id"],))["m"] or 0
+            depart = cx.un("SELECT MAX(n) AS m FROM pages WHERE book_id = ? AND n > 0", (b["id"],))["m"] or 0
             m = acces.maintenant()
             for i, t in enumerate(textes, start=1):
                 pid = cx.inserer("INSERT INTO pages (book_id, n, acces, statut, source, created_at) VALUES (?, ?, ?, 'draft', ?, ?)",

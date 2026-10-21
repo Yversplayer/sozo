@@ -454,3 +454,62 @@ CREATE TABLE IF NOT EXISTS dons (
   revoque_le TEXT
 );
 CREATE INDEX IF NOT EXISTS dons_personne ON dons (user_id, objet);
+
+-- v10 (21/10/2026) : ÉCRITS — poème, récit, conte, pensée, prière. « Sōzō
+-- n'est pas seulement des livres : on doit pouvoir publier un récit, un poème,
+-- un conte, une phrase » (le propriétaire). Un brouillon n'est vu que par son
+-- auteur ; une fois publié, tout compte connecté le lit, l'aime, le garde, le
+-- commente. Rien ne s'efface : la corbeille se récupère, la modération retire
+-- (retire_le) sans détruire.
+CREATE TABLE IF NOT EXISTS ecrits (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  nature TEXT NOT NULL CHECK (nature IN ('poeme', 'recit', 'conte', 'pensee', 'priere')),
+  titre TEXT NOT NULL DEFAULT '',
+  texte TEXT NOT NULL,
+  apparence TEXT,
+  statut TEXT NOT NULL DEFAULT 'brouillon' CHECK (statut IN ('brouillon', 'publie')),
+  publie_le TEXT,
+  corbeille_le TEXT,
+  retire_le TEXT,
+  retrait_motif TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ecrits_fil ON ecrits (statut, id);
+CREATE INDEX IF NOT EXISTS ecrits_auteur ON ecrits (user_id, id);
+
+-- J'aime et « garder » (épingler un écrit dans sa bibliothèque) : un geste par
+-- personne, par écrit et par nature — la clé primaire empêche le double compte.
+CREATE TABLE IF NOT EXISTS ecrits_gestes (
+  ecrit_id INTEGER NOT NULL REFERENCES ecrits (id),
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  nature TEXT NOT NULL CHECK (nature IN ('jaime', 'garde')),
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (ecrit_id, user_id, nature)
+);
+CREATE INDEX IF NOT EXISTS ecrits_gestes_personne ON ecrits_gestes (user_id, nature, created_at);
+
+-- Un commentaire retiré (par son auteur, par l'auteur de l'écrit ou par la
+-- modération) disparaît de l'écran mais reste en base, daté, avec qui l'a retiré.
+CREATE TABLE IF NOT EXISTS ecrits_commentaires (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ecrit_id INTEGER NOT NULL REFERENCES ecrits (id),
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  texte TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  retire_le TEXT,
+  retire_par TEXT CHECK (retire_par IS NULL OR retire_par IN ('commentateur', 'auteur', 'moderation'))
+);
+CREATE INDEX IF NOT EXISTS ecrits_commentaires_fil ON ecrits_commentaires (ecrit_id, id);
+
+CREATE TABLE IF NOT EXISTS signalements_ecrits (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  ecrit_id INTEGER NOT NULL REFERENCES ecrits (id),
+  commentaire_id INTEGER REFERENCES ecrits_commentaires (id),
+  motif TEXT NOT NULL,
+  etat TEXT NOT NULL DEFAULT 'ouvert' CHECK (etat IN ('ouvert', 'traite', 'rejete')),
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS signalements_ecrits_etat ON signalements_ecrits (etat, id);

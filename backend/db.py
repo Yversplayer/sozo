@@ -17,7 +17,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 9   # v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
+VERSION_SCHEMA = 10   # v10 (21/10/2026) : écrits, corbeille des pages ; v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
 _verrou = threading.Lock()
 
 
@@ -199,6 +199,8 @@ _AUDIT_IMMUABLE = {
 _MOI = "NULLIF(current_setting('app.user_id', true), '')::bigint"
 _GLOBALE = "current_setting('app.global', true) = '1'"
 _MES_LIVRES = f"(SELECT id FROM books WHERE owner_id = {_MOI})"
+_MES_ECRITS = f"(SELECT id FROM ecrits WHERE user_id = {_MOI})"
+_ECRITS_PUBLICS = "ecrit_id IN (SELECT id FROM ecrits WHERE statut = 'publie' AND corbeille_le IS NULL AND retire_le IS NULL)"
 RLS = {
     "follows": f"user_id = {_MOI} OR book_id IN {_MES_LIVRES}",
     "progress": f"user_id = {_MOI}",
@@ -216,17 +218,24 @@ RLS = {
     "epingles": f"user_id = {_MOI}",
     "ia_usages": f"user_id = {_MOI}",
     "dons": f"user_id = {_MOI}",
+    # v10 (21/10/2026) — (lecture, écriture) : un écrit PUBLIÉ, ses j'aime et ses
+    # commentaires se lisent par tous ; on n'écrit jamais qu'en son propre nom.
+    "ecrits": (f"user_id = {_MOI} OR (statut = 'publie' AND corbeille_le IS NULL AND retire_le IS NULL)", f"user_id = {_MOI}"),
+    "ecrits_gestes": (f"user_id = {_MOI} OR {_ECRITS_PUBLICS}", f"user_id = {_MOI}"),
+    "ecrits_commentaires": (f"user_id = {_MOI} OR {_ECRITS_PUBLICS} OR ecrit_id IN {_MES_ECRITS}",
+                            f"user_id = {_MOI} OR ecrit_id IN {_MES_ECRITS}"),
+    "signalements_ecrits": f"user_id = {_MOI}",
 }
 
 
 def _politiques_rls():
     out = []
     for table, regle in RLS.items():
-        expr = f"({regle}) OR {_GLOBALE}"
+        lire, ecrire = regle if isinstance(regle, tuple) else (regle, regle)
         out += [f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY",
                 f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY",
                 f"DROP POLICY IF EXISTS sozo_{table} ON {table}",
-                f"CREATE POLICY sozo_{table} ON {table} USING ({expr}) WITH CHECK ({expr})"]
+                f"CREATE POLICY sozo_{table} ON {table} USING (({lire}) OR {_GLOBALE}) WITH CHECK (({ecrire}) OR {_GLOBALE})"]
     return out
 
 
@@ -324,3 +333,8 @@ def _migrer(cx):
         # tâche enverrait à chaque lecteur une notification pour tout l'historique.
         cx.execute("UPDATE pages SET annoncee_le = publie_le WHERE statut <> 'draft' AND publie_le IS NOT NULL AND publie_le <= ?",
                    (datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),))
+    # v10 (21/10/2026) : corbeille des pages. Une page jetée garde sa ligne et
+    # tout son historique de versions ; elle quitte la numérotation (n négatif,
+    # pour libérer UNIQUE(book_id, n)) et se récupère depuis la corbeille.
+    _ajouter_colonne(cx, "pages", "corbeille_le", "TEXT")
+    _ajouter_colonne(cx, "pages", "n_avant", "INTEGER")
