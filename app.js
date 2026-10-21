@@ -601,7 +601,7 @@
   let trailIdx = 0, trailZ = 10, trailAcc = 0, trailX = null, trailY = null;
 
   addEventListener('mousemove', (e) => {
-    if (staticMode || !sceneFinal) return;
+    if (staticMode || !sceneFinal || !trailImgs.length) return;     // 21/10/2026 : plus aucune photo sur la landing
     if (current + vh < sceneFinal.start || current > sceneFinal.start + sceneFinal.len + vh) {
       trailX = trailY = null;
       return;

@@ -357,18 +357,56 @@ window.SOZO_PRET.then(() => {
     else $('#focusBtn').focus();
     eclairer();
   }
-  let tEcl;
+  /* 21/10/2026, le propriétaire : « pourquoi doit-on commencer à se concentrer
+     seulement au milieu de l'écran ? Dès les premières lignes, on doit avoir
+     l'effet. » Le paragraphe éclairé était celui le plus proche du MILIEU de
+     l'écran : en haut d'une page, les premières lignes restaient éteintes.
+     Désormais une LIGNE DE LECTURE, au tiers de l'écran, éclaire le premier
+     paragraphe qui la dépasse ; en haut de page (rien encore défilé), c'est
+     le premier paragraphe. Un toucher sur un paragraphe, ou ↑ / ↓, choisit
+     soi-même où l'on en est. */
+  let tEcl, choisi = null;
+  // les blocs de lecture : paragraphes, titres, citations (enfants directs du texte)
+  const BLOCS = '.rd-text > p:not(.pg-sep), .rd-text > .pg-t, .rd-text > .pg-cit';
+  const paragraphesVus = () => $$(BLOCS).filter((p) => {
+    const r = p.getBoundingClientRect();
+    return r.height && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
+  });
+  function poser(best) {
+    $$('.rd-text .is-lu').forEach((p) => p !== best && p.classList.remove('is-lu'));
+    if (best) best.classList.add('is-lu');
+  }
   function eclairer() {
     cancelAnimationFrame(tEcl);
-    tEcl = requestAnimationFrame(() => {
-      $$('.rd-text p.is-lu').forEach((p) => p.classList.remove('is-lu'));
-      if (!body.classList.contains('is-focus') || !pref.focusP) return;
-      const mi = innerHeight / 2; let best = null, d = Infinity;
-      $$('.rd-text p').forEach((p) => { const r = p.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) return; const x = Math.abs((r.top + r.bottom) / 2 - mi); if (x < d) { d = x; best = p; } });
-      if (best) best.classList.add('is-lu');
-    });
+    const faire = () => {
+      if (!body.classList.contains('is-focus') || !pref.focusP) { poser(null); return; }
+      if (choisi && choisi.isConnected) { const r = choisi.getBoundingClientRect(); if (r.bottom > 0 && r.top < innerHeight) { poser(choisi); return; } }
+      choisi = null;
+      const vus = paragraphesVus();
+      if (!vus.length) { poser(null); return; }
+      const ligne = innerHeight * 0.34;
+      const enHaut = (document.scrollingElement || document.documentElement).scrollTop < 8;
+      poser(enHaut ? vus[0] : (vus.find((p) => p.getBoundingClientRect().bottom > ligne) || vus[vus.length - 1]));
+    };
+    tEcl = requestAnimationFrame(faire);
+    setTimeout(faire, 120);          // si l'onglet ne peint pas (arrière-plan), l'état reste juste
   }
-  addEventListener('scroll', eclairer, { passive: true });
+  // capture : le défilement d'un conteneur (mode « glisser ») compte aussi
+  addEventListener('scroll', () => { choisi = null; eclairer(); }, { passive: true, capture: true });
+  document.addEventListener('click', (e) => {
+    if (!body.classList.contains('is-focus') || !pref.focusP || getSelection().toString()) return;
+    const p = e.target.closest('.rd-text > :is(p:not(.pg-sep), .pg-t, .pg-cit)');
+    if (p) { choisi = p; poser(p); }
+  });
+  function deplacer(sens) {
+    const tous = $$(BLOCS).filter((p) => p.getBoundingClientRect().height);
+    const ici = $('.rd-text .is-lu');
+    const i = Math.max(0, Math.min(tous.length - 1, tous.indexOf(ici) + sens));
+    const p = tous[i]; if (!p) return;
+    choisi = p; poser(p);
+    const r = p.getBoundingClientRect();
+    if (r.top < 60 || r.bottom > innerHeight - 60) scrollBy({ top: r.top - innerHeight * 0.3, behavior: S.reduced ? 'auto' : 'smooth' });
+  }
   sortie.addEventListener('click', () => concentration(false));
 
   /* ─── interactions ─── */
@@ -424,6 +462,7 @@ window.SOZO_PRET.then(() => {
   addEventListener('keydown', (e) => {
     if (e.target.closest('input, select, textarea') || document.querySelector('.md-wrap')) return;
     if (e.key === 'Escape' && body.classList.contains('is-focus')) { concentration(false); return; }
+    if (body.classList.contains('is-focus') && pref.focusP && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && !(e.target.closest && e.target.closest('input, textarea, select'))) { e.preventDefault(); deplacer(e.key === 'ArrowDown' ? 1 : -1); return; }
     if (e.key === 'Escape' && !pins.hidden) { pinsBasc(false); return; }
     if (e.key === 'Escape' && panel.classList.contains('is-open')) { panel.classList.remove('is-open'); setBtn.setAttribute('aria-expanded', 'false'); setBtn.focus(); return; }
     if (e.key.toLowerCase() === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey) { concentration(!body.classList.contains('is-focus')); return; }

@@ -6,11 +6,14 @@ window.SOZO_PRET.then(async () => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
   S.shell('suivis');
   const ICONES = { parution: 'book', paiement: 'tag', vente: 'star', reversement: 'send', plume: 'feather', moderation: 'shield', securite: 'lock', test: 'bell' };
-  let notifs = [], epingles = null;
+  let notifs = [], epingles = null, gardes = null;
+  const E = window.SOZO_ECRITS;
   const charger = async () => { const r = await window.SOZO_API('GET', '/api/notifications'); notifs = r.ok ? r.d.liste : null; };
   const chargerEpingles = async () => { const r = await window.SOZO_API('GET', '/api/epingles'); epingles = r.ok ? r.d.epingles : null; };
-  await Promise.all([charger(), chargerEpingles()]);
-  const ONGLETS = [['livres', 'En cours', 'book'], ['epingles', 'Épingles', 'tag'], ['notifications', 'Notifications', 'bell']];
+  // 21/10/2026 : les écrits qu'on « garde » (poèmes, pensées, prières…) ont leur onglet
+  const chargerGardes = async () => { const r = await window.SOZO_API('GET', '/api/ecrits/gardes'); gardes = r.ok ? r.d.ecrits : null; };
+  await Promise.all([charger(), chargerEpingles(), chargerGardes()]);
+  const ONGLETS = [['livres', 'En cours', 'book'], ['ecrits', 'Écrits gardés', 'garder'], ['epingles', 'Épingles', 'tag'], ['notifications', 'Notifications', 'bell']];
   let onglet = (location.hash || '').slice(1);
   if (!ONGLETS.some(([k]) => k === onglet)) onglet = 'livres';
   const main = $('#main');
@@ -25,11 +28,15 @@ window.SOZO_PRET.then(async () => {
     const nonLues = notifs ? notifs.filter((x) => !x.lu_le).length : 0;
     main.innerHTML = `<div class="wrap">
       <section class="sec" style="padding-top:44px">
-        <p class="kicker">Mon espace lecteur</p>
-        <h1 class="sec-title" style="font-size:clamp(36px,4.6vw,62px)" data-ink-text="Ma [[bibliothèque]]"></h1>
-        <div class="bi-onglets" role="tablist" aria-label="Ma bibliothèque">${ONGLETS.map(([k, l, ic]) => `<button type="button" role="tab" id="bi-${k}" aria-controls="biPanel" aria-selected="${onglet === k}" tabindex="${onglet === k ? 0 : -1}" data-bi="${k}">${S.icon(ic)} ${l}${k === 'notifications' && nonLues ? ` <span class="dot">${nonLues}</span>` : ''}${k === 'epingles' && epingles && epingles.length ? ` <span class="bi-n">${epingles.length}</span>` : ''}</button>`).join('')}</div>
+        <h1 class="sec-title" style="font-size:clamp(34px,4.6vw,52px)">Ma bibliothèque</h1>
+        <div class="bi-onglets" role="tablist" aria-label="Ma bibliothèque">${ONGLETS.map(([k, l, ic]) => `<button type="button" role="tab" id="bi-${k}" aria-controls="biPanel" aria-selected="${onglet === k}" tabindex="${onglet === k ? 0 : -1}" data-bi="${k}">${S.icon(ic)} ${l}${k === 'notifications' && nonLues ? ` <span class="dot">${nonLues}</span>` : ''}${k === 'epingles' && epingles && epingles.length ? ` <span class="bi-n">${epingles.length}</span>` : ''}${k === 'ecrits' && gardes && gardes.length ? ` <span class="bi-n">${gardes.length}</span>` : ''}</button>`).join('')}</div>
       </section>
       <div id="biPanel" role="tabpanel" aria-labelledby="bi-${onglet}">
+      <section class="sec" id="ecrits" style="padding-top:28px"${onglet === 'ecrits' ? '' : ' hidden'}>
+        ${gardes === null ? `<p class="warn">${S.icon('x')}<span>Écrits gardés indisponibles pour le moment.</span></p>`
+          : gardes.length ? `<div class="vl-fil" id="filGardes">${gardes.map((e) => E.carte(e)).join('')}</div>`
+          : `<div class="empty"><strong>Aucun écrit gardé</strong>Sous un poème, une pensée ou une prière qui vous parle, touchez « Garder » : il vous attendra ici.<br><br><a class="btn btn--ghost btn--sm" href="explorer.html?vue=ecrits">Lire des écrits</a></div>`}
+      </section>
       <section class="sec" id="epingles" style="padding-top:28px"${onglet === 'epingles' ? '' : ' hidden'}>
         ${epingles === null ? `<p class="warn">${S.icon('x')}<span>Épingles indisponibles pour le moment.</span></p>`
           : epingles.length ? (() => { const par = {}; epingles.forEach((e) => (par[e.livre] = par[e.livre] || { titre: e.titre, l: [] }).l.push(e)); return Object.entries(par).map(([slug, g]) => `<div class="panel bi-pins">
@@ -87,6 +94,8 @@ window.SOZO_PRET.then(async () => {
       t.addEventListener('click', () => { onglet = t.dataset.bi; history.replaceState(null, '', '#' + onglet); render(); document.getElementById('bi-' + onglet).focus(); });
       t.addEventListener('keydown', (e) => { const k = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!k) return; e.preventDefault(); onglet = tabs[(i + k + tabs.length) % tabs.length].dataset.bi; history.replaceState(null, '', '#' + onglet); render(); document.getElementById('bi-' + onglet).focus(); });
     });
+    const fg = $('#filGardes');
+    if (fg) E.brancher(fg, (id) => gardes.find((e) => e.id === id));
     document.querySelectorAll('[data-desep]').forEach((x) => x.addEventListener('click', async () => {
       x.disabled = true;
       const r = await window.SOZO_API('DELETE', `/api/epingles/${+x.dataset.desep}`);

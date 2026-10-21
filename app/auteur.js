@@ -24,10 +24,10 @@ window.SOZO_PRET.then(() => {
   const allFollowed = () => books.every((b) => S.isFollowed(b.id));
 
   main.innerHTML = `
-  <div class="au-hero"><img src="${S.img(banner)}" alt=""></div>
+  <div class="au-hero vl-velours" aria-hidden="true"></div>
   <div class="wrap">
     <div class="au-head">
-      <div class="au-big"><img src="${S.img(a.photo, true)}" alt="Portrait d'illustration de ${S.esc(a.name)}"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M58,5 C84,8 98,28 96,54 C94,82 72,97 46,95 C20,93 3,74 5,47 C7,22 26,4 52,4 C64,4 72,7 78,12"/></svg></div>
+      <div class="au-big">${S.monogramme(a.name, 112)}</div>
       <div>
         <p class="kicker">Auteur · ${S.esc(a.city)} · sur Sōzō depuis ${S.esc(a.since)}</p>
         <h1 data-ink-text="${S.esc(a.name)}"></h1>

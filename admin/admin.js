@@ -274,6 +274,28 @@
         <td>${date(s.created_at)}</td><td>${esc(s.titre)}</td><td>${esc(s.par)}</td><td class="ad-motif">${esc(s.motif)}</td><td>${{ ouvert: 'Ouvert', traite: 'Traité', rejete: 'Rejeté' }[s.etat] || esc(s.etat)}</td>
         <td>${s.etat === 'ouvert' && peut('moderation') ? `<span class="row-acts"><button class="btn btn--sm" data-sig="${s.id}" data-e="traite">Traité</button><button class="btn btn--sm btn--ghost" data-sig="${s.id}" data-e="rejete">Rejeter</button></span>` : ''}</td></tr>`)) : vide('Aucun signalement.');
       $$('[data-sig]', el).forEach((b) => b.addEventListener('click', async () => { b.disabled = true; const y = await api('POST', `/api/admin/signalements/${b.dataset.sig}`, { etat: b.dataset.e }); if (!y.ok) { b.disabled = false; toast(y.d.erreur); return; } toast('Signalement clos.'); console_(); }));
+      /* 21/10/2026 — écrits et commentaires signalés. « Retirer » cache l'écrit
+         (ou le commentaire) pour tous, sans rien détruire ; le motif est gardé. */
+      const re = await api('GET', '/api/admin/signalements-ecrits');
+      const sec = document.createElement('section');
+      sec.className = 'ad-sec';
+      if (!re.ok) { sec.innerHTML = `<h2>Écrits et commentaires</h2><p class="warn">${esc(re.d.erreur)}</p>`; el.appendChild(sec); return; }
+      const SE = re.d.signalements;
+      sec.innerHTML = `<h2 style="margin-top:28px">Écrits et commentaires</h2>` + (SE.length ? table(['Le', 'Écrit signalé', 'Auteur', 'Par', 'Motif', 'État', ''], SE.map((x) => `<tr>
+        <td>${date(x.created_at)}</td>
+        <td class="ad-motif"><strong>${esc(x.titre || x.nature)}</strong><br><small class="ash">${x.commentaire_id ? `Commentaire : « ${esc((x.commentaire || '').slice(0, 200))} »` : esc((x.extrait || '').slice(0, 200))}</small></td>
+        <td>${esc(x.auteur)}</td><td>${esc(x.par)}</td><td class="ad-motif">${esc(x.motif)}</td>
+        <td>${{ ouvert: 'Ouvert', traite: 'Retiré', rejete: 'Rejeté' }[x.etat] || esc(x.etat)}</td>
+        <td>${x.etat === 'ouvert' && peut('moderation') ? `<span class="row-acts"><input class="ad-motif-in" data-motif="${x.id}" placeholder="Motif du retrait" maxlength="300" aria-label="Motif du retrait"><button class="btn btn--sm" data-se="${x.id}" data-d="retirer">Retirer</button><button class="btn btn--sm btn--ghost" data-se="${x.id}" data-d="rejeter">Rejeter</button></span>` : ''}</td></tr>`)) : vide('Aucun écrit signalé.'));
+      el.appendChild(sec);
+      $$('[data-se]', sec).forEach((b) => b.addEventListener('click', async () => {
+        const corps = { decision: b.dataset.d };
+        if (b.dataset.d === 'retirer') { corps.motif = ($(`[data-motif="${b.dataset.se}"]`, sec).value || '').trim(); if (corps.motif.length < 3) { toast('Indiquez le motif du retrait (3 lettres au moins).'); return; } }
+        b.disabled = true;
+        const y = await api('POST', `/api/admin/signalements-ecrits/${b.dataset.se}`, corps);
+        if (!y.ok) { b.disabled = false; toast(y.d.erreur); return; }
+        toast(b.dataset.d === 'retirer' ? 'Retiré : il n’est plus visible.' : 'Signalement rejeté.'); console_();
+      }));
     },
 
     async utilisateurs(el) {

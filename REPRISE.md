@@ -1,4 +1,4 @@
-# REPRISE — Sōzō (état au 19/10/2026)
+# REPRISE — Sōzō (état au 21/10/2026)
 
 À lire en entier avant de toucher au code. Puis lire `README.md` (lancement, tests, garanties, architecture).
 
@@ -32,6 +32,8 @@ Ajouts du 17-18/10/2026 (déployés, commit b29e2e5) :
 
 ## ⏭ Où on s'est arrêté — À FAIRE EN PREMIER
 
+00. **Refonte du 21/10/2026, « Sōzō plus modeste, calme et sérieux, tourné vers l'écriture » — PAS ENCORE POUSSÉE NI DÉPLOYÉE** (voir §8). Pour la mettre en ligne : pousser, **Manual Deploy de Render** (le serveur a changé : schéma v10, 20 routes), puis, sur le « go » du propriétaire seulement, réduire le catalogue en ligne à un livre : `backend_venv/bin/python backend/tools/demo.py --un-seul --en-ligne --projet dcbbvcvnpdllxjyefzln` (adresse collée au clavier, taper CONFIRMER ; `--remettre` annule).
+
 0. **Refonte du 19/10/2026 (retours du propriétaire après son test), PAS ENCORE DÉPLOYÉE** — voir §7. À faire : pousser, Manual Deploy de Render (le serveur a changé : migration v8, nouvelles routes), puis faire tester par le propriétaire. Pour activer la relecture IA : `ANTHROPIC_API_KEY` sur Render (sans elle, le bouton dit honnêtement « pas encore activée »).
 
 1. **Catalogue en ligne : décision A (18/10/2026), « des livres de religion, d'inspiration, de Dieu et de foi, dans le christianisme ».** **Chargé EN LIGNE le 19/10/2026** (Render redéployé avant, sur 05b1cab ; chargement ~7 min depuis Kinshasa). Vérifié en ligne : 14 livres / 12 auteurs au catalogue, tous `demo` ; page gratuite servie ; achat d'une page payante refusé (400 « Ce livre est un exemple : il ne se vend pas. »).
@@ -43,6 +45,21 @@ Ajouts du 17-18/10/2026 (déployés, commit b29e2e5) :
    Tuiles vides : réglé le 19/10 — Explorer n'affiche que les catégories qui ont des livres, avec leur nombre.
 2. **Paiements (19/10/2026)** : les DEUX, dans l'ordre. (a) **Fait** : l'administration « Cadeaux » offre un livre entier ou Plume (table `dons`, rôle finance + code frais, motif, audit, notification, retirable ; aucun argent : ni paiement, ni reçu, ni revenu pour l'auteur ; tests `test_dons.py`, vus tomber). (b) **Reste** : quand le propriétaire donne ses numéros Mobile Money (`SOZO_PAIEMENT_NUMEROS` sur Render), les vraies ventes s'ouvrent ; il confirme chaque paiement dans l'admin.
 3. Le propriétaire teste le logiciel ce week-end : traiter ses retours en priorité.
+
+## 8. Refonte du 21/10/2026 — ce qui a changé (image envoyée par le propriétaire)
+
+Commits `b19060e` (serveur) puis la refonte des écrans. Suites : 188 tests SQLite (+16), 188 PostgreSQL, verts.
+- **Identité « velours »** (`app/velours.css`, chargé en dernier par chaque écran, préfixe `vl-`) : papier ivoire, bordeaux, or, titres en serif, mode sombre bordeaux presque noir. **Plus aucune photo** dans le logiciel ni sur la landing : couvertures typographiques sur velours (`ui.js` `cover`, l'ancien fond « photo » devient un dégradé), monogrammes à la place des portraits, velours derrière la fiche d'un livre, la connexion, la page d'un auteur. Les dossiers `images/` restent dans le dépôt mais ne sont plus appelés par le logiciel.
+- **Navigation** : téléphone = Accueil · Explorer · la plume (Écrire) · Bibliothèque · Profil ; ordinateur = Écrire (Écrire, Mes écrits, Mes livres, Importer) puis Lire.
+- **Accueil** (`decouvrir.js`) sur le modèle de l'image : « Bonjour », recherche, la plume (pensée, poème, prière, récit, conte, un livre), à la une sur velours, nouveautés, écrits du jour.
+- **Écrits** : `ecrits.html` (mes écrits façon Notes : brouillons, publiés, corbeille ; et la plume pour écrire), `ecrit.html` (lire, j'aimer, garder, partager, commenter, signaler), `ecrits-ui.js` (la carte et ses gestes, partagée). Explorer a une vue « Écrits », la bibliothèque un onglet « Écrits gardés », l'administration une section « Écrits et commentaires » dans Signalements. Serveur : `ecrits.py` (enregistrement sur 3 s de calme, pas de versions).
+- **La Plume, le mini-Word** (`app/plume.js` + `plume-editeur.css`, préfixe `pl-`) : feuilles éditables, gras, italique, titre, sous-titre, citation, séparateur, insérer un verset (Bible intégrée), caractères spéciaux, police et alignement (réglage DU LIVRE, vu par le lecteur), taille d'affichage, rechercher / remplacer dans toutes les pages, inspiration (idée + verset), objectif de mots, machine à écrire, concentration, papiers (ivoire, blanc, sépia, nuit), casse, plein écran. Annuler = celui du navigateur (tout passe par `execCommand`). Les fautes sont soulignées par l'API Highlight de CSS, sans toucher au texte ; un clic sur un mot souligné ouvre sa remarque.
+- **Écrire un livre** (`ecrire.js` réécrit) : toutes les pages défilent de haut en bas et se modifient sur place (chargées par lots de 24) ; chaque page garde ses garde-fous (version attendue, copie de secours, Plume, correcteur et IA page par page). Ajouter une page ; **mettre à la corbeille** (brouillons de fin de livre) avec « Annuler » qui remet la page à SA place ; corbeille aussi dans l'atelier (bouton « Corbeille » des pages).
+- **Genres** : Poésie, Foi, Prière, Méditation, Louange, Témoignage, Spiritualité, Recueil, Récit, Conte (un livre d'avant garde son ancien genre tant qu'il n'en change pas).
+- **Un seul livre** : `demo.py` ne charge plus que « Psaumes de la terre rouge » ; `--un-seul` retire les autres livres d'exemple (rien n'est effacé, les livres des vrais auteurs ne sont jamais touchés), `--remettre` annule. Fait sur la base LOCALE le 21/10 ; **pas en ligne** (attend le go).
+- **Liseuse** : la concentration éclaire le premier paragraphe dès le haut de la page, puis suit une ligne de lecture au tiers de l'écran ; un toucher ou ↑ / ↓ choisit le paragraphe.
+- **Landing** : toujours rouge ; plus de photo (le pan qui s'ouvrait entre les mots est du velours ; les cartes portent un verset LSG vérifié dans la Bible intégrée ; les catégories sont des tuiles) ; accroche « Écrivez votre foi, mot après mot. » ; plus de roman, polar ni manga. La devise du propriétaire est inchangée.
+- **Versions des fichiers** : `python3 tools/versions.py` pose dans chaque page une version tirée du CONTENU de chaque .js / .css (plus de ?v=N à incrémenter à la main).
 
 ## 7. Refonte du 19/10/2026 — ce qui a changé (retours du propriétaire)
 
@@ -69,8 +86,8 @@ Commits `563625a` (serveur) puis la refonte des écrans. Suites : 168 tests SQLi
 
 ## 2. Décisions du propriétaire (ne pas rouvrir)
 - **Identité visuelle** : bordeaux #6B0F1A, blanc cassé #F8F5EB, or #D4AF37. Logo « Sōzō » en serif avec une plume dorée. Devise « Heal your heart · Grown your faith · Glow your spirit » (le « Grown » est probablement une faute de frappe : il reste tel quel, signalé). « Plus qu'une application, un chemin. »
-- **La landing (`index.html`, `styles.css`, `sozo.css`, `sozo.js`, `content.js`, `app.js`) est FIGÉE.** On n'y touche pas. Seule exception, demandée le 19/10 : les liens d'action sont devenus de vrais boutons (bloc « BOUTONS MIS EN AVANT » en fin de `sozo.css`).
-- **Une fois connecté, le rouge est discret (19/10)** : « trop de rouge ». Fonds crème (clair) ou noir chaud (nocturne) ; le bordeaux reste un accent (boutons, badges payants, filet du menu actif). La page de connexion garde son bordeaux.
+- **La landing (`index.html`, `styles.css`, `sozo.css`, `sozo.js`, `content.js`, `app.js`) est FIGÉE**, sauf sur demande expresse du propriétaire : boutons (19/10), toujours rouge (19/10), plus de photo et textes tournés vers l'écriture (21/10, §8).
+- **Une fois connecté (21/10, image du propriétaire)** : papier ivoire, bordeaux, or, plume, velours pour ce qui compte ; aucune photo. Sōzō est « plus modeste, calme et sérieux », tourné vers l'écriture (écrits courts ET livres).
 - **On développe d'abord pour les AUTEURS (19/10)** : « Écrire » vient en premier partout (menu, barre du bas au centre, inscription), l'outillage auteur à un ou deux clics.
 - **Le recueil « Sōzō » de Nawezi N. est PERSONNEL** : jamais dans le catalogue, jamais cité.
 - Il faut un compte pour entrer dans le logiciel. Les livres de la landing servent de vitrine.
@@ -85,7 +102,7 @@ Commits `563625a` (serveur) puis la refonte des écrans. Suites : 168 tests SQLi
 - Tarifs proposés, **non confirmés par le propriétaire** : commission de 15 % (10 % avec Plume), Plume à 4,99 $ pour 30 jours, reversement minimum de 1 $.
 
 ## 3. Ce qui fonctionne (testé)
-**Tests** : 172 sur SQLite (7 réservés à PostgreSQL y sont sautés) et 172 sur PostgreSQL (RLS active), tous verts au 19/10/2026. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
+**Tests** : 188 sur SQLite (8 réservés à PostgreSQL y sont sautés) et 188 sur PostgreSQL (RLS active), tous verts au 21/10/2026. Chaque garde-fou a été vu tomber quand on retire le code qui le porte.
 ```bash
 cd /Users/macbookpro/sozo && backend_venv/bin/python -m unittest discover -s backend/tests -t backend
 cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py

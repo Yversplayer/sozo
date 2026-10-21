@@ -21,7 +21,6 @@
   document.getElementById('main').innerHTML = `
   <div class="cx">
     <aside class="cx-brand" aria-label="Sōzō">
-      <img class="cx-photo" src="${S.img('foi-priere-lumiere')}" alt="">
       <div class="cx-brand-in">
         <a class="cx-logo" href="../index.html" aria-label="Sōzō — retour au site">${window.SOZO_LOGO || 'Sōzō'}</a>
         <p class="cx-tag">Heal your heart<br>Grown your faith<br>Glow your spirit</p>

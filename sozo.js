@@ -78,7 +78,7 @@
 
   $('#szCats').innerHTML = L.cats.map((c, i) =>
     `<a class="sz-cat reveal" style="--i:${i}" href="app/decouvrir.html?cat=${encodeURIComponent(c.name)}">
-      <img src="${c.img}" alt="" loading="lazy"><span class="sz-cat-ic">${S.icon(c.icon)}</span>
+      <span class="sz-cat-ic">${S.icon(c.icon)}</span>
       <strong>${c.name}</strong><span>${c.hint}</span></a>`).join('');
 
   /* tout autre titre [data-ink] écrit en dur dans la page : [[mots]] → ovale */
@@ -96,7 +96,7 @@
   const bars = (n) => Array.from({ length: n }, (_, i) => `<span class="pg-bar" style="width:${[96, 88, 93, 70, 91, 84, 95, 62][i % 8]}%"></span>`).join('');
   const head = (n, tag, k) => `<header class="pg-h"><span class="mono">PAGE ${n}</span><span class="pg-tag pg-tag--${k}">${tag}</span></header>`;
   const face = {
-    title: `<div class="pg pg--title"><span class="mono">INÈS KANZA</span><strong>Le Carnet<br>bleu</strong>${svg('pg-oval', OVAL)}<span class="mono">ROMAN · PARUTION PROGRESSIVE</span></div>`,
+    title: `<div class="pg pg--title"><span class="mono">INÈS KANZA</span><strong>Le Carnet<br>bleu</strong>${svg('pg-oval', OVAL)}<span class="mono">RECUEIL · PARUTION PROGRESSIVE</span></div>`,
     p1: `<div class="pg">${head(1, 'GRATUITE', 'free')}${para(0)}<footer class="pg-f mono">1</footer></div>`,
     p2: `<div class="pg">${head(2, 'GRATUITE', 'free')}${para(1)}<footer class="pg-f mono">2</footer></div>`,
     p3: `<div class="pg pg--locked">${head(3, 'PAYANTE', 'paid')}<div class="pg-blur">${bars(8)}</div>

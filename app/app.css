@@ -1043,8 +1043,9 @@ body.is-focus .rd-sortie { display: inline-flex !important; }
 body.is-focus .rd-top, body.is-focus .rd-nav, body.is-focus .rd-strip, body.is-focus .rd-filigrane { display: none; }
 body.is-focus .rd-main { padding-top: 12vh; }
 body.is-focus .rd-page-h { border-bottom-color: transparent; opacity: .5; }
-body.is-focus .rd-text p { transition: opacity .35s; }
-body.is-focus .rd-text:has(p.is-lu) p:not(.is-lu) { opacity: .32; }
+body.is-focus .rd-text :is(p, .pg-t, .pg-cit) { transition: opacity .35s; }
+body.is-focus .rd-text:has(> .is-lu) > :is(p, .pg-t, .pg-cit):not(.is-lu) { opacity: .32; }
+body.is-focus .rd-text .is-lu { cursor: default; }
 @media (prefers-reduced-motion: reduce) { body.is-focus .rd-text p { transition: none; } }
 @media (max-width: 760px) { .rd-pins { right: 12px; left: 12px; width: auto; } .rd-top { gap: 4px; padding-left: 10px; padding-right: 10px; } .rd-top .icon-btn { width: 36px; height: 36px; } }
 

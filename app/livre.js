@@ -81,7 +81,7 @@ window.SOZO_PRET.then(() => {
         return `<div class="cal-row"><div class="cal-day"><b>${dt.getDate()}</b><span>${MO[dt.getMonth()]}</span></div><div>${S.esc(S.pagesRange(ns).replace(/^p/, 'P'))}<small>à ${dt.getHours()} h — contenu invisible jusque-là</small></div></div>`;
       }).join('')}</div>` : ''}
       <h2>L’auteur</h2>
-      <a class="author-card lv-carte" href="auteur.html?id=${encodeURIComponent(a.id)}"><img src="${S.img(a.photo, true)}" alt=""><div><strong>${S.esc(a.name)}</strong>${a.city ? `<span class="ash"> · ${S.esc(a.city)}</span>` : ''}<p>${S.esc(a.bio)}</p></div></a>
+      <a class="author-card lv-carte" href="auteur.html?id=${encodeURIComponent(a.id)}">${S.monogramme(a.name, 48)}<div><strong>${S.esc(a.name)}</strong>${a.city ? `<span class="ash"> · ${S.esc(a.city)}</span>` : ''}<p>${S.esc(a.bio)}</p></div></a>
     </section>
 
     <section class="lv-panneau" id="lp-sommaire" role="tabpanel" aria-labelledby="lo-sommaire" hidden>

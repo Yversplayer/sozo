@@ -84,12 +84,9 @@ window.SOZO_PRET.then(() => {
   function atelier() {
     const a = at.atelier || {}, amb = a.ambiance || 'parchemin';
     const nom = a.nom || nomParDefaut();
-    const photo = a.photo || 'auteur-bureau';
     const pages = at.livres.reduce((s, b) => s + b.sorties, 0);
     const lecteur = at.role !== 'auteur';
     return `<section class="at at--${lecteur ? 'parchemin' : amb}" id="atelier" aria-label="Votre atelier">
-      <div class="at-bg" style="--ph:url('${S.img(photo)}')" aria-hidden="true"></div>
-      <div class="at-dust" aria-hidden="true">${'<i></i>'.repeat(14)}</div>
       <div class="wrap at-in">
         <div class="at-id">
           <p class="at-kicker">${lecteur ? 'Studio auteur' : `Atelier · ${S.esc(AMB[amb])}`}</p>
@@ -232,7 +229,7 @@ window.SOZO_PRET.then(() => {
     // Seule la queue de brouillons (après la dernière page sortie) se réordonne : les droits suivent les numéros
     const derniereSortie = Math.max(0, ...p.filter((x) => x.statut !== 'draft').map((x) => x.n));
     const queue = p.filter((x) => x.n > derniereSortie).map((x) => x.n);
-    const bascule = `<div class="seg-c at-vue" role="group" aria-label="Affichage des pages"><button type="button" data-vue="notes" aria-pressed="${vue === 'notes'}">Brouillons</button><button type="button" data-vue="entieres" aria-pressed="${vue === 'entieres'}">Pages entières</button><button type="button" data-vue="tableau" aria-pressed="${vue === 'tableau'}">Tableau</button></div>`;
+    const bascule = `<div class="seg-c at-vue" role="group" aria-label="Affichage des pages"><button type="button" data-vue="notes" aria-pressed="${vue === 'notes'}">Brouillons</button><button type="button" data-vue="entieres" aria-pressed="${vue === 'entieres'}">Pages entières</button><button type="button" data-vue="tableau" aria-pressed="${vue === 'tableau'}">Tableau</button></div><button class="btn btn--ghost btn--sm at-corbeille" type="button" data-corbeille>${S.icon('corbeille')} Corbeille</button>`;
     if (vue === 'notes') return notes(bascule);
     if (vue === 'entieres') {
       return `<div class="tbl-tools at-tools" role="group" aria-label="Filtrer les pages">${[['all', `Toutes (${p.length})`], ['published', `Publiées (${c('published')})`], ['scheduled', `Programmées (${c('scheduled')})`], ['draft', `Brouillons (${c('draft')})`]].map(([k, l]) => `<button class="chip" type="button" data-filtre="${k}" aria-pressed="${filtre === k}">${l}</button>`).join('')}${bascule}</div>
@@ -362,7 +359,7 @@ window.SOZO_PRET.then(() => {
   function champsLivre(b) {
     const prix = b.prix || {};
     return `<label class="cx-field">Titre<input name="titre" maxlength="120" required value="${S.esc(b.titre || '')}"></label>
-      <label class="cx-field">Catégorie<select name="categorie">${at.categories.map((c) => `<option${c === b.categorie ? ' selected' : ''}>${S.esc(c)}</option>`).join('')}</select></label>
+      <label class="cx-field">Catégorie<select name="categorie">${(b.categorie && !at.categories.includes(b.categorie) ? [b.categorie, ...at.categories] : at.categories).map((c) => `<option${c === b.categorie ? ' selected' : ''}>${S.esc(c)}</option>`).join('')}</select></label>
       <label class="cx-field">Présentation <small>visible sur la fiche du livre</small><textarea name="description" maxlength="1500" rows="4">${S.esc(b.description || '')}</textarea></label>
       <fieldset class="at-radios"><legend>Publication</legend>
         ${[['integral', 'Tout publier', 'Toutes les pages sortent ensemble'], ['progressive', 'Progressive', 'Vous programmez la parution page par page']].map(([k, l, d]) => `<label><input type="radio" name="mode" value="${k}"${(b.mode || 'progressive') === k ? ' checked' : ''}><span><strong>${l}</strong><small>${d}</small></span></label>`).join('')}
@@ -496,6 +493,33 @@ window.SOZO_PRET.then(() => {
     });
   }
 
+  /* ═══════════ CORBEILLE DES PAGES (21/10/2026) ═══════════
+     Une page jetée garde toutes ses versions ; elle revient en brouillon, à la
+     fin du livre (le serveur choisit le numéro : le premier libre). */
+  async function corbeille() {
+    const m = S.modal({ title: 'Corbeille', body: `<div id="corb" aria-live="polite"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>`, actions: [{ label: 'Fermer', primary: true }] });
+    const zone = m.el.querySelector('#corb');
+    const peindre = async () => {
+      const r = await API('GET', `/api/studio/livres/${enc(livre.id)}/corbeille`);
+      if (!r.ok) { zone.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'La corbeille n’a pas pu s’ouvrir.')}</span></p>`; return; }
+      zone.innerHTML = r.d.pages.length ? `<ul class="at-corb">${r.d.pages.map((p) => `<li><div><strong>Ancienne page ${p.n_avant}</strong> <small class="ash">jetée ${S.esc(S.dateLong(p.jetee_le))} · ${p.mots} mot${p.mots > 1 ? 's' : ''} · ${p.version} version${p.version > 1 ? 's' : ''}</small>
+          <p>${p.extrait ? S.esc(p.extrait.slice(0, 160)) : '<span class="ash">Page vide</span>'}</p></div>
+          <button class="btn btn--ghost btn--sm" type="button" data-rendre="${p.id}">${S.icon('restaurer')} Récupérer</button></li>`).join('')}</ul>
+          <p class="note">${S.icon('shield')} Une page récupérée revient en brouillon, à la fin du livre ; remettez-la à sa place avec les flèches du tableau.</p>`
+        : `<div class="empty"><strong>La corbeille est vide</strong>Dans l’éditeur, l’icône corbeille d’un brouillon le range ici. Rien n’est jamais effacé.</div>`;
+    };
+    zone.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-rendre]'); if (!b) return;
+      b.disabled = true;
+      const r = await API('POST', `/api/studio/livres/${enc(livre.id)}/corbeille/${b.dataset.rendre}/restaurer`);
+      if (!r.ok) { b.disabled = false; S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+      S.toast(`Page récupérée : c’est maintenant la page ${r.d.n}.`);
+      await relireLivre(); peindre();
+    });
+    peindre();
+  }
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-corbeille]') && livre) corbeille(); });
+
   /* ═══════════ FENÊTRES : personnaliser, nouveau livre ═══════════ */
   function personnaliser() {
     const a = at.atelier || {};
@@ -503,12 +527,10 @@ window.SOZO_PRET.then(() => {
       <fieldset class="at-amb"><legend>Ambiance</legend>${Object.entries(AMB).map(([k, l]) => `<label><input type="radio" name="ambiance" value="${k}"${(a.ambiance || 'parchemin') === k ? ' checked' : ''}><span class="at-amb-s at-amb-s--${k}" aria-hidden="true"></span><span>${l}</span></label>`).join('')}</fieldset>
       <label class="cx-field">Nom de l’atelier<input name="nom" maxlength="60" placeholder="${S.esc(nomParDefaut())}" value="${S.esc(a.nom || '')}"></label>
       <label class="cx-field">Votre phrase <small>affichée sous le nom</small><textarea name="citation" maxlength="200" rows="2">${S.esc(a.citation || '')}</textarea></label>
-      <p class="cx-field">Photo de fond</p>
-      ${galerie('photo', a.photo || 'auteur-bureau', (i) => !i.startsWith('couv'))}
       <p class="cx-err" id="errAt" role="alert"></p></form>`,
       actions: [{ label: 'Annuler' }, { label: 'Enregistrer', primary: true, onClick: async (close) => {
         const f = $('#formAt');
-        const r = await API('PUT', '/api/studio/atelier', { ambiance: f.elements.ambiance.value, nom: f.elements.nom.value.trim() || null, citation: f.elements.citation.value.trim() || null, photo: f.elements.photo.value || null });
+        const r = await API('PUT', '/api/studio/atelier', { ambiance: f.elements.ambiance.value, nom: f.elements.nom.value.trim() || null, citation: f.elements.citation.value.trim() || null, photo: a.photo || null });
         if (!r.ok) { $('#errAt').textContent = r.d.erreur || 'Réglage refusé.'; return; }
         at.atelier = r.d.atelier; close(); rendre(true); S.toast('Votre atelier est à votre image.');
       } }] });
@@ -522,11 +544,11 @@ window.SOZO_PRET.then(() => {
     let image = null;
     const apercu = (k, titre, cat, photo) => couv({ couverture: photo, style: 'a', titre: titre || 'Votre titre', categorie: cat, apparence: { couv: MODELES[k] }, image: null, id: 'apercu' }, { d3: false, imageUrl: k === 'image' ? (image || undefined) : undefined });
     const m = S.modal({ title: 'Un nouveau livre', body: `<form id="formNouv" class="at-form" novalidate>
-      ${champsLivre({ acces: 'free', mode: 'progressive', categorie: at.categories.includes('Roman') ? 'Roman' : at.categories[0] })}
+      ${champsLivre({ acces: 'free', mode: 'progressive', categorie: at.categories.includes('Poésie') ? 'Poésie' : at.categories[0] })}
       <p class="cx-field">Couverture <small>vous pourrez tout modifier ensuite dans « Ma couverture »</small></p>
       <div class="nv-modeles" role="radiogroup" aria-label="Modèle de couverture" id="nvModeles"></div>
       <div data-nv-image hidden><label class="drop dz-drop">${S.icon('upload')}<strong>Choisir mon image</strong><br>JPEG, PNG ou WebP, réduite sur votre appareil avant l’envoi.<input type="file" id="nvFichier" class="sr" accept="image/jpeg,image/png,image/webp"></label><p class="cx-err" id="nvErrImg" role="alert"></p></div>
-      <div data-nv-photo><p class="dz-l">Photo de fond</p>${galerie('couverture', 'couv-pages', null)}</div>
+      <input type="hidden" name="couverture" value="couv-pages">
       <p class="cx-err" id="errNouv" role="alert"></p></form>`,
       actions: [{ label: 'Annuler' }, { label: 'Créer le livre', primary: true, onClick: async (close) => {
         const f = $('#formNouv'), err = $('#errNouv');
@@ -556,7 +578,6 @@ window.SOZO_PRET.then(() => {
       const k = (f.querySelector('input[name="modele"]:checked') || { value: 'classique' }).value;
       $('#nvModeles').innerHTML = Object.entries(NOMS_MODELES).map(([c, l]) => `<label class="nv-m"><input type="radio" name="modele" value="${c}"${c === k ? ' checked' : ''}><span class="nv-cv">${apercu(c, f.elements.titre.value, f.elements.categorie.value, f.elements.couverture.value)}</span><small>${l}</small></label>`).join('');
       $('[data-nv-image]', md).hidden = k !== 'image';
-      $('[data-nv-photo]', md).hidden = !['classique', 'capitales', 'bandeau'].includes(k);
       $('[data-prix]', md).hidden = f.elements.acces.value === 'free';
     };
     let t;
@@ -576,9 +597,10 @@ window.SOZO_PRET.then(() => {
      rien n'est enregistré avant « Enregistrer », et seulement si le serveur
      l'accepte (image reconnue par son contenu, valeurs sur liste fermée). */
   const MODELES = {
-    classique: { fond: 'photo', police_titre: 'cormorant', position: 'bas', alignement: 'gauche', ornement: 'aucun', voile: 45, voile_couleur: '#0C0909' },
-    capitales: { fond: 'photo', police_titre: 'inter', capitales: true, espacement: 14, taille_titre: 70, graisse: 500, position: 'milieu', alignement: 'centre', ornement: 'filet', voile: 50, voile_couleur: '#0C0909' },
-    bandeau: { fond: 'photo', police_titre: 'cormorant', position: 'bas', ornement: 'bandeau', couleur_ornement: '#6B0F1A', voile: 25, voile_couleur: '#0C0909' },
+    // 21/10/2026 : plus aucune photo (demande du propriétaire) — velours, ivoire, or
+    classique: { fond: 'degrade', couleur1: '#5C0E1B', couleur2: '#23050A', angle: 160, couleur_titre: '#F8EEDC', couleur_texte: '#E2C25E', police_titre: 'cormorant', position: 'milieu', alignement: 'centre', ornement: 'cadre', couleur_ornement: '#D4AF37' },
+    capitales: { fond: 'degrade', couleur1: '#2B1418', couleur2: '#140709', angle: 170, couleur_titre: '#F3EADF', couleur_texte: '#D4AF37', police_titre: 'inter', capitales: true, espacement: 14, taille_titre: 70, graisse: 500, position: 'milieu', alignement: 'centre', ornement: 'filet', couleur_ornement: '#D4AF37' },
+    bandeau: { fond: 'uni', couleur1: '#F7F1E7', couleur_titre: '#F8EEDC', couleur_texte: '#6B0F1A', police_titre: 'cormorant', position: 'milieu', alignement: 'centre', ornement: 'bandeau', couleur_ornement: '#6B0F1A' },
     medaillon: { fond: 'uni', couleur1: '#F3EBDD', couleur_titre: '#2A1014', couleur_texte: '#2A1014', police_titre: 'cormorant', graisse: 400, position: 'haut', ornement: 'ovale', couleur_ornement: '#C29B2E' },
     nuit: { fond: 'degrade', couleur1: '#0F0D0E', couleur2: '#3A2A12', angle: 160, couleur_titre: '#E9CD72', police_titre: 'didone', position: 'milieu', alignement: 'centre', ornement: 'cadre', couleur_ornement: '#D4AF37' },
     parchemin: { fond: 'uni', couleur1: '#EFE4CC', couleur_titre: '#3B2A1A', couleur_texte: '#5A4430', police_titre: 'georgia', italique: true, position: 'milieu', alignement: 'centre', ornement: 'coins', couleur_ornement: '#8C6B2A' },
@@ -615,7 +637,7 @@ window.SOZO_PRET.then(() => {
   function dessinerCouverture() {
     const depart = (livre.apparence && livre.apparence.couv) || {};
     let c = { ...depart }, nouvelleImage = null, retirerImage = false;
-    if (!c.fond) c.fond = livre.image ? 'image' : 'photo';
+    if (!c.fond || c.fond === 'photo') c.fond = livre.image ? 'image' : 'degrade';   // « photo » n'existe plus (21/10/2026)
     const champ = (k, l, html) => `<label class="dz-f"><span>${l}</span>${html}</label>`;
     const coul = (k, d) => `<input type="color" data-k="${k}" value="${S.esc(c[k] || d)}">`;
     const plage = (k, a, z, d, pas = 1) => `<input type="range" data-k="${k}" min="${a}" max="${z}" step="${pas}" value="${c[k] != null ? c[k] : d}" data-num>`;
@@ -627,14 +649,13 @@ window.SOZO_PRET.then(() => {
         <p class="mono ash">Partir d’un modèle</p>
         <div class="dz-modeles">${Object.entries(NOMS_MODELES).map(([k, l]) => `<button type="button" class="chip" data-modele="${k}">${l}</button>`).join('')}</div>
         <details class="dz-sec" open><summary>Le fond</summary>
-          ${seg('fond', [['photo', 'Photo'], ['image', 'Mon image'], ['uni', 'Couleur'], ['degrade', 'Dégradé']], 'photo')}
+          ${seg('fond', [['degrade', 'Velours'], ['uni', 'Couleur'], ['image', 'Mon image']], 'degrade')}
           <div data-si="image"><label class="drop dz-drop">${S.icon('upload')}<strong>Choisir une image</strong><br>Photo, dessin ou couverture déjà faite (JPEG, PNG, WebP). Elle est réduite sur votre appareil avant l’envoi.<input type="file" id="dzFichier" class="sr" accept="image/jpeg,image/png,image/webp"></label>
             <p class="cx-err" id="dzErrImg" role="alert"></p>
             ${livre.image ? `<button type="button" class="btn btn--ghost btn--sm" id="dzRetirer">${S.icon('x')} Retirer mon image</button>` : ''}
             ${coche('image_seule', 'Image seule : ma couverture est déjà complète (sans texte ajouté)', false)}</div>
-          <div data-si="photo">${galerie('dzPhoto', livre.couverture, null)}</div>
-          <div data-si="uni degrade" class="dz-ligne">${champ('couleur1', 'Couleur', coul('couleur1', '#241C1D'))}<span data-si="degrade">${champ('couleur2', 'Seconde couleur', coul('couleur2', '#6B0F1A'))}${champ('angle', 'Angle', plage('angle', 0, 360, 160, 5))}</span></div>
-          <div data-si="photo image">${champ('cadrage_x', 'Cadrage horizontal', plage('cadrage_x', 0, 100, 50))}${champ('cadrage_y', 'Cadrage vertical', plage('cadrage_y', 0, 100, 50))}${champ('zoom', 'Zoom', plage('zoom', 100, 300, 100, 5))}
+          <div data-si="uni degrade" class="dz-ligne">${champ('couleur1', 'Couleur', coul('couleur1', '#5C0E1B'))}<span data-si="degrade">${champ('couleur2', 'Seconde couleur', coul('couleur2', '#23050A'))}${champ('angle', 'Angle', plage('angle', 0, 360, 160, 5))}</span></div>
+          <div data-si="image">${champ('cadrage_x', 'Cadrage horizontal', plage('cadrage_x', 0, 100, 50))}${champ('cadrage_y', 'Cadrage vertical', plage('cadrage_y', 0, 100, 50))}${champ('zoom', 'Zoom', plage('zoom', 100, 300, 100, 5))}
             <div class="dz-ligne">${champ('voile', 'Voile sur l’image', plage('voile', 0, 90, 35))}${champ('voile_couleur', 'Couleur du voile', coul('voile_couleur', '#0C0909'))}</div></div>
         </details>
         <details class="dz-sec" open><summary>Le titre</summary>
@@ -679,14 +700,14 @@ window.SOZO_PRET.then(() => {
       const b = { ...livre, couverture: photo ? photo.value : livre.couverture, apparence: { couv: nettoyer(c) }, image: retirerImage ? null : livre.image };
       $('#dzCv', m.el).innerHTML = couv(b, { big: true, d3: false, imageUrl: nouvelleImage || undefined });
       $$('[data-si]', m.el).forEach((el) => { el.hidden = !el.dataset.si.split(' ').includes(c.fond); });
-      $$('[data-seg]', m.el).forEach((bt) => bt.setAttribute('aria-pressed', String((c[bt.dataset.seg] || { fond: 'photo', alignement: 'gauche', position: 'bas', ornement: 'aucun' }[bt.dataset.seg]) === bt.dataset.v)));
+      $$('[data-seg]', m.el).forEach((bt) => bt.setAttribute('aria-pressed', String((c[bt.dataset.seg] || { fond: 'degrade', alignement: 'gauche', position: 'bas', ornement: 'aucun' }[bt.dataset.seg]) === bt.dataset.v)));
     };
     const relire = () => {
       $$('[data-k]', m.el).forEach((el) => {
         const v = el.type === 'checkbox' ? el.checked : el.value;
         if (el.type === 'checkbox' || el.type === 'text' || el.type === 'color' || el.tagName === 'SELECT' || el.type === 'range') c[el.dataset.k] = el.dataset.num != null || el.type === 'range' ? +v : v;
       });
-      c.couleur1 = c.couleur1 || '#241C1D';
+      c.couleur1 = c.couleur1 || '#5C0E1B';
       peindre();
     };
     m.el.addEventListener('input', (e) => { if (e.target.closest('[data-k], input[name="dzPhoto"]')) relire(); });
@@ -702,7 +723,7 @@ window.SOZO_PRET.then(() => {
         $$('[data-k]', m.el).forEach((el) => { const k = el.dataset.k, v = c[k]; if (el.type === 'checkbox') el.checked = v != null ? v : ['afficher_auteur', 'afficher_categorie'].includes(k); else if (v != null) el.value = v; else if (el.type === 'text') el.value = ''; });
         peindre(); return;
       }
-      if (e.target.closest('#dzRetirer')) { retirerImage = true; nouvelleImage = null; if (c.fond === 'image') c.fond = 'photo'; e.target.closest('#dzRetirer').remove(); peindre(); }
+      if (e.target.closest('#dzRetirer')) { retirerImage = true; nouvelleImage = null; if (c.fond === 'image') c.fond = 'degrade'; e.target.closest('#dzRetirer').remove(); peindre(); }
     });
     $('#dzFichier', m.el).addEventListener('change', async (e) => {
       const f = e.target.files[0]; if (!f) return;

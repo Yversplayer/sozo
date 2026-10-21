@@ -449,3 +449,21 @@ html[data-theme="dark"] .sz-plan--plume { background: #4A0B14; border-color: #D4
 .steps-cta a { background: var(--gold); color: #2A1A06; border-radius: 999px; padding: .36em .9em; box-shadow: 0 18px 40px -18px rgba(42, 16, 20, .6); }
 .sz-link:focus-visible, .sz-plan-cta:focus-visible, .dock-cta:focus-visible, .steps-cta a:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .sz-link, .sz-plan-cta { transition: none; } .sz-link:hover, .sz-plan-cta:hover { transform: none; } }
+
+/* ═══════════ 21/10/2026 — PLUS AUCUNE PHOTO (demande du propriétaire) ═══════════
+   « Enlève toutes les images ; garde seulement les fonds importants. » Ce qui
+   s'ouvrait entre les mots est un pan de VELOURS bordeaux ; les cartes portent un verset (LSG 1910) ; les catégories sont
+   des tuiles de velours. Les scènes et leurs mouvements ne changent pas. */
+.grow { background:
+  radial-gradient(120% 95% at 15% 0%, rgba(150, 32, 52, .6), transparent 58%),
+  radial-gradient(90% 80% at 100% 100%, rgba(20, 3, 7, .75), transparent 62%),
+  linear-gradient(158deg, #5C0E1B 0%, #3A0811 55%, #23050A 100%); }
+.grow img { display: none; }
+.floaters, .trail { display: none; }
+.card-velours { display: grid; place-items: center; min-height: 260px; padding: 28px 24px;
+  background: radial-gradient(110% 90% at 20% 0%, rgba(150, 32, 52, .5), transparent 60%), linear-gradient(160deg, #4A0B14, #23050A); }
+.col:nth-child(2n) .card:nth-child(odd) .card-velours { min-height: 340px; }
+.card-velours blockquote { font: italic 400 clamp(20px, 2vw, 26px)/1.35 var(--serif, 'Cormorant Garamond', Georgia, serif); color: #F8EEDC; text-align: center; }
+.card-velours cite { display: block; margin-top: 14px; font: 500 11.5px/1 'Inter', system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; font-style: normal; color: #D4AF37; }
+.sz-cat { background: radial-gradient(110% 90% at 20% 0%, rgba(150, 32, 52, .55), transparent 60%), linear-gradient(160deg, #5C0E1B, #23050A); }
+.sz-cat::after { background: none !important; }

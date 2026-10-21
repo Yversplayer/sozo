@@ -67,13 +67,16 @@ window.SITE_CONTENT = {
   },
 
   hook: {
-    line1: 'Publiez votre livre',
-    line2a: 'page après',
-    line2b: 'page.',
-    image: 'images/hero-crepuscule.jpg',
-    imageAlt: 'Une lectrice en silhouette, un livre ouvert, face à la mer au crépuscule',
-    floaters: ['images/c/f1.jpg', 'images/c/f2.jpg', 'images/c/f3.jpg', 'images/c/f4.jpg', 'images/c/f5.jpg',
-               'images/c/f6.jpg', 'images/c/f7.jpg', 'images/c/f8.jpg', 'images/c/f9.jpg', 'images/c/f10.jpg']
+    /* 21/10/2026, le propriétaire : « enlève toutes les images de la landing ;
+       garde seulement les fonds importants ». Ce qui s'ouvrait entre les mots
+       est désormais un pan de velours, plus une photo. Et Sōzō se tourne vers
+       l'écriture : un poème, une prière, une phrase, un livre. */
+    line1: 'Écrivez votre foi,',
+    line2a: 'mot après',
+    line2b: 'mot.',
+    image: '',
+    imageAlt: '',
+    floaters: []
   },
 
   positioning: 'Gratuit, payant ou mixte — à votre rythme.',
@@ -84,19 +87,20 @@ window.SITE_CONTENT = {
 
   proof: {
     layout: 'masonry',
-    kicker: 'ILS LISENT, ILS ÉCRIVENT',
-    title: 'Une page à la fois',
-    sub: 'Des lecteurs qui attendent le jeudi, des auteurs qui publient quand ils sont prêts.',
-    meta: 'HUIT LECTURES EN COURS — SCÈNES D’ILLUSTRATION',
+    kicker: 'ILS ÉCRIVENT, ILS LISENT',
+    title: 'Un mot à la fois',
+    sub: 'Une prière publiée au réveil, un poème gardé pour le soir, un recueil qui paraît page après page.',
+    meta: 'HUIT SCÈNES D’ILLUSTRATION — VERSETS : LOUIS SEGOND 1910',
+    // Plus de photo : un verset (Bible intégrée, domaine public) sur velours
     projects: [
-      { img: 'images/c/m1.jpg', title: 'Nadia lit « Les Heures salées »', meta: 'ROMAN — PAGE 12 — GRATUITE' },
-      { img: 'images/c/m2.jpg', title: 'Jonas suit « La Fenêtre rouge »', meta: 'POLAR — PAGE 7 ACHETÉE' },
-      { img: 'images/c/m3.jpg', title: 'Mireille programme sa page 15', meta: 'ROMAN GRAPHIQUE — LE 15 NOV.' },
-      { img: 'images/c/m4.jpg', title: 'Awa relit ses poèmes', meta: 'POÉSIE — LIVRE GRATUIT' },
-      { img: 'images/c/m5.jpg', title: 'Clara attend jeudi', meta: 'NOUVELLES — PAGE 9 À VENIR' },
-      { img: 'images/c/m6.jpg', title: 'Kofi lit à son fils', meta: 'JEUNESSE — GRATUIT' },
-      { img: 'images/c/m7.jpg', title: 'Nawezi relit « Croix de bois »', meta: 'BROUILLON — VISIBLE PAR L’AUTEUR SEUL' },
-      { img: 'images/c/m8.jpg', title: 'Sofia achète un chapitre', meta: '0,35 $ — PRIX AFFICHÉ AVANT' }
+      { verset: 'L’Éternel est mon berger : je ne manquerai de rien.', ref: 'Psaumes 23:1', title: 'Awa publie une prière', meta: 'PRIÈRE — PUBLIÉE EN UN GESTE' },
+      { verset: 'Ta parole est une lampe à mes pieds.', ref: 'Psaumes 119:105', title: 'Jonas garde un poème', meta: 'POÈME — DANS SA BIBLIOTHÈQUE' },
+      { verset: 'Venez à moi, vous tous qui êtes fatigués et chargés.', ref: 'Matthieu 11:28', title: 'Mireille programme sa page 15', meta: 'RECUEIL — LE 15 NOV.' },
+      { verset: 'Dieu est pour nous un refuge et un appui.', ref: 'Psaumes 46:2', title: 'Ruth relit ses psaumes', meta: 'POÉSIE — LIVRE GRATUIT' },
+      { verset: 'Je puis tout par celui qui me fortifie.', ref: 'Philippiens 4:13', title: 'Clara commente une pensée', meta: 'PENSÉE — UN MOT POUR L’AUTEUR' },
+      { verset: 'La lumière luit dans les ténèbres.', ref: 'Jean 1:5', title: 'Kofi lit un conte à son fils', meta: 'CONTE — GRATUIT' },
+      { verset: 'La charité est patiente, elle est pleine de bonté.', ref: '1 Corinthiens 13:4', title: 'Nadia écrit son témoignage', meta: 'BROUILLON — VISIBLE PAR ELLE SEULE' },
+      { verset: 'Ceux qui se confient en l’Éternel renouvellent leur force.', ref: 'Ésaïe 40:31', title: 'Sofia achète un chapitre', meta: '0,35 $ — PRIX AFFICHÉ AVANT' }
     ]
   },
 
@@ -104,12 +108,12 @@ window.SITE_CONTENT = {
      une photo qui s'ouvre dans la phrase, puis s'entoure d'un cercle */
   inkReaders: {
     kicker: 'EN CE MOMENT SUR Sōzō — SCÈNES D’ILLUSTRATION',
-    text: 'Amina {{pic:pic-lectrice-echarpe|Une lectrice en écharpe}} lit la page 9 dans le bus. Jonas {{pic:pic-lecteur-livre-rouge|Un lecteur, un livre rouge à la main}} attend la suite, annoncée pour [[jeudi, 20 h]]. Et Mireille {{pic:pic-autrice-ordinateur|Une autrice à son ordinateur}} vient de programmer trois pages pour le mois prochain.'
+    text: 'Amina lit une prière dans le bus. Jonas garde un poème pour ce soir et attend la suite d’un recueil, annoncée pour [[jeudi, 20 h]]. Et Mireille vient de publier une pensée : une seule phrase, qui a déjà trouvé ses lecteurs.'
   },
 
   library: {
     title: 'Une bibliothèque [[qui respire]].',
-    sub: "Romans, poésie, mangas, polars, essais : des livres complets et des livres qui s'écrivent sous vos yeux, page après page.",
+    sub: "Poésie, prières, méditations, témoignages, contes : des livres qui s'écrivent page après page, et des écrits d'une seule phrase.",
     catsTitle: 'Trouvez votre [[prochaine lecture]]',
     promises: [
       { icon: 'gift', title: 'Des pages gratuites, vraiment', text: 'Ce qui est offert se lit sans rien payer.' },
@@ -118,16 +122,16 @@ window.SITE_CONTENT = {
       { icon: 'clock', title: 'Chaque date annoncée', text: '« Page 8 — disponible le 15 novembre ».' }
     ],
     labels: [
-      { text: 'Roman', shelf: 0, at: 0.08 }, { text: 'Poésie', shelf: 0, at: 0.42 }, { text: 'Manga', shelf: 0, at: 0.78 },
-      { text: 'Polar', shelf: 1, at: 0.2 }, { text: 'Jeunesse', shelf: 1, at: 0.55 }, { text: 'Foi', shelf: 1, at: 0.86 }
+      { text: 'Poésie', shelf: 0, at: 0.08 }, { text: 'Prière', shelf: 0, at: 0.42 }, { text: 'Louange', shelf: 0, at: 0.78 },
+      { text: 'Méditation', shelf: 1, at: 0.2 }, { text: 'Témoignage', shelf: 1, at: 0.55 }, { text: 'Foi', shelf: 1, at: 0.86 }
     ],
     cats: [
-      { name: 'Roman', hint: 'Des vies entières', img: 'images/lectrice-canape-480.jpg', icon: 'book' },
-      { name: 'Poésie', hint: 'Un poème par semaine', img: 'images/cat-poesie-480.jpg', icon: 'spark' },
-      { name: 'Polar', hint: 'Une page, un indice', img: 'images/couv-fenetre-rouge-480.jpg', icon: 'search' },
-      { name: 'Jeunesse', hint: 'À lire ensemble', img: 'images/cat-jeunesse-480.jpg', icon: 'star' },
-      { name: 'Essai', hint: 'Penser lentement', img: 'images/cat-essai-480.jpg', icon: 'spark' },
-      { name: 'Foi', hint: 'Des mots pour l’âme', img: 'images/foi-bougie-480.jpg', icon: 'feather' }
+      { name: 'Poésie', hint: 'Des vers, une louange', icon: 'feather' },
+      { name: 'Foi', hint: 'Des mots pour l’âme', icon: 'heart' },
+      { name: 'Prière', hint: 'À dire, à partager', icon: 'spark' },
+      { name: 'Méditation', hint: 'Lire lentement', icon: 'sun' },
+      { name: 'Témoignage', hint: 'Une vie, une grâce', icon: 'book' },
+      { name: 'Conte', hint: 'Une parabole d’aujourd’hui', icon: 'moon' }
     ]
   },
 
@@ -157,7 +161,7 @@ window.SITE_CONTENT = {
     introB: 'livre,',
     introC: '3 gestes.',
     cta: 'Ouvrir le studio →',
-    image: 'images/foi-bible-cafe.jpg',
+    image: '',
     items: [
       { name: 'Écrivez ou importez', meta: 'GESTE — 01', desc: "Rédigez dans l'éditeur, ou déposez un PDF, un EPUB, un DOCX : Sōzō le découpe en pages que vous relisez, corrigez et réordonnez." },
       { name: 'Fixez vos règles', meta: 'GESTE — 02', desc: 'Tout gratuit, tout payant, ou mixte : pages 1 à 5 offertes, la suite à 0,10 $. Par page, par chapitre ou le livre entier.' },
@@ -180,7 +184,7 @@ window.SITE_CONTENT = {
 
   inkAuthors: {
     kicker: 'POUR LES AUTEURS',
-    text: 'Vous fixez le prix [[d’une page]], d’un chapitre {{pic:pic-foi-priere-bordeaux|Une femme, les mains jointes}} ou du livre entier. Le lecteur le voit {{pic:pic-lectrice-telephone|Une lectrice sur son téléphone}} avant de payer. Et ce qu’il a acheté [[reste à lui]].'
+    text: 'Vous fixez le prix [[d’une page]], d’un chapitre ou du livre entier. Le lecteur le voit avant de payer. Et ce qu’il a acheté [[reste à lui]].'
   },
 
   testimonial: {
@@ -203,7 +207,7 @@ window.SITE_CONTENT = {
     reassurance: 'BROUILLON DE DÉMONSTRATION — LIVRES, AUTEURS ET LECTEURS FICTIFS'
   },
 
-  trail: Array.from({ length: 20 }, (_, i) => `images/c/t${i + 1}.jpg`)
+  trail: []
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -227,8 +231,7 @@ window.SITE_CONTENT = {
   const hls = $$('#heroLine2 .hl');
   if (hls.length === 2) { hls[0].textContent = C.hook.line2a; hls[1].textContent = C.hook.line2b; }
   const g1 = $('#grow1 img');
-  if (g1) { g1.src = C.hook.image; g1.alt = C.hook.imageAlt; }
-  $$('.floaters .fl img').forEach((img, i) => { if (C.hook.floaters[i]) img.src = C.hook.floaters[i]; });
+  if (g1) { g1.removeAttribute('src'); g1.alt = ''; }       // un pan de velours (sozo.css), plus une photo
 
   // 2 · positionnement
   const intro = $('#spotIntro');
@@ -251,7 +254,7 @@ window.SITE_CONTENT = {
     grid.innerHTML = SPEEDS.map((s, ci) =>
       `<div class="col" data-pspeed="${s}">` +
       C.proof.projects.slice(ci * 2, ci * 2 + 2).map((p) =>
-        `<figure class="card"><div class="card-img"><img src="${p.img}" alt="${p.title} — ${p.meta}"></div><figcaption>${p.title}<span class="mono">${p.meta}</span></figcaption></figure>`
+        `<figure class="card"><div class="card-img card-velours"><blockquote>« ${p.verset} »<cite>${p.ref}</cite></blockquote></div><figcaption>${p.title}<span class="mono">${p.meta}</span></figcaption></figure>`
       ).join('') + '</div>'
     ).join('');
   }
@@ -264,7 +267,7 @@ window.SITE_CONTENT = {
   // 6-7 · processus
   set('#nw1', C.universes.introA); set('#nw2', C.universes.introB); set('#nw3', C.universes.introC);
   const g2 = $('#grow2 img');
-  if (g2) { g2.src = C.universes.image; g2.alt = 'Une bible ouverte et un café sur une table'; }
+  if (g2) { g2.removeAttribute('src'); g2.alt = ''; }
   const psteps = $('#psteps');
   if (psteps) psteps.innerHTML = C.universes.items.map((u) =>
     `<div class="pstep"><span class="pstep-meta mono ash">${u.meta}</span><h3>${u.name}</h3><p>${u.desc}</p></div>`).join('');
@@ -288,7 +291,7 @@ window.SITE_CONTENT = {
   C.objections.items.forEach((t, i) => set('#fs' + (i + 1), t));
   const fs4 = $('#fs4');
   if (fs4) fs4.innerHTML = `${C.objections.finale} <span class="pill" id="pillPhrase">${C.objections.pill}<svg class="pill-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path id="pillPath" d="M50,6 C88,4 98,22 97,50 C96,82 76,96 49,95 C16,94 3,76 4,48 C5,18 20,7 50,6 Z"/></svg></span>`;
-  $$('#trail img').forEach((img, i) => { img.src = C.trail[i % C.trail.length]; });
+
 
   // 10 · conversion (pas d'e-mail : le domaine n'existe pas encore)
   set('.footer-kicker', C.contact.kicker);

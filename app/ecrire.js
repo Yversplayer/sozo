@@ -1,20 +1,30 @@
 /* ═══════════════════════════════════════════════════════════
-   Sōzō — l'éditeur de page, avec correction du français en direct.
-   Technique : un <textarea> transparent posé sur un calque qui reproduit
-   le même texte et souligne les fautes. On écrit dans un vrai champ (copier,
-   coller, annuler, clavier, accessibilité : tout reste natif) ; le calque ne
-   sert qu'à montrer. Le correcteur tourne dans un Web Worker.
-   Le brouillon s'enregistre sur CET appareil seulement : rien n'est publié.
+   Sōzō — écrire les pages d'un livre (refonte du 21/10/2026).
+
+   « Lorsque l'utilisateur clique sur une page, il doit pouvoir défiler vers
+   les autres de haut en bas, et les modifier directement » (le
+   propriétaire). Toutes les pages s'empilent comme dans Word ; chacune est
+   une feuille de la Plume (plume.js), modifiable sur place.
+
+   Ce qui ne change pas, page par page :
+   * le SERVEUR fait foi : « enregistrée » n'apparaît qu'après sa réponse ;
+   * une copie de secours reste sur l'appareil tant que la page n'est pas
+     enregistrée (une coupure réseau ne fait rien perdre) ;
+   * conflit entre deux fenêtres : on ne choisit pas à la place de l'auteur ;
+   * une page publiée sans Plume reste en lecture seule ;
+   * pas d'enregistrement à chaque frappe (chaque envoi crée une version) :
+     après 20 s de calme, ou avec « Enregistrer », ⌘S / Ctrl S.
+   Le correcteur tourne sur l'appareil (Web Worker) ; la relecture par l'IA
+   ne part qu'à la demande de l'auteur, après son accord.
    ═══════════════════════════════════════════════════════════ */
 window.SOZO_PRET.then(async () => {
   const S = window.SOZO, $ = (s, c = document) => c.querySelector(s);
-  // Plein écran, comme une page Word (19/10/2026) : pas de menu du site, une barre fine
   document.body.classList.add('ecriture');
   const main = $('#main');
-  const id = S.q('id'), n = +S.q('p');
-  if (!id || !n) { location.replace('studio.html'); return; }
-  const URL_PAGE = `/api/studio/livres/${encodeURIComponent(id)}/pages/${n}`;
-  const KEY = `sozo-secours:${id}:${n}`;          // copie de secours, si le réseau tombe
+  const id = S.q('id'), depart = +S.q('p') || 1;
+  if (!id) { location.replace('studio.html'); return; }
+  const enc = encodeURIComponent;
+  const URL_LIVRE = `/api/studio/livres/${enc(id)}`;
   const PERSO = 'sozo-dico-perso';
   const ESSAI = `Il a manger son pain en silance, puis il a voulu sortir dehors. Les maison du quartier dormaient encore.Je ne voulais quitter cette ville , mais ils on décidé de partir sans moi.
 
@@ -23,72 +33,211 @@ Nous mange ensemble ce soir. Cette homme marchait vers la mer ; elle à peur de 
 Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense à ma mère. Une lumière, une lumière douce, une lumière qui ne s’éteint pas.`;
   let personal = [];
   try { personal = JSON.parse(localStorage.getItem(PERSO)) || []; } catch (e) {}
-  let ignored = new Set();
-  let issues = [], seq = 0, ready = false;
 
-  // La page vient du SERVEUR : texte courant, version, statut, Plume.
-  const [rp, rl] = await Promise.all([window.SOZO_API('GET', URL_PAGE), window.SOZO_API('GET', `/api/studio/livres/${encodeURIComponent(id)}`)]);
-  if (!rp.ok || !rl.ok) {
-    main.innerHTML = `<div class="wrap sec"><div class="empty"><strong>Page introuvable</strong>${S.esc(rp.d.erreur || rl.d.erreur || '')} Elle n’existe pas, ou ce livre n’est pas le vôtre.<br><br><a class="btn" href="studio.html">Retour à l’atelier</a></div></div>`;
+  const [rl, rs] = await Promise.all([window.SOZO_API('GET', URL_LIVRE), window.SOZO_API('GET', '/api/studio')]);
+  if (!rl.ok) {
+    main.innerHTML = `<div class="wrap sec"><div class="empty"><strong>Livre introuvable</strong>${S.esc(rl.d.erreur || '')} Il n’existe pas, ou il n’est pas le vôtre.<br><br><a class="btn" href="studio.html">Retour à mes livres</a></div></div>`;
     S.footer(); return;
   }
-  const page = rp.d, livre = rl.d.livre;
-  const total = livre.pages.length;
-  const verrou = page.statut === 'published' && !page.plume;     // publiée sans Plume : lecture seule
-  let enregistre = page.contenu;                                // dernier texte confirmé par le serveur
-  let version = page.version;
-  let secours = null;
-  try { secours = localStorage.getItem(KEY); } catch (e) {}
-  if (secours === enregistre) { secours = null; try { localStorage.removeItem(KEY); } catch (e) {} }
-  const ETAT = { published: ['Publiée', 'owned'], scheduled: ['Programmée', 'soon'], draft: ['Brouillon', 'draft'] }[page.statut];
+  let livre = rl.d.livre;
+  const plume = rs.ok && rs.d.plume && rs.d.plume.actif;
+  const pg = (livre.apparence && livre.apparence.page) || {};
+  const ETAT = { published: 'Publiée', scheduled: 'Programmée', draft: 'Brouillon' };
 
   let panneau = false;
   try { panneau = localStorage.getItem('sozo-ed-panneau') === '1'; } catch (e) {}
   main.innerHTML = `
   <header class="ec-barre">
-    <a class="icon-btn" href="studio.html?id=${encodeURIComponent(id)}&tab=pages" aria-label="Retour à l’atelier">${S.icon('left')}</a>
-    <div class="ec-titre"><strong>${S.esc(livre.titre)}</strong><span>Page ${n} sur ${total} · ${ETAT[0]} · <span id="save" role="status" aria-live="polite">${version ? `Version ${version}` : ''}</span></span></div>
+    <a class="icon-btn" href="studio.html?id=${enc(id)}&tab=pages" aria-label="Retour à mes livres">${S.icon('left')}</a>
+    <div class="ec-titre"><strong>${S.esc(livre.titre)}</strong><span id="etatDoc" role="status" aria-live="polite"></span></div>
     <div class="ec-outils">
-      ${n > 1 ? `<a class="icon-btn" href="ecrire.html?id=${encodeURIComponent(id)}&p=${n - 1}" aria-label="Page précédente">${S.icon('left')}</a>` : ''}
-      ${n < total ? `<a class="icon-btn" href="ecrire.html?id=${encodeURIComponent(id)}&p=${n + 1}" aria-label="Page suivante">${S.icon('right')}</a>` : ''}
-      <a class="icon-btn" id="apercu" href="lire.html?id=${encodeURIComponent(id)}&p=${n}" target="_blank" rel="noopener" aria-label="Aperçu lecteur" title="Aperçu lecteur">${S.icon('eye')}</a>
+      <label class="sr" for="allerA">Aller à la page</label>
+      <select class="pl-sel ec-aller" id="allerA"></select>
       <button class="btn btn--ghost btn--sm" type="button" id="panneauBtn" aria-expanded="${panneau}" aria-controls="edPanneau">${S.icon('check')} <span class="ec-l">Correction</span> <span class="ec-nb" id="nbFautes" hidden></span></button>
       <button class="btn btn--ghost btn--sm" type="button" id="iaBtn">${S.icon('spark')} <span class="ec-l">IA</span></button>
-      <button class="btn btn--accent btn--sm" type="button" id="saveBtn"${verrou ? ' disabled' : ''}>Enregistrer</button>
+      <button class="btn btn--sm" type="button" id="saveBtn">Enregistrer</button>
     </div>
   </header>
   <div class="ec">
-    ${verrou ? `<p class="warn ec-msg">${S.icon('lock')}<span><strong>Page publiée.</strong> Son texte ne se corrige qu’avec Plume, en nouvelle version (l’ancienne reste dans l’historique). <button class="btn btn--sm" type="button" id="plumeBtn">Passer à Plume</button></span></p>` : ''}
-    ${page.statut === 'published' && page.plume ? `<p class="note ec-msg">${S.icon('feather')} Page publiée, corrigée avec Plume : chaque enregistrement crée une nouvelle version.</p>` : ''}
-    ${secours != null && !verrou ? `<p class="warn ec-msg" id="secours">${S.icon('clock')}<span>Une copie plus récente de cette page est restée sur cet appareil. <button class="btn btn--sm" type="button" id="restaurer">La reprendre</button> <button class="btn btn--ghost btn--sm" type="button" id="oublier">L’oublier</button></span></p>` : ''}
-    <section class="ec-feuille" aria-label="Texte de la page">
-      <div class="ed-stack">
-        <div class="ed-back" id="back" aria-hidden="true"></div>
-        <textarea id="ta" spellcheck="false" lang="fr" aria-label="Texte de la page ${n}" placeholder="Écrivez ici…"${verrou ? ' readonly' : ''}>${S.esc(enregistre)}</textarea>
-      </div>
-    </section>
-    <footer class="ec-pied">
-      <span id="count"></span>
-      <span class="ec-pied-a">
-        <button class="ec-lien" type="button" id="essai"${enregistre ? ' hidden' : ''}>Essayer le correcteur</button>
-        <button class="ec-lien" type="button" id="fixTypo" disabled>Harmoniser la typographie</button>
-      </span>
-    </footer>
+    <div id="barre"></div>
+    <div id="doc" aria-label="Les pages du livre"></div>
+    <div class="ec-fin"><button class="btn btn--ghost" type="button" id="ajouter">${S.icon('plus')} Ajouter une page à la fin</button></div>
+    <footer class="ec-pied" aria-live="polite"><span id="count"></span><span id="objectif"></span>
+      <span class="ec-pied-a"><button class="ec-lien" type="button" id="essai" hidden>Essayer le correcteur</button>
+      <button class="ec-lien" type="button" id="fixTypo" disabled>Harmoniser la typographie</button></span></footer>
   </div>
   <aside class="ed-side ec-panneau" id="edPanneau" aria-label="Correction"${panneau ? '' : ' hidden'}>
-    <div class="ec-panneau-h"><strong>Correction</strong>
-      <label class="ec-coche"><input type="checkbox" id="souligner" checked> Souligner dans le texte</label>
+    <div class="ec-panneau-h"><strong>Correction <small class="ash" id="pageCorr"></small></strong>
+      <label class="ec-coche"><input type="checkbox" id="souligner" checked> Souligner</label>
       <button class="icon-btn" type="button" id="panneauX" aria-label="Fermer la correction">${S.icon('x')}</button></div>
     <div class="ed-status" id="status" aria-live="polite"><span class="spin" aria-hidden="true"></span> Chargement du dictionnaire…</div>
     <div class="panel ed-ia" id="ia" hidden aria-live="polite"></div>
     <div class="ed-sum" id="sum" role="group" aria-label="Filtrer les remarques"></div>
     <div class="ed-list" id="list"></div>
     <div class="panel ed-word" id="word" hidden></div>
-    ${page.versions.length > 1 ? `<details class="ed-hist"><summary>Historique : ${page.versions.length} versions</summary><ol>${page.versions.map((v) => `<li><strong>Version ${v.version}</strong> <span class="ash">${S.esc(S.dateLong(v.created_at))}${v.remplacee_le ? '' : ' · courante'}</span></li>`).join('')}</ol><p class="ash" style="font-size:13px">Rien n’est effacé : chaque version reste conservée.</p></details>` : ''}
-    <p class="ec-astuce">Les références bibliques (« Ps 23:4 ») deviennent des liens pour le lecteur. ⌘ S ou Ctrl S : enregistrer.</p>
+    <details class="ed-hist" id="hist" hidden><summary id="histT"></summary><ol id="histL"></ol><p class="ash" style="font-size:13px">Rien n’est effacé : chaque version reste conservée.</p></details>
+    <p class="ec-astuce">Les références bibliques (« Ps 23:4 ») deviennent des liens pour le lecteur. ⌘ S ou Ctrl S : tout enregistrer. ⌘ F ou Ctrl F : rechercher.</p>
   </aside>`;
+  const remplirAller = () => { $('#allerA').innerHTML = livre.pages.map((p) => `<option value="${p.n}">Page ${p.n}</option>`).join(''); };
+  remplirAller();
 
-  /* ─── le panneau de correction : ouvert ou fermé, au choix (retenu sur l'appareil) ─── */
+  /* ─── la Plume ─── */
+  const ed = window.SOZO_PLUME.editeur({
+    barre: $('#barre'), doc: $('#doc'),
+    reglages: { police: pg.police || 'cormorant', alignement: pg.alignement || 'gauche' },
+    etiquette: (n) => `Texte de la page ${n}`,
+    surReglage: async (k, v) => {
+      // police et alignement : ceux que verra le LECTEUR, donc un réglage du livre
+      const page = { ...((livre.apparence && livre.apparence.page) || {}), [k]: v };
+      const r = await window.SOZO_API('PATCH', URL_LIVRE, { apparence: { couv: (livre.apparence && livre.apparence.couv) || {}, page } });
+      if (!r.ok) { S.toast(r.d.erreur || 'Réglage refusé par le serveur.'); return; }
+      livre.apparence = r.d.livre.apparence;
+      S.toast(k === 'police' ? 'Police du livre enregistrée : vos lecteurs la verront aussi.' : 'Alignement du livre enregistré : vos lecteurs le verront aussi.');
+    },
+    surFocus: (f) => surFocus(f),
+    surSaisie: (f) => change(f),
+    surObjectif: () => compter(),
+    surClic: (f) => { if (f === corrigee) montrerRemarqueSousCurseur(f); }
+  });
+  const parN = new Map();          // n → feuille
+  let charges = [0, -1];           // pages chargées [de, a]
+  const total = () => livre.pages.length;
+  const infoPage = (n) => livre.pages.find((p) => p.n === n) || {};
+  const derniereSortie = () => Math.max(0, ...livre.pages.filter((p) => p.statut !== 'draft').map((p) => p.n));
+  const jetable = (n) => infoPage(n).statut === 'draft' && n > derniereSortie();
+  const clefSecours = (n) => `sozo-secours:${id}:${n}`;
+  let motsDebut = null;
+
+  function entete(p) {
+    return `<strong>Page ${p.n}</strong><span>${ETAT[p.statut] || ''}${p.acces === 'paid' ? ' · payante' : ''}</span><span data-etat>${p.version ? `version ${p.version}` : 'vide'}</span>
+      <span class="pl-page-a">
+        <a class="icon-btn" href="lire.html?id=${enc(id)}&p=${p.n}" target="_blank" rel="noopener" data-apercu="${p.n}" aria-label="Aperçu lecteur de la page ${p.n}" title="Aperçu lecteur">${S.icon('eye')}</a>
+        ${jetable(p.n) ? `<button class="icon-btn" type="button" data-jeter="${p.n}" aria-label="Mettre la page ${p.n} à la corbeille" title="Mettre à la corbeille">${S.icon('corbeille')}</button>` : ''}
+      </span>`;
+  }
+  function creerFeuille(p, avant) {
+    const verrou = p.statut === 'published' && !plume;
+    const f = ed.ajouter({ cle: p.n, texte: p.contenu, verrou, entete: entete(p), avant });
+    Object.assign(f, { n: p.n, version: p.version, enregistre: ed.texte(f), statut: p.statut, envoi: null, tAuto: null, tSecours: null });
+    const h = f.bloc.querySelector('.pl-page-h');
+    if (verrou) h.insertAdjacentHTML('afterend', `<p class="warn ec-msg">${S.icon('lock')}<span><strong>Page publiée.</strong> Son texte ne se corrige qu’avec Plume, en nouvelle version (l’ancienne reste dans l’historique). <button class="btn btn--sm" type="button" data-plume>Passer à Plume</button></span></p>`);
+    else if (p.statut === 'published') h.insertAdjacentHTML('afterend', `<p class="note ec-msg">${S.icon('feather')} Page publiée, corrigée avec Plume : chaque enregistrement crée une nouvelle version.</p>`);
+    let secours = null;
+    try { secours = localStorage.getItem(clefSecours(p.n)); } catch (e) {}
+    if (secours != null && secours !== f.enregistre && !verrou) {
+      h.insertAdjacentHTML('afterend', `<p class="warn ec-msg" data-secours>${S.icon('clock')}<span>Une copie plus récente de cette page est restée sur cet appareil. <button class="btn btn--sm" type="button" data-reprendre>La reprendre</button> <button class="btn btn--ghost btn--sm" type="button" data-oublier>L’oublier</button></span></p>`);
+      f.secours = secours;
+    } else if (secours != null) { try { localStorage.removeItem(clefSecours(p.n)); } catch (e) {} }
+    parN.set(p.n, f);
+    return f;
+  }
+
+  /* ─── chargement par lots de 24 (un livre de 2 000 pages ne part pas d'un bloc) ─── */
+  let enCharge = false;
+  async function charger(de, a, devant) {
+    de = Math.max(1, de); a = Math.min(total(), a);
+    if (a < de || enCharge) return;
+    enCharge = true;
+    const r = await window.SOZO_API('GET', `${URL_LIVRE}/textes?de=${de}&a=${a}`);
+    enCharge = false;
+    if (!r.ok) { S.toast(r.d.erreur || 'Ces pages n’ont pas pu se charger.'); return; }
+    const avant = devant ? parN.get(charges[0]) : null;
+    const hautAvant = avant ? avant.bloc.getBoundingClientRect().top : 0;
+    r.d.pages.forEach((p) => { if (!parN.has(p.n)) creerFeuille(p, avant); });
+    if (avant) scrollBy(0, avant.bloc.getBoundingClientRect().top - hautAvant);   // le texte sous les yeux ne saute pas
+    charges = charges[1] < charges[0] ? [de, a] : [Math.min(charges[0], de), Math.max(charges[1], a)];
+    compter();
+  }
+  addEventListener('scroll', () => {
+    if (enCharge || !total()) return;
+    if (charges[1] < total() && innerHeight + scrollY > document.documentElement.scrollHeight - 1600) charger(charges[1] + 1, charges[1] + 24);
+    else if (charges[0] > 1 && scrollY < 900) charger(charges[0] - 24, charges[0] - 1, true);
+  }, { passive: true });
+
+  async function vider() { ed.feuilles.slice().forEach((f) => ed.retirer(f)); parN.clear(); charges = [0, -1]; corrigee = null; }
+  async function aller(n, focus) {
+    if (!parN.has(n)) {
+      // trop loin : on recharge autour de la page demandée, après avoir tout enregistré
+      await toutEnregistrer();
+      if (ed.feuilles.some(sale)) { S.toast('Des pages ne sont pas enregistrées : enregistrez-les avant d’aller si loin.'); return; }
+      await vider();
+      await charger(n - 3, n + 20);
+    }
+    const f = parN.get(n);
+    if (!f) return;
+    f.bloc.scrollIntoView({ block: 'start', behavior: S.reduced ? 'auto' : 'smooth' });
+    if (focus && !f.verrou) setTimeout(() => f.el.focus({ preventScroll: true }), 60);
+  }
+
+  /* ─── enregistrer ─── */
+  const sale = (f) => !f.verrou && ed.texte(f) !== f.enregistre;
+  const marque = (f, t) => { const e = f.bloc.querySelector('[data-etat]'); if (e) e.textContent = t; etatDoc(); };
+  function etatDoc() {
+    const n = ed.feuilles.filter(sale).length;
+    $('#etatDoc').textContent = n ? `${n} page${n > 1 ? 's' : ''} non enregistrée${n > 1 ? 's' : ''}` : `${total()} page${total() > 1 ? 's' : ''} · tout est enregistré`;
+  }
+  function enregistrer(f) {
+    if (!sale(f)) return Promise.resolve();
+    if (f.envoi) return f.envoi;
+    const texte = ed.texte(f);
+    marque(f, 'enregistrement…');
+    f.envoi = window.SOZO_API('PUT', `${URL_LIVRE}/pages/${f.n}`, { contenu: texte, version_attendue: f.version || 0 }).then((r) => {
+      f.envoi = null;
+      if (r.status === 409 && r.d.code === 'conflit') { conflit(f, texte, r.d); return; }
+      if (!r.ok) {
+        marque(f, r.status === 0 ? 'hors ligne · copie gardée sur cet appareil' : 'non enregistrée');
+        S.toast(r.d.erreur || 'Le serveur a refusé l’enregistrement.');
+        return;
+      }
+      f.enregistre = texte;
+      if (r.d.version) f.version = r.d.version;
+      if (!sale(f)) { try { localStorage.removeItem(clefSecours(f.n)); } catch (e) {} }
+      marque(f, sale(f) ? 'modifiée' : `enregistrée · version ${f.version}`);
+      infoPage(f.n).version = f.version;
+    });
+    return f.envoi;
+  }
+  const toutEnregistrer = () => Promise.all(ed.feuilles.filter(sale).map(enregistrer));
+  function conflit(f, mien, serveur) {
+    marque(f, 'conflit : modifiée ailleurs');
+    S.modal({ title: `La page ${f.n} a changé ailleurs`, body: `<p>Une autre fenêtre ou un autre appareil a enregistré la <strong>version ${serveur.version}</strong> de cette page pendant que vous écriviez.</p>
+      <div class="recap"><div><span>Début de l’autre version</span><strong>${S.esc((serveur.contenu || '').slice(0, 120)) || '(vide)'}…</strong></div></div>
+      <p class="note">${S.icon('shield')} Quel que soit votre choix, rien n’est effacé : chaque version reste dans l’historique.</p>`,
+      actions: [
+        { label: 'Reprendre l’autre version', onClick: (close) => { close(); ed.remplacerTout(f, serveur.contenu || ''); f.enregistre = ed.texte(f); f.version = serveur.version; marque(f, `version ${f.version} chargée`); change(f, true); } },
+        { label: 'Garder mon texte', primary: true, onClick: (close) => { close(); f.version = serveur.version; ed.remplacerTout(f, mien); enregistrer(f); } }
+      ] });
+  }
+  function change(f, maintenant) {
+    if (f.verrou) return;
+    if (sale(f)) marque(f, 'modifiée');
+    clearTimeout(f.tSecours); f.tSecours = setTimeout(() => { try { if (sale(f)) localStorage.setItem(clefSecours(f.n), ed.texte(f)); } catch (e) {} }, 600);
+    clearTimeout(f.tAuto); f.tAuto = setTimeout(() => { if (sale(f)) enregistrer(f); }, 20000);
+    compter();
+    if (f === corrigee) { clearTimeout(tCheck); tCheck = setTimeout(verifier, maintenant ? 0 : 450); }
+  }
+  $('#saveBtn').addEventListener('click', async () => { await toutEnregistrer(); if (!ed.feuilles.some(sale)) S.toast('Tout est enregistré.'); });
+  document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); toutEnregistrer(); } });
+  addEventListener('beforeunload', (e) => { if (ed.feuilles.some(sale)) { e.preventDefault(); e.returnValue = ''; } });
+
+  /* ─── compteur et objectif ─── */
+  function compter() {
+    const f = ed.active;
+    const tout = ed.feuilles.reduce((s, x) => s + ed.mots(ed.plat(x)), 0);
+    if (motsDebut == null && ed.feuilles.length) motsDebut = tout;
+    const ici = f ? ed.mots(ed.plat(f)) : 0;
+    $('#count').textContent = f ? `Page ${f.n} : ${ici} mot${ici > 1 ? 's' : ''} · ${Math.max(1, Math.round(ici / 230))} min de lecture` : `${tout} mots dans les pages ouvertes`;
+    const obj = ed.objectif(), fait = Math.max(0, tout - (motsDebut || 0));
+    $('#objectif').innerHTML = obj ? `<span class="ec-obj" role="progressbar" aria-valuemin="0" aria-valuemax="${obj}" aria-valuenow="${Math.min(fait, obj)}" aria-label="Objectif de mots"><i style="width:${Math.min(100, (fait / obj) * 100)}%"></i></span> ${fait} / ${obj} mots${fait >= obj ? ' · objectif atteint' : ''}` : '';
+  }
+
+  /* ─── le correcteur : il suit la page où l'on écrit ─── */
+  const TYPES = { orth: ['Orthographe', 'orth'], gram: ['Grammaire', 'gram'], typo: ['Typographie', 'typo'], voc: ['Vocabulaire', 'voc'] };
+  let issues = [], seq = 0, ready = false, filter = '', corrigee = null, tCheck;
+  const ignored = new Set();
+  const plain = () => (corrigee ? ed.plat(corrigee) : '');
+  const keyOf = (x) => `${x.rule}|${plain().slice(x.s, x.e)}`;
+  const visible = () => issues.filter((x) => x.type !== 'auto' && !ignored.has(keyOf(x)) && (!filter || x.type === filter));
   const ouvrirPanneau = (o) => {
     panneau = o; $('#edPanneau').hidden = !o; $('#panneauBtn').setAttribute('aria-expanded', String(o));
     document.body.classList.toggle('ec-avec-panneau', o);
@@ -103,95 +252,86 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
   document.body.classList.toggle('ec-sans-soulignes', !souligner);
   $('#souligner').addEventListener('change', (e) => { souligner = e.target.checked; document.body.classList.toggle('ec-sans-soulignes', !souligner); try { localStorage.setItem('sozo-ed-souligner', souligner ? '1' : '0'); } catch (er) {} });
 
-  const ta = $('#ta'), back = $('#back');
-  const TYPES = { orth: ['Orthographe', 'orth'], gram: ['Grammaire', 'gram'], typo: ['Typographie', 'typo'], voc: ['Vocabulaire', 'voc'] };
-  let filter = '';
-
-  /* ─── calque : même texte, fautes soulignées ─── */
-  function paint() {
-    const txt = ta.value;
-    let html = '', last = 0;
-    visible().forEach((x, i) => {
-      if (x.s < last) return;
-      html += S.esc(txt.slice(last, x.s)) + `<mark class="m-${x.type}" data-i="${i}">${S.esc(txt.slice(x.s, x.e)) || ' '}</mark>`;
-      last = x.e;
-    });
-    back.innerHTML = html + S.esc(txt.slice(last)) + '\n';
-    hauteur();
+  function surFocus(f) {
+    if (corrigee !== f) {
+      corrigee = f; issues = []; filter = ''; propositions = [];
+      $('#ia').hidden = true; $('#word').hidden = true;
+      $('#pageCorr').textContent = `· page ${f.n}`;
+      $('#allerA').value = String(f.n);
+      $('#essai').hidden = !!ed.plat(f).trim() || f.verrou;
+      list(); verifier(); histoire(f);
+    }
+    compter();
   }
-  /* La feuille grandit avec le texte, comme une page Word : on fait défiler la
-     page, pas une petite zone. (Le calque des soulignés suit, même hauteur.) */
-  function hauteur() {
-    const pile = ta.parentElement, mini = Math.max(420, innerHeight - 190);
-    pile.style.height = mini + 'px';
-    pile.style.height = Math.max(mini, ta.scrollHeight + 4) + 'px';
+  async function histoire(f) {
+    $('#hist').hidden = true;
+    const r = await window.SOZO_API('GET', `${URL_LIVRE}/pages/${f.n}`);
+    if (!r.ok || corrigee !== f || r.d.versions.length < 2) return;
+    $('#histT').textContent = `Historique de la page ${f.n} : ${r.d.versions.length} versions`;
+    $('#histL').innerHTML = r.d.versions.map((v) => `<li><strong>Version ${v.version}</strong> <span class="ash">${S.esc(S.dateLong(v.created_at))}${v.remplacee_le ? '' : ' · courante'}</span></li>`).join('');
+    $('#hist').hidden = false;
   }
-  addEventListener('resize', hauteur);
-  const keyOf = (x) => `${x.rule}|${ta.value.slice(x.s, x.e)}`;
-  const visible = () => issues.filter((x) => x.type !== 'auto' && !ignored.has(keyOf(x)) && (!filter || x.type === filter));
-
   function list() {
+    if (!corrigee) return;
     const v = issues.filter((x) => x.type !== 'auto' && !ignored.has(keyOf(x)));
     const c = { orth: 0, gram: 0, typo: 0, voc: 0 };
     v.forEach((x) => { c[x.type] = (c[x.type] || 0) + 1; });
     const nb = v.length, pastille = $('#nbFautes');
     pastille.hidden = !nb; pastille.textContent = nb;
-    $('#panneauBtn').setAttribute('aria-label', `Correction${nb ? ` : ${nb} remarque${nb > 1 ? 's' : ''}` : ''}`);
-    $('#sum').innerHTML = Object.entries(TYPES).map(([k, [l]]) =>
-      `<button type="button" class="ed-chip ed-chip--${k}" data-f="${k}" aria-pressed="${filter === k}"><b>${c[k]}</b>${l}</button>`).join('');
-    const vis = visible();
+    $('#panneauBtn').setAttribute('aria-label', `Correction${nb ? ` : ${nb} remarque${nb > 1 ? 's' : ''} sur la page ${corrigee.n}` : ''}`);
+    $('#sum').innerHTML = Object.entries(TYPES).map(([k, [l]]) => `<button type="button" class="ed-chip ed-chip--${k}" data-f="${k}" aria-pressed="${filter === k}"><b>${c[k]}</b>${l}</button>`).join('');
+    const vis = visible(), t = plain();
     $('#list').innerHTML = vis.length ? vis.map((x, i) => `
       <article class="ed-item ed-item--${x.type}" data-i="${i}">
         <p class="mono">${TYPES[x.type][0]}</p>
-        <p class="ed-ctx">…${S.esc(ta.value.slice(Math.max(0, x.s - 24), x.s))}<mark>${S.esc(ta.value.slice(x.s, x.e)) || '␣'}</mark>${S.esc(ta.value.slice(x.e, x.e + 24))}…</p>
+        <p class="ed-ctx">…${S.esc(t.slice(Math.max(0, x.s - 24), x.s))}<mark>${S.esc(t.slice(x.s, x.e)) || '␣'}</mark>${S.esc(t.slice(x.e, x.e + 24))}…</p>
         <p>${S.esc(x.msg)}</p>
         <div class="ed-acts">
-          ${x.sugg.slice(0, 4).map((s, k) => `<button type="button" class="btn btn--sm" data-fix="${i}" data-k="${k}">${S.esc(s.trim() || '(supprimer)')}</button>`).join('')}
+          ${corrigee.verrou ? '' : x.sugg.slice(0, 4).map((s, k) => `<button type="button" class="btn btn--sm" data-fix="${i}" data-k="${k}">${S.esc(s.trim() || '(supprimer)')}</button>`).join('')}
           ${x.type === 'orth' ? `<button type="button" class="btn btn--ghost btn--sm" data-add="${i}">Ajouter au dictionnaire</button>` : ''}
           <button type="button" class="btn btn--ghost btn--sm" data-ign="${i}">Ignorer</button>
         </div>
       </article>`).join('')
-      : `<div class="empty"><strong>${filter ? 'Rien dans cette catégorie' : 'Aucune faute relevée'}</strong>${filter ? '' : 'Le correcteur ne voit rien à reprendre. Relisez tout de même : aucun outil ne remplace l’œil de l’auteur.'}</div>`;
+      : `<div class="empty"><strong>${filter ? 'Rien dans cette catégorie' : 'Aucune faute relevée'}</strong>${filter ? '' : 'Le correcteur ne voit rien à reprendre sur cette page. Relisez tout de même : aucun outil ne remplace l’œil de l’auteur.'}</div>`;
     const harmo = issues.filter((x) => (x.type === 'typo' || x.type === 'auto') && x.sugg.length && !ignored.has(keyOf(x))).length;
-    $('#fixTypo').disabled = !harmo;
+    $('#fixTypo').disabled = !harmo || corrigee.verrou;
     $('#fixTypo').innerHTML = `${S.icon('check')} Harmoniser la typographie${harmo ? ` (${harmo})` : ''}`;
     $('#fixTypo').title = 'Apostrophes courbes, espaces fines avant ; : ! ?, points de suspension…';
-    paint();
+    ed.souligner(corrigee, visible());
   }
-
-  /* ─── corrections ─── */
-  function apply(x, s) {
-    const v = ta.value;
-    ta.value = v.slice(0, x.s) + s + v.slice(x.e);
+  function appliquer(x, s) {
+    if (!ed.remplacer(corrigee, x.s, x.e, s)) { S.toast('Ce passage a changé : relancez la correction.'); return; }
     const d = s.length - (x.e - x.s);
     issues = issues.filter((y) => y !== x).map((y) => (y.s >= x.e ? { ...y, s: y.s + d, e: y.e + d } : y));
-    ta.setSelectionRange(x.s + s.length, x.s + s.length);
-    changed(true);
+    list();
   }
   $('#list').addEventListener('click', (e) => {
-    const f = e.target.closest('[data-fix]'), a = e.target.closest('[data-add]'), g = e.target.closest('[data-ign]');
-    const item = e.target.closest('.ed-item');
+    const fx = e.target.closest('[data-fix]'), a = e.target.closest('[data-add]'), g = e.target.closest('[data-ign]'), item = e.target.closest('.ed-item');
     const vis = visible();
-    if (f) { const x = vis[+f.dataset.fix]; apply(x, x.sugg[+f.dataset.k]); return; }
-    if (a) { const x = vis[+a.dataset.add]; const w = ta.value.slice(x.s, x.e); personal.push(w); try { localStorage.setItem(PERSO, JSON.stringify(personal)); } catch (er) {} S.toast(`« ${w} » ajouté à votre dictionnaire (sur cet appareil).`); run(); return; }
+    if (fx) { const x = vis[+fx.dataset.fix]; appliquer(x, x.sugg[+fx.dataset.k]); return; }
+    if (a) { const x = vis[+a.dataset.add]; const w = plain().slice(x.s, x.e); personal.push(w); try { localStorage.setItem(PERSO, JSON.stringify(personal)); } catch (er) {} S.toast(`« ${w} » ajouté à votre dictionnaire (sur cet appareil).`); verifier(); return; }
     if (g) { ignored.add(keyOf(vis[+g.dataset.ign])); list(); return; }
-    if (item) { const x = vis[+item.dataset.i]; ta.focus(); ta.setSelectionRange(x.s, x.e); scrollToSel(); }
+    if (item) { const x = vis[+item.dataset.i]; ed.selectionner(corrigee, x.s, x.e); }
   });
   $('#sum').addEventListener('click', (e) => { const c = e.target.closest('[data-f]'); if (!c) return; filter = filter === c.dataset.f ? '' : c.dataset.f; list(); });
   $('#fixTypo').addEventListener('click', () => {
     const typo = issues.filter((x) => (x.type === 'typo' || x.type === 'auto') && x.sugg.length && !ignored.has(keyOf(x))).sort((a, z) => z.s - a.s);
-    let v = ta.value, last = Infinity;
-    typo.forEach((x) => { if (x.e > last) return; v = v.slice(0, x.s) + x.sugg[0] + v.slice(x.e); last = x.s; });
-    ta.value = v; S.toast(`${typo.length} correction${typo.length > 1 ? 's' : ''} typographique${typo.length > 1 ? 's' : ''} appliquée${typo.length > 1 ? 's' : ''}.`);
-    changed(true);
+    let n = 0, last = Infinity;
+    typo.forEach((x) => { if (x.e > last) return; if (ed.remplacer(corrigee, x.s, x.e, x.sugg[0])) n++; last = x.s; });
+    S.toast(`${n} correction${n > 1 ? 's' : ''} typographique${n > 1 ? 's' : ''} appliquée${n > 1 ? 's' : ''}. ⌘Z pour annuler.`);
+    change(corrigee, true);
   });
-  function scrollToSel() {
-    const m = back.querySelector('mark[data-i]') && [...back.querySelectorAll('mark')].find((x) => x.textContent && ta.value.indexOf(x.textContent, ta.selectionStart) === ta.selectionStart);
-    const y = m ? m.getBoundingClientRect().top : ta.getBoundingClientRect().top + (ta.value.slice(0, ta.selectionStart).split('\n').length - 1) * parseFloat(getComputedStyle(ta).lineHeight);
-    scrollTo({ top: Math.max(0, scrollY + y - innerHeight / 3), behavior: S.reduced ? 'auto' : 'smooth' });
+  // Un clic sur un mot souligné montre sa remarque, comme dans Word
+  function montrerRemarqueSousCurseur(f) {
+    const o = ed.curseur(f);
+    if (o == null) return;
+    const vis = visible(), i = vis.findIndex((x) => o >= x.s && o <= x.e);
+    if (i < 0) return;
+    if (!panneau) ouvrirPanneau(true);
+    const el = $(`#list .ed-item[data-i="${i}"]`);
+    if (el) { el.scrollIntoView({ block: 'nearest' }); el.classList.add('is-vise'); setTimeout(() => el.classList.remove('is-vise'), 1400); }
   }
 
-  /* ─── le correcteur (Web Worker) ─── */
   const status = (h) => { $('#status').innerHTML = h; };
   let worker;
   try { worker = new Worker('langue/correcteur.js?v=5'); } catch (e) { status(`${S.icon('x')} Ce navigateur ne peut pas lancer le correcteur.`); }
@@ -199,27 +339,24 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
     worker.onmessage = (ev) => {
       const d = ev.data;
       if (d.type === 'progress') status(`<span class="spin" aria-hidden="true"></span> ${S.esc(d.step)}`);
-      if (d.type === 'ready') { ready = true; status(`${S.icon('check')} Dictionnaire chargé : ${d.forms.toLocaleString('fr-FR')} formes du français.`); run(); }
-      if (d.type === 'result' && d.id === seq) { issues = d.issues; list(); }
+      if (d.type === 'ready') { ready = true; status(`${S.icon('check')} Dictionnaire chargé : ${d.forms.toLocaleString('fr-FR')} formes du français.`); verifier(); }
+      if (d.type === 'result' && d.id === seq && corrigee) { issues = d.issues; list(); }
       if (d.type === 'wordinfo') showWord(d.info);
       if (d.type === 'error') status(`${S.icon('x')} Le correcteur a rencontré un problème : ${S.esc(d.message)}`);
     };
     worker.onerror = () => status(`${S.icon('x')} Le dictionnaire n’a pas pu être chargé (connexion ?). Vous pouvez écrire quand même.`);
     worker.postMessage({ type: 'init', base: new URL('langue/', location.href).href });
   }
-  const run = () => { if (ready) worker.postMessage({ type: 'check', id: ++seq, text: ta.value, personal }); };
+  const verifier = () => { if (ready && corrigee) worker.postMessage({ type: 'check', id: ++seq, text: plain(), personal }); };
 
-  /* ─── relecture par l'IA (Claude) : un second avis, à la demande ───
-     Le texte part vers Anthropic seulement après l'accord de l'auteur (retenu
-     sur l'appareil). Le serveur vérifie chaque proposition dans le texte ;
-     ici, rien ne change sans un clic sur « Appliquer ». */
+  /* ─── relecture par l'IA (Claude) : un second avis, à la demande, page par page ─── */
   const IA_OK = 'sozo-ia-accord';
   const T_IA = { orthographe: 'Orthographe', grammaire: 'Grammaire', conjugaison: 'Conjugaison', accord: 'Accord', ponctuation: 'Ponctuation', style: 'Style' };
   let propositions = [];
   function peindreIA() {
     const el = $('#ia');
     el.hidden = false;
-    el.innerHTML = `<div class="ed-ia-h"><strong>${S.icon('spark')} Relecture par l’IA</strong><button class="icon-btn" type="button" data-ia-fermer aria-label="Fermer">${S.icon('x')}</button></div>`
+    el.innerHTML = `<div class="ed-ia-h"><strong>${S.icon('spark')} Relecture par l’IA · page ${corrigee.n}</strong><button class="icon-btn" type="button" data-ia-fermer aria-label="Fermer">${S.icon('x')}</button></div>`
       + (propositions.length ? propositions.map((p, i) => `<article class="ed-item ed-item--ia">
           <p class="mono">${T_IA[p.type] || 'Remarque'}</p>
           <p class="ed-ctx"><del>${S.esc(p.extrait)}</del> → <ins>${S.esc(p.correction)}</ins></p>
@@ -228,24 +365,27 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
         : `<p class="ash">L’IA ne relève aucune faute sur cette page. Relisez tout de même : rien ne remplace votre œil.</p>`);
   }
   async function relectureIA() {
-    if (!ta.value.trim()) { S.toast('La page est vide : rien à relire.'); return; }
+    if (!corrigee) { S.toast('Cliquez d’abord dans la page à relire.'); return; }
+    const texte = plain();
+    if (!texte.trim()) { S.toast('La page est vide : rien à relire.'); return; }
     let accord = false; try { accord = localStorage.getItem(IA_OK) === '1'; } catch (e) {}
     if (!accord) {
-      S.modal({ title: 'Relecture par l’IA', body: `<p>Le texte de cette page va être envoyé à <strong>Anthropic (Claude)</strong>, le temps d’être relu. L’IA ne publie rien et n’enregistre rien : elle propose des corrections, et c’est vous qui décidez de chacune.</p><p class="note">${S.icon('shield')} Le correcteur de l’éditeur, lui, fonctionne sur votre appareil sans rien envoyer.</p>`,
+      S.modal({ title: 'Relecture par l’IA', body: `<p>Le texte de la page ${corrigee.n} va être envoyé à <strong>Anthropic (Claude)</strong>, le temps d’être relu. L’IA ne publie rien et n’enregistre rien : elle propose des corrections, et c’est vous qui décidez de chacune.</p><p class="note">${S.icon('shield')} Le correcteur de l’éditeur, lui, fonctionne sur votre appareil sans rien envoyer.</p>`,
         actions: [{ label: 'Annuler' }, { label: 'J’accepte, relire la page', primary: true, onClick: (close) => { close(); try { localStorage.setItem(IA_OK, '1'); } catch (e) {} relectureIA(); } }] });
       return;
     }
     ouvrirPanneau(true);
-    const btn = $('#iaBtn'), el = $('#ia');
+    const btn = $('#iaBtn'), el = $('#ia'), f = corrigee;
     btn.disabled = true; btn.setAttribute('aria-busy', 'true');
-    el.hidden = false; el.innerHTML = `<p><span class="spin" style="display:inline-block;vertical-align:-3px"></span> L’IA relit la page… (quelques secondes)</p>`;
-    const r = await window.SOZO_API('POST', `${URL_PAGE}/relecture`, { texte: ta.value });
+    el.hidden = false; el.innerHTML = `<p><span class="spin" style="display:inline-block;vertical-align:-3px"></span> L’IA relit la page ${f.n}… (quelques secondes)</p>`;
+    const r = await window.SOZO_API('POST', `${URL_LIVRE}/pages/${f.n}/relecture`, { texte });
     btn.disabled = false; btn.removeAttribute('aria-busy');
+    if (corrigee !== f) return;
     if (!r.ok) {
       el.innerHTML = `<div class="ed-ia-h"><strong>${S.icon('spark')} Relecture par l’IA</strong><button class="icon-btn" type="button" data-ia-fermer aria-label="Fermer">${S.icon('x')}</button></div><p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'La relecture n’a pas pu se faire.')}${r.d.code === 'ia_inactive' ? ' Le correcteur de l’éditeur reste disponible.' : ''}</span></p>`;
       return;
     }
-    propositions = r.d.corrections.map((p) => ({ ...p, texte: ta.value }));
+    propositions = r.d.corrections;
     peindreIA();
   }
   $('#iaBtn').addEventListener('click', relectureIA);
@@ -254,16 +394,16 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
     const ap = e.target.closest('[data-ia-app]'), ig = e.target.closest('[data-ia-ign]');
     if (ig) { propositions.splice(+ig.dataset.iaIgn, 1); peindreIA(); return; }
     if (!ap) return;
-    const p = propositions[+ap.dataset.iaApp];
-    // Le texte a pu bouger depuis la relecture : on cherche l'extrait au plus près de sa place d'origine
-    let at = ta.value.indexOf(p.extrait, Math.max(0, p.debut - 80));
-    if (at < 0) at = ta.value.indexOf(p.extrait);
-    if (at < 0) { S.toast('Ce passage a changé depuis la relecture : correction ignorée.'); propositions.splice(+ap.dataset.iaApp, 1); peindreIA(); return; }
-    apply({ s: at, e: at + p.extrait.length }, p.correction);
+    const p = propositions[+ap.dataset.iaApp], t = plain();
+    // le texte a pu bouger depuis la relecture : on cherche l'extrait au plus près de sa place d'origine
+    let at = t.indexOf(p.extrait, Math.max(0, p.debut - 80));
+    if (at < 0) at = t.indexOf(p.extrait);
+    if (at < 0 || !ed.remplacer(corrigee, at, at + p.extrait.length, p.correction)) S.toast('Ce passage a changé depuis la relecture : correction ignorée.');
     propositions.splice(+ap.dataset.iaApp, 1); peindreIA();
   });
 
-  /* ─── fiche du mot sélectionné : nature, lemme, synonymes, conjugaison ─── */
+  /* ─── fiche du mot (double-clic) : nature, synonymes, conjugaison ─── */
+  let selMot = null;
   function showWord(info) {
     const el = $('#word'); el.hidden = false;
     if (!info.known) { el.innerHTML = `<p class="mono ash">Mot</p><h3>${S.esc(info.w)}</h3><p>Inconnu du dictionnaire.${info.sugg.length ? ` Vouliez-vous dire : <strong>${info.sugg.map(S.esc).join('</strong>, <strong>')}</strong> ?` : ''}</p>`; return; }
@@ -276,16 +416,20 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
         ${P.map((p, i) => `<tr><th>${p}</th><td>${S.esc(info.conj.ipre[i])}</td><td>${S.esc(info.conj.iimp[i])}</td><td>${S.esc(info.conj.ifut[i])}</td></tr>`).join('')}
         </tbody></table><p class="ash" style="font-size:13px">Participe passé : ${S.esc(info.conj.ppas || '—')}</p>` : ''}`;
   }
+  $('#word').addEventListener('mousedown', (e) => { if (e.target.closest('[data-syn]')) e.preventDefault(); });
   $('#word').addEventListener('click', (e) => {
-    const s = e.target.closest('[data-syn]'); if (!s) return;
-    const a = ta.selectionStart, z = ta.selectionEnd;
-    if (a === z) return;
-    apply({ s: a, e: z }, s.dataset.syn);
+    const s = e.target.closest('[data-syn]'); if (!s || !selMot || !corrigee || corrigee.verrou) return;
+    corrigee.el.focus({ preventScroll: true });
+    const sl = getSelection(); sl.removeAllRanges(); sl.addRange(selMot);
+    document.execCommand('insertText', false, s.dataset.syn);
+    change(corrigee, true);
   });
-  ta.addEventListener('dblclick', () => {
+  $('#doc').addEventListener('dblclick', () => {
     setTimeout(() => {
-      const w = ta.value.slice(ta.selectionStart, ta.selectionEnd).trim();
-      if (worker && ready && /^[\p{L}’'-]{2,}$/u.test(w)) {
+      const sl = getSelection(), w = sl.toString().trim();
+      if (worker && ready && sl.rangeCount && /^[\p{L}’'-]{2,}$/u.test(w)) {
+        selMot = sl.getRangeAt(0).cloneRange();
+        if (!panneau) ouvrirPanneau(true);
         const el = $('#word'); el.hidden = false;
         el.innerHTML = `<p class="mono ash">Le mot</p><h3>${S.esc(w)}</h3><p class="ash"><span class="spin" style="display:inline-block;vertical-align:-3px"></span> Recherche de la nature, des synonymes et de la conjugaison…</p>`;
         worker.postMessage({ type: 'word', w });
@@ -293,71 +437,95 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
     }, 10);
   });
 
-  /* ─── saisie, enregistrement sur le serveur, compteurs ───
-     « Enregistré » ne s'affiche qu'après la réponse du serveur. Entre-temps,
-     une copie de secours reste sur l'appareil : une coupure réseau ne fait
-     rien perdre. Pas d'enregistrement à chaque frappe : chaque envoi crée
-     une version, l'historique resterait illisible. */
-  let tCheck, tSecours, tAuto, envoi = null;
-  const sale = () => ta.value !== enregistre;
-  const marque = (t) => { $('#save').textContent = t; };
-  async function enregistrer() {
-    if (verrou || !sale()) { if (!verrou) marque(`Enregistré · version ${version}`); return; }
-    if (envoi) return envoi;
-    const texte = ta.value;
-    $('#saveBtn').disabled = true; marque('Enregistrement…');
-    envoi = window.SOZO_API('PUT', URL_PAGE, { contenu: texte, version_attendue: version || 0 }).then((r) => {
-      envoi = null; $('#saveBtn').disabled = false;
-      if (r.status === 409 && r.d.code === 'conflit') { conflit(texte, r.d); return; }
-      if (!r.ok) {
-        marque(r.status === 0 ? 'Hors ligne · copie gardée sur cet appareil' : 'Non enregistré');
-        S.toast(r.d.erreur || 'Le serveur a refusé l’enregistrement.');
-        return;
+  /* ─── actions des feuilles : copie de secours, aperçu, corbeille, Plume ─── */
+  $('#doc').addEventListener('click', async (e) => {
+    const bloc = e.target.closest('.pl-page'); if (!bloc) return;
+    const f = parN.get(+bloc.dataset.cle); if (!f) return;
+    if (e.target.closest('[data-reprendre]')) { ed.remplacerTout(f, f.secours); bloc.querySelector('[data-secours]').remove(); change(f, true); return; }
+    if (e.target.closest('[data-oublier]')) { try { localStorage.removeItem(clefSecours(f.n)); } catch (er) {} bloc.querySelector('[data-secours]').remove(); return; }
+    const ap = e.target.closest('[data-apercu]');
+    // l'aperçu montre ce que le SERVEUR a : on enregistre d'abord
+    if (ap && sale(f)) { e.preventDefault(); await enregistrer(f); if (!sale(f)) open(ap.href, '_blank', 'noopener'); return; }
+    if (e.target.closest('[data-plume]')) { const r = await window.SOZO_API('GET', '/api/studio'); if (r.ok) S.buy.plume(r.d.plume.prix); else S.toast(r.d.erreur || 'Plume est indisponible pour le moment.'); return; }
+    if (e.target.closest('[data-jeter]')) jeter(f);
+  });
+  async function relireLivre() {
+    const r = await window.SOZO_API('GET', URL_LIVRE);
+    if (r.ok) livre = r.d.livre;
+    remplirAller();
+  }
+  async function reconstruire(autour) {
+    await vider();
+    await relireLivre();
+    await charger(autour - 3, autour + 20);
+    etatDoc();
+  }
+  function jeter(f) {
+    S.modal({ title: `Mettre la page ${f.n} à la corbeille ?`, body: `<p>Elle quitte le livre, avec toutes ses versions, et reste dans la corbeille de l’atelier : vous pourrez la récupérer quand vous voulez.</p>${f.n < total() ? '<p class="ash">Les brouillons qui la suivent reculent d’un numéro.</p>' : ''}`,
+      actions: [{ label: 'Annuler' }, { label: 'Mettre à la corbeille', primary: true, onClick: async (close) => {
+        close();
+        await toutEnregistrer();
+        if (ed.feuilles.some(sale)) { S.toast('Des pages ne sont pas enregistrées : rien n’a été jeté.'); return; }
+        const n = f.n;
+        const r = await window.SOZO_API('DELETE', `${URL_LIVRE}/pages/${n}`);
+        if (!r.ok) { S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+        try { localStorage.removeItem(clefSecours(n)); } catch (e) {}
+        await reconstruire(Math.max(1, n - 1));
+        annulable(r.d.page, n);
+      } }] });
+  }
+  // « Annuler » : la page revient à SA place (restaurée à la fin, puis remise au bon numéro)
+  function annulable(pid, n) {
+    const t = document.createElement('div');
+    t.className = 'ec-annuler';
+    t.setAttribute('role', 'status');
+    t.innerHTML = `<span>Page ${n} mise à la corbeille.</span> <button class="btn btn--sm btn--accent" type="button">Annuler</button>`;
+    document.body.appendChild(t);
+    const fin = setTimeout(() => t.remove(), 10000);
+    t.querySelector('button').addEventListener('click', async () => {
+      clearTimeout(fin); t.remove();
+      const r = await window.SOZO_API('POST', `${URL_LIVRE}/corbeille/${pid}/restaurer`);
+      if (!r.ok) { S.toast(r.d.erreur || 'La page n’a pas pu revenir. Elle reste dans la corbeille de l’atelier.'); return; }
+      await relireLivre();
+      const sortie = derniereSortie();
+      const queue = livre.pages.filter((p) => p.n > sortie).map((p) => p.n);
+      if (r.d.n !== n && queue.includes(n)) {
+        const ordre = queue.filter((x) => x !== r.d.n);
+        ordre.splice(queue.indexOf(n), 0, r.d.n);
+        const ro = await window.SOZO_API('POST', `${URL_LIVRE}/pages/ordre`, { ordre });
+        if (!ro.ok) S.toast(`La page est revenue en page ${r.d.n} : ${ro.d.erreur || 'elle n’a pas pu reprendre sa place.'}`);
       }
-      enregistre = texte;
-      if (r.d.version) version = r.d.version;
-      if (!sale()) { try { localStorage.removeItem(KEY); } catch (e) {} }
-      marque(`Enregistré · version ${version}`);
+      await reconstruire(n);
+      S.toast(`La page ${n} est revenue.`);
     });
-    return envoi;
   }
-  /* Une autre fenêtre a enregistré cette page entre-temps : on ne choisit
-     pas à la place de l'auteur, et rien n'est perdu (sa copie reste au secours). */
-  function conflit(mien, serveur) {
-    marque('Conflit : page modifiée ailleurs');
-    S.modal({ title: 'Cette page a changé ailleurs', body: `<p>Une autre fenêtre ou un autre appareil a enregistré la <strong>version ${serveur.version}</strong> de cette page pendant que vous écriviez.</p>
-      <div class="recap"><div><span>Début de l’autre version</span><strong>${S.esc((serveur.contenu || '').slice(0, 120)) || '(vide)'}…</strong></div></div>
-      <p class="note">${S.icon('shield')} Quel que soit votre choix, rien n’est effacé : chaque version reste dans l’historique.</p>`,
-      actions: [
-        { label: 'Reprendre l’autre version', onClick: (close) => { close(); ta.value = serveur.contenu || ''; enregistre = ta.value; version = serveur.version; changed(true); marque(`Version ${version} chargée`); } },
-        { label: 'Garder mon texte', primary: true, onClick: (close) => { close(); version = serveur.version; ta.value = mien; enregistrer(); } }
-      ] });
+  $('#ajouter').addEventListener('click', async () => {
+    const r = await window.SOZO_API('POST', `${URL_LIVRE}/pages`, { contenu: '' });
+    if (!r.ok) { S.toast(r.d.erreur || 'Le serveur a refusé.'); return; }
+    await relireLivre();
+    if (!$('#doc .pl-page')) $('#doc').innerHTML = '';
+    if (charges[1] === r.d.n - 1 || charges[1] < charges[0]) await charger(r.d.n, r.d.n); else await reconstruire(r.d.n);
+    aller(r.d.n, true);
+    etatDoc();
+  });
+  $('#allerA').addEventListener('change', (e) => aller(+e.target.value, true));
+  $('#essai').addEventListener('click', () => {
+    const f = ed.active; if (!f || f.verrou || ed.plat(f).trim()) return;
+    ed.remplacerTout(f, ESSAI); $('#essai').hidden = true;
+    S.toast('Texte d’essai, avec des fautes volontaires. Il n’est enregistré que si vous l’enregistrez.'); change(f, true);
+  });
+
+  /* ─── départ : les pages autour de celle demandée ─── */
+  if (!total()) {
+    $('#doc').innerHTML = `<div class="empty"><strong>Ce livre n’a pas encore de page</strong>Ajoutez la première : elle reste un brouillon, visible par vous seul.</div>`;
+  } else {
+    await charger(depart - 5, depart + 18);
+    const f = parN.get(depart) || ed.feuilles[0];
+    if (f) {
+      $('#allerA').value = String(f.n);
+      f.bloc.scrollIntoView({ block: 'start' });
+      if (!f.verrou) f.el.focus({ preventScroll: true });
+    }
   }
-  function changed(now) {
-    const words = (ta.value.match(/[\p{L}\d’'-]+/gu) || []).length;
-    $('#count').textContent = `${words} mots · ${ta.value.length} signes · ${Math.max(1, Math.round(words / 230))} min de lecture`;
-    paint();
-    clearTimeout(tCheck); tCheck = setTimeout(run, now ? 0 : 450);
-    if (verrou) return;
-    if (sale()) marque('Modifications non enregistrées');
-    clearTimeout(tSecours); tSecours = setTimeout(() => { try { if (sale()) localStorage.setItem(KEY, ta.value); } catch (e) {} }, 600);
-    clearTimeout(tAuto); tAuto = setTimeout(() => { if (sale()) enregistrer(); }, 20000);
-  }
-  ta.addEventListener('input', () => { issues = issues.filter((x) => x.e <= ta.selectionStart - 1 || x.s >= ta.value.length); changed(false); });
-  ta.addEventListener('scroll', () => { back.scrollTop = ta.scrollTop; });
-  $('#saveBtn').addEventListener('click', enregistrer);
-  document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); enregistrer(); } });
-  addEventListener('beforeunload', (e) => { if (!verrou && sale()) { e.preventDefault(); e.returnValue = ''; } });
-  const essai = $('#essai');
-  if (essai) essai.addEventListener('click', () => { if (ta.value.trim()) return; ta.value = ESSAI; essai.hidden = true; S.toast('Texte d’essai, avec des fautes volontaires. Il n’est enregistré que si vous cliquez sur « Enregistrer ».'); changed(true); });
-  // L'aperçu montre ce que le SERVEUR a : on enregistre d'abord
-  $('#apercu').addEventListener('click', async (e) => { if (!verrou && sale()) { e.preventDefault(); await enregistrer(); if (!sale()) open(e.currentTarget.href, '_blank', 'noopener'); } });
-  const rest = $('#restaurer');
-  if (rest) {
-    rest.addEventListener('click', () => { ta.value = secours; $('#secours').remove(); changed(true); });
-    $('#oublier').addEventListener('click', () => { try { localStorage.removeItem(KEY); } catch (e) {} $('#secours').remove(); });
-  }
-  const pb = $('#plumeBtn');
-  if (pb) pb.addEventListener('click', async () => { const r = await window.SOZO_API('GET', '/api/studio'); if (r.ok) S.buy.plume(r.d.plume.prix); else S.toast(r.d.erreur || 'Plume est indisponible pour le moment.'); });
-  changed(true);
+  etatDoc(); compter();
 }).catch(window.SOZO_ERREUR);

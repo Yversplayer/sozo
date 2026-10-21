@@ -1,0 +1,115 @@
+/* ═══════════════════════════════════════════════════════════
+   Sōzō — la Plume, le mini-Word (21/10/2026). Préfixe pl-.
+   Chargée par ecrire.html (pages d'un livre) et ecrits.html (écrits).
+   La barre est fine et claire ; la feuille est le papier ; rien ne bouge
+   sans que la personne l'ait demandé.
+   ═══════════════════════════════════════════════════════════ */
+.pl-barre { position: sticky; top: var(--pl-haut, 56px); z-index: 30; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 10px;
+  background: color-mix(in srgb, var(--paper) 94%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--line); border-radius: 12px; margin: 0 auto 18px; max-width: 980px; }
+.pl-g { display: flex; align-items: center; gap: 2px; padding-right: 10px; border-right: 1px solid var(--line); }
+.pl-g:last-child { border-right: 0; padding-right: 0; }
+.pl-g--outils { margin-left: auto; }
+.pl-b { min-width: 34px; height: 34px; padding: 0 6px; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: none; color: var(--ink); cursor: pointer; font: 600 14px/1 var(--sans); }
+.pl-b .ic { width: 18px; height: 18px; }
+.pl-b:hover { background: rgba(var(--ink-rgb), .07); }
+.pl-b[aria-pressed="true"] { background: rgba(107, 15, 26, .1); color: var(--ver); }
+html[data-theme="dark"] .pl-b[aria-pressed="true"] { background: rgba(212, 175, 55, .14); color: var(--gold); }
+.pl-b--t { font-family: var(--serif); font-size: 16px; }
+.pl-sel { height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); padding: 0 8px; font: 500 13.5px/1 var(--sans); max-width: 150px; }
+.pl-menu { position: relative; }
+.pl-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; min-width: 220px; padding: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); display: grid; gap: 2px; }
+.pl-pop[hidden] { display: none; }
+.pl-pop--d { left: auto; right: 0; min-width: 290px; }
+.pl-pop[data-pop="car"] { grid-template-columns: repeat(6, 1fr); min-width: 260px; }
+.pl-car { height: 38px; border: 0; border-radius: 8px; background: none; font: 400 20px/1 var(--serif); color: var(--ink); cursor: pointer; }
+.pl-car:hover { background: rgba(var(--ink-rgb), .07); }
+.pl-pop > button:not(.pl-car) { display: grid; grid-template-columns: 20px 1fr; align-items: center; column-gap: 10px; padding: 9px 10px; border: 0; border-radius: 8px; background: none; color: var(--ink); text-align: left; font: 500 14px/1.25 var(--sans); cursor: pointer; }
+.pl-pop > button:not(.pl-car) small { grid-column: 2; color: var(--ash); font-weight: 400; font-size: 12.5px; }
+.pl-pop > button:hover { background: rgba(var(--ink-rgb), .06); }
+.pl-pop > button[aria-checked="true"] { color: var(--ver); }
+.pl-pop > button[aria-checked="true"]::after { content: '✓'; position: absolute; right: 16px; }
+.pl-pop > button { position: relative; }
+.pl-pop-l { margin: 8px 10px 4px; font: 600 12px/1 var(--sans); color: var(--ash); }
+.pl-papiers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 0 6px 4px; }
+.pl-papier { height: 36px; border-radius: 8px; border: 1px solid var(--line); font: 500 12px/1 var(--sans); cursor: pointer; }
+.pl-papier[aria-pressed="true"] { outline: 2px solid var(--ver); outline-offset: 1px; }
+.pl-papier--ivoire { background: #FBF6EC; color: #2A1B1E; } .pl-papier--blanc { background: #fff; color: #222; }
+.pl-papier--sepia { background: #F1E4C8; color: #3B2A1A; } .pl-papier--nuit { background: #1A1416; color: #F3EADF; }
+
+/* ─── le document : des feuilles qui défilent de haut en bas ─── */
+.pl-doc { --pl-papier: #FFFDF8; --pl-encre: #2A1B1E; display: grid; gap: 22px; justify-items: center; padding-bottom: 40vh; }
+.pl-doc[data-papier="blanc"] { --pl-papier: #FFFFFF; --pl-encre: #1F1F1F; }
+.pl-doc[data-papier="sepia"] { --pl-papier: #F4E8CE; --pl-encre: #3B2A1A; }
+.pl-doc[data-papier="nuit"] { --pl-papier: #1C1517; --pl-encre: #EFE5D8; }
+html[data-theme="dark"] .pl-doc[data-papier="ivoire"] { --pl-papier: #221316; --pl-encre: #F3EADF; }
+.pl-page { width: min(100%, 820px); }
+.pl-page-h { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 4px 8px; font: 500 13px/1.3 var(--sans); color: var(--ash); }
+.pl-page-h strong { color: var(--ink); font-weight: 600; }
+.pl-page-h .pl-page-a { margin-left: auto; display: flex; gap: 4px; }
+.pl-feuille { min-height: min(60vh, 760px); padding: clamp(28px, 6vw, 72px) clamp(22px, 7vw, 84px); background: var(--pl-papier); color: var(--pl-encre);
+  border-radius: 6px; box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 18px 40px -30px rgba(42, 27, 30, .55); outline: none;
+  font-family: var(--pl-police); font-size: var(--pl-taille, 19px); line-height: 1.75; overflow-wrap: anywhere; caret-color: var(--ver); }
+html[data-theme="dark"] .pl-feuille { box-shadow: 0 0 0 1px rgba(212, 175, 55, .12), 0 18px 40px -26px rgba(0, 0, 0, .9); caret-color: var(--gold); }
+.pl-feuille:focus-visible { box-shadow: 0 0 0 2px rgba(107, 15, 26, .35), 0 18px 40px -30px rgba(42, 27, 30, .55); }
+.pl-feuille[contenteditable="false"] { opacity: .82; cursor: default; }
+.pl-feuille > * + * { margin-top: .55em; }
+.pl-feuille h3 { font-family: inherit; font-size: 1.45em; font-weight: 600; line-height: 1.2; margin-top: .8em; }
+.pl-feuille h4 { font-family: inherit; font-size: 1.15em; font-weight: 600; font-style: italic; line-height: 1.3; margin-top: .7em; }
+.pl-feuille blockquote { padding-left: 1em; border-left: 2px solid var(--gold); font-style: italic; opacity: .9; }
+.pl-feuille hr.pl-sep { border: 0; height: 1.6em; text-align: center; }
+.pl-feuille hr.pl-sep::after { content: '⁂'; color: var(--gold-text); font-size: .9em; }
+.pl-doc[data-align="centre"] .pl-feuille { text-align: center; }
+.pl-doc[data-align="justifie"] .pl-feuille { text-align: justify; hyphens: auto; }
+.pl-doc[data-align="centre"] .pl-feuille blockquote { border-left: 0; padding-left: 0; }
+/* concentration : seul le paragraphe en cours reste net */
+.pl-concentration .pl-feuille > * { transition: opacity .25s; opacity: .3; }
+.pl-concentration .pl-feuille > .pl-ici, .pl-concentration .pl-feuille:not(:focus-within) > * { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .pl-concentration .pl-feuille > * { transition: none; } }
+
+/* soulignés du correcteur et résultats de recherche (sans toucher au texte) */
+::highlight(pl-orth) { text-decoration: underline wavy #C0392B; text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+::highlight(pl-gram) { text-decoration: underline wavy #2F6FD1; text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+::highlight(pl-typo) { text-decoration: underline dotted #8E6B1F; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+::highlight(pl-voc) { text-decoration: underline wavy #2E8B57; text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+::highlight(pl-trouve) { background-color: rgba(212, 175, 55, .45); color: inherit; }
+.ec-sans-soulignes ::highlight(pl-orth), .ec-sans-soulignes ::highlight(pl-gram), .ec-sans-soulignes ::highlight(pl-typo), .ec-sans-soulignes ::highlight(pl-voc) { text-decoration: none; }
+
+/* rechercher / remplacer */
+.pl-chercher { flex: 1 1 100%; display: grid; gap: 6px; padding: 8px 0 2px; border-top: 1px solid var(--line); }
+.pl-chercher-l { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pl-chercher input:not([type]) , .pl-chercher input#plQ, .pl-chercher input#plR { flex: 1 1 200px; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bone); color: var(--ink); }
+.pl-chercher-n { min-width: 84px; font-size: 13px; color: var(--ash); }
+.pl-coche { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ash); }
+
+/* fenêtres : verset, inspiration */
+.pl-apercu { min-height: 64px; margin-top: 10px; }
+.pl-vapercu, .pl-idee-v blockquote { margin: 6px 0; padding: 10px 14px; border-left: 2px solid var(--gold); background: var(--surface); border-radius: 0 8px 8px 0; font: italic 400 18px/1.5 var(--serif); }
+.pl-idee-t { font: 500 24px/1.3 var(--serif); margin-bottom: 14px; }
+
+@media (max-width: 760px) {
+  .pl-barre { border-radius: 0; margin: 0 0 14px; border-left: 0; border-right: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+  .pl-barre::-webkit-scrollbar { display: none; }
+  .pl-g { flex: 0 0 auto; }
+  .pl-g--outils { margin-left: 0; }
+  .pl-pop { position: fixed; top: auto; bottom: calc(80px + env(safe-area-inset-bottom)); left: 12px; right: 12px; min-width: 0; }
+  .pl-feuille { min-height: 52vh; border-radius: 4px; }
+}
+
+/* ─── la page « Écrire » d'un livre ─── */
+body.ecriture .ec { padding-top: 14px; }
+body.ecriture { --pl-haut: 57px; }
+.ec-aller { width: auto; }
+.ec-fin { display: flex; justify-content: center; margin: -30vh 0 30vh; }
+.ec-obj { display: inline-block; width: 90px; height: 6px; border-radius: 99px; background: var(--surface); vertical-align: middle; overflow: hidden; margin-right: 6px; }
+.ec-obj i { display: block; height: 100%; background: var(--gold); }
+.ed-item.is-vise { outline: 2px solid var(--gold); outline-offset: 2px; }
+.ec-annuler { position: fixed; z-index: 140; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 14px;
+  padding: 10px 12px 10px 18px; border-radius: 12px; background: #2A1B1E; color: #F8EEDC; box-shadow: 0 20px 40px -20px rgba(0, 0, 0, .6); font-size: 14.5px; }
+.pl-page .ec-msg { margin: 0 0 10px; }
+@media (max-width: 760px) {
+  .pl-barre { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--paper); }
+  .ec-aller { display: none; }
+}
+.pl-page { scroll-margin-top: calc(var(--pl-haut, 56px) + 70px); }
+@media (max-width: 760px) { .pl-barre:has(.pl-chercher) { flex-wrap: wrap; } }

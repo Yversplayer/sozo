@@ -58,6 +58,28 @@ window.SOZO = (() => {
     filter: 'M4 5h16l-6 8v6l-4 2v-8z',
     type: 'M4 7V5h16v2M12 5v14M9 19h6',
     dots: 'M5 12h.01M12 12h.01M19 12h.01',
+    // 21/10/2026 : écrits, mini-Word
+    bulle: 'M4 5h16v11H9l-5 4z',
+    partager: 'M12 15V3M7 8l5-5 5 5M5 13v7h14v-7',
+    garder: 'M6 3h12v18l-6-4-6 4z',
+    corbeille: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',
+    restaurer: 'M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4',
+    gras: 'M7 4h6a4 4 0 0 1 0 8H7zM7 12h7a4 4 0 0 1 0 8H7z',
+    italique: 'M10 4h8M6 20h8M14 4l-4 16',
+    titre: 'M5 5v14M14 5v14M5 12h9M18 10l2-1v10',
+    citation: 'M5 11h5v6H5zM5 11c0-3 1-5 4-6M14 11h5v6h-5zM14 11c0-3 1-5 4-6',
+    separateur: 'M4 12h4M10 12h4M16 12h4',
+    gauche: 'M4 6h16M4 10h10M4 14h16M4 18h10',
+    centre: 'M4 6h16M7 10h10M4 14h16M7 18h10',
+    justifie: 'M4 6h16M4 10h16M4 14h16M4 18h16',
+    annuler: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
+    refaire: 'M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3',
+    loupe: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4M8 11h6',
+    cible: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01',
+    lampe: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.7 1 1.5 1 2.5h6c0-1 .2-1.8 1-2.5A6 6 0 0 0 12 3z',
+    plein: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+    machine: 'M4 8h16v9H4zM7 11h1M10 11h1M13 11h1M16 11h1M8 14h8M8 5h8v3H8z',
+    croix: 'M12 3v18M7 8h10',
     send: 'M4 12l16-8-6 16-2-6z',
     draft: 'M5 3h10l4 4v14H5zM9 13l2 2 4-5'
   };
@@ -215,6 +237,13 @@ window.SOZO = (() => {
   const coul = (v, d) => (/^#[0-9a-f]{6}$/i.test(v || '') ? v : d);
   const ent = (v, a, z, d) => (Number.isInteger(v) && v >= a && v <= z ? v : d);
   const couvUrl = (b) => b.image && b.id ? `/api/livres/${encodeURIComponent(b.id)}/couverture?v=${encodeURIComponent(b.image)}` : null;
+  /* La plume de Sōzō (logo, couvertures, bouton Écrire) */
+  const PLUME_SVG = '<svg class="cv-plume" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.6 3.2c-6.8.4-12 4.9-13.8 11.6l-1.9 6.3 1.3.4 1.6-4.5c1.5.2 3.3-.2 5-1.3 3.5-2.3 6.4-6.7 7.8-12.5z"/><path fill="none" stroke="rgba(0,0,0,.35)" stroke-width=".7" stroke-linecap="round" d="M6.4 19.4C9.1 13.6 12.7 9 17.4 5.9"/></svg>';
+  /* Monogramme : les initiales sur velours, à la place d'un portrait */
+  const monogramme = (nom, taille) => {
+    const i = String(nom || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((m) => m[0]).join('').toUpperCase() || '?';
+    return `<span class="vl-mono"${taille ? ` style="--t:${Number(taille) | 0}px"` : ''} aria-hidden="true">${esc(i)}</span>`;
+  };
   const OVAL = '<svg class="cv-oval" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50,6 C88,4 98,22 97,50 C96,82 76,96 49,95 C16,94 3,76 4,48 C5,18 20,7 50,6 Z"/></svg>';
   function cover(b, opts = {}) {
     const a = author(b.author);
@@ -223,28 +252,31 @@ window.SOZO = (() => {
     const st = b.cover.style;
     const tail = `${b.demo ? '<span class="cv-exemple">Exemple</span>' : ''}`;
     const cls = `cv${opts.d3 === false ? '' : ' cv3d'}${opts.cls ? ' ' + opts.cls : ''}`;
+    /* 21/10/2026 : plus aucune photo dans le logiciel (demande du propriétaire).
+       Sans réglage de l'auteur, la couverture est TYPOGRAPHIQUE : velours,
+       filet d'or, la plume. Le style a/b/c/d choisit la teinte. */
     if (!c && !b.image) {
-      return `<div class="${cls} cv--${st}" style="--cv:url('${img(b.cover.img, !opts.big)}')">
+      return `<div class="${cls} cv--velours cv--${st}">
       <div class="cv-face">
-        <span class="cv-photo" aria-hidden="true"></span>
-        <span class="cv-author">${esc(a.name)}</span>
-        <span class="cv-title">${esc(b.title)}</span>
         <span class="cv-cat">${esc(b.cat)}</span>
+        <span class="cv-bloc-v">${PLUME_SVG}<span class="cv-title">${esc(b.title)}</span></span>
+        <span class="cv-author">${esc(a.name)}</span>
         ${tail}
-        ${st === 'd' ? OVAL : ''}
       </div>
-      <span class="cv-spine" aria-hidden="true"></span><span class="cv-edge" aria-hidden="true"></span>
     </div>`;
     }
     const k = c || {};
-    const fond = k.fond || (b.image ? 'image' : 'photo');
+    // « photo » (ancien réglage) n'existe plus : on le rend en velours
+    let fond = k.fond || (b.image ? 'image' : 'degrade');
+    if (fond === 'photo') fond = 'degrade';
     const url = fond === 'image' ? (opts.imageUrl || couvUrl(b)) : null;   // imageUrl : aperçu d'une image pas encore envoyée
-    const photo = fond === 'photo' || (fond === 'image' && !url);
+    const photo = false;
     const v = [];
     if (url) v.push(`--cv:url('${url}')`);
     else if (photo) v.push(`--cv:url('${img(b.cover.img, !opts.big)}')`);
     if (fond === 'uni') v.push(`--cv-fond:${coul(k.couleur1, '#241C1D')}`);
-    if (fond === 'degrade') v.push(`--cv-fond:linear-gradient(${ent(k.angle, 0, 360, 160)}deg, ${coul(k.couleur1, '#241C1D')}, ${coul(k.couleur2, '#6B0F1A')})`);
+    if (fond === 'degrade') v.push(`--cv-fond:linear-gradient(${ent(k.angle, 0, 360, 160)}deg, ${coul(k.couleur1, '#5C0E1B')}, ${coul(k.couleur2, '#23050A')})`);
+    if (fond === 'image' && !url) v.push(`--cv-fond:linear-gradient(160deg, #5C0E1B, #23050A)`);
     v.push(`--cv-x:${ent(k.cadrage_x, 0, 100, 50)}%`, `--cv-y:${ent(k.cadrage_y, 0, 100, 50)}%`, `--cv-zoom:${ent(k.zoom, 100, 300, 100) / 100}`);
     if (k.voile != null) v.push(`--cv-voile:${ent(k.voile, 0, 90, 35) / 100}`, `--cv-voile-c:${coul(k.voile_couleur, '#0C0909')}`);
     v.push(`--cv-police:${POLICES[k.police_titre] || POLICES.cormorant}`, `--cv-taille:${ent(k.taille_titre, 50, 240, 100) / 100}`, `--cv-graisse:${[300, 400, 500, 600, 700, 800].includes(k.graisse) ? k.graisse : 600}`,
@@ -256,7 +288,7 @@ window.SOZO = (() => {
     const seule = k.image_seule === true && !!url;
     const voile = k.voile != null ? ' cv-voile' : '';
     return `<div class="${cls} cv--perso cv-pos-${pos} cv-al-${al} cv-orn-${orn}${k.capitales ? ' cv-caps' : ''}${k.italique ? ' cv-ital' : ''}${seule ? ' cv-seule' : ''}${voile}${url || photo ? ' cv-a-photo' : ''}" style="${esc(v.join(';'))}">
-      <div class="cv-face"${fond === 'uni' || fond === 'degrade' ? ' data-fond' : ''}>
+      <div class="cv-face"${fond === 'uni' || fond === 'degrade' || (fond === 'image' && !url) ? ' data-fond' : ''}>
         <span class="cv-photo" aria-hidden="true"></span>
         ${seule ? `<span class="sr">${esc(b.title)} — ${esc(a.name)}</span>` : `
         <span class="cv-author"${k.afficher_auteur === false ? ' hidden' : ''}>${esc(a.name)}</span>
@@ -274,6 +306,7 @@ window.SOZO = (() => {
      règle est exactement ce que le lecteur verra. Une ligne « *** » devient
      le séparateur choisi. Tout le texte passe par esc() (ou par la Bible
      intégrée, qui échappe elle-même). */
+  const emphase = (h) => h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>');
   const SEPARATEURS = { etoiles: '⁂', fleuron: '❦', croix: '✝', trait: '———' };
   const mise = {
     style(pg = {}) {
@@ -282,13 +315,23 @@ window.SOZO = (() => {
       return v.join(';');
     },
     classes(pg = {}) {
-      return `pg-al-${pg.alignement === 'justifie' ? 'justifie' : 'gauche'} pg-lt-${['aucune', 'simple', 'ornee'].includes(pg.lettrine) ? pg.lettrine : 'simple'} pg-ch-${['capitales', 'italique'].includes(pg.titre_chapitre) ? pg.titre_chapitre : 'classique'}`;
+      return `pg-al-${['justifie', 'centre'].includes(pg.alignement) ? pg.alignement : 'gauche'} pg-lt-${['aucune', 'simple', 'ornee'].includes(pg.lettrine) ? pg.lettrine : 'simple'} pg-ch-${['capitales', 'italique'].includes(pg.titre_chapitre) ? pg.titre_chapitre : 'classique'}`;
     },
+    /* 21/10/2026 — la mise en forme du mini-Word, en marques de TEXTE (backend/texte.py) :
+       « # titre », « > citation », **gras**, *italique*. f() échappe d'abord tout le
+       texte ; les seules balises posées ensuite sont les nôtres, autour d'un texte
+       déjà échappé. Aucune balise venue d'un auteur n'entre jamais dans la page. */
     paragraphes(texte, pg = {}, ligne) {
       const sep = SEPARATEURS[pg.separateur];
       const f = ligne || ((t) => (window.SOZO && SOZO.bible ? SOZO.bible.linkify(t) : esc(t)) || '&nbsp;');
-      return String(texte || '').split('\n').map((t) => /^\s*(\*\s*){3}\s*$/.test(t)
-        ? `<p class="pg-sep" role="separator">${sep ? esc(sep) : '&nbsp;'}</p>` : `<p>${f(t)}</p>`).join('');
+      return String(texte || '').split('\n').map((t) => {
+        if (/^\s*(\*\s*){3}\s*$/.test(t)) return `<p class="pg-sep" role="separator">${sep ? esc(sep) : '&nbsp;'}</p>`;
+        let m = /^(#{1,2}) (.*)$/.exec(t);
+        if (m) return `<h3 class="pg-t${m[1].length === 2 ? ' pg-t2' : ''}">${emphase(f(m[2]))}</h3>`;
+        m = /^> (.*)$/.exec(t);
+        if (m) return `<blockquote class="pg-cit"><p>${emphase(f(m[1]))}</p></blockquote>`;
+        return `<p>${emphase(f(t))}</p>`;
+      }).join('');
     }
   };
 
@@ -413,10 +456,9 @@ window.SOZO = (() => {
   const ALIAS = { decouvrir: 'accueil', suivis: 'bibliotheque', studio: 'atelier' };
   const NAV = {
     ecrire: [
-      ['atelier', 'studio.html', 'Mon atelier', 'feather'],
-      ['nouveau', 'studio.html?action=nouveau', 'Nouveau livre', 'plus'],
-      ['ecrire', 'studio.html?action=ecrire', 'Écrire une page', 'pen'],
-      ['brouillons', 'studio.html?action=brouillons', 'Brouillons', 'file'],
+      ['ecrire', 'ecrits.html?nouveau=1', 'Écrire', 'feather'],
+      ['ecrits', 'ecrits.html', 'Mes écrits', 'file'],
+      ['atelier', 'studio.html', 'Mes livres', 'book'],
       ['importer', 'studio.html?action=importer', 'Importer un manuscrit', 'upload']
     ],
     lire: [
@@ -430,8 +472,9 @@ window.SOZO = (() => {
       ['compte', 'compte.html', 'Mon compte', 'user']
     ]
   };
+  // Téléphone, comme l'image du propriétaire : Accueil, Explorer, la plume, Bibliothèque, Profil
   const ONGLETS = [['accueil', 'decouvrir.html', 'Accueil', 'home'], ['explorer', 'explorer.html', 'Explorer', 'grid'],
-    ['atelier', 'studio.html', 'Écrire', 'feather'], ['bibliotheque', 'suivis.html', 'Biblio.', 'library'], ['bible', 'bible.html', 'Bible', 'book']];
+    ['ecrits', 'ecrits.html', 'Écrire', 'feather'], ['bibliotheque', 'suivis.html', 'Bibliothèque', 'library'], ['profil', 'compte.html', 'Profil', 'user']];
   const ouvertGarde = () => { try { return localStorage.getItem('sozo-nav-ouverte') === '1'; } catch (e) { return false; } };
   function shell(active) {
     active = ALIAS[active] || active;
@@ -483,7 +526,7 @@ window.SOZO = (() => {
     nav.after(head);
     const tabs = document.createElement('nav');
     tabs.className = 'tabs'; tabs.setAttribute('aria-label', 'Navigation');
-    tabs.innerHTML = ONGLETS.map(([k, h, l, ic]) => `<a href="${h}" class="${active === k ? 'is-active' : ''}${k === 'atelier' ? ' tabs-ecrire' : ''}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}">${icon(ic)}<span>${l}</span></a>`).join('');
+    tabs.innerHTML = ONGLETS.map(([k, h, l, ic]) => `<a href="${h}" class="${active === k || (k === 'ecrits' && active === 'atelier') || (k === 'profil' && active === 'compte') ? 'is-active' : ''}${k === 'ecrits' ? ' tabs-ecrire' : ''}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}">${icon(ic)}<span>${l}</span></a>`).join('');
     document.body.appendChild(tabs);
 
     /* barre latérale : épinglée (bouton), ou dépliée le temps du survol / du clavier */
@@ -530,10 +573,10 @@ window.SOZO = (() => {
     const tel = matchMedia('(max-width: 899px)').matches;
     const cible = (k) => document.querySelector(tel ? `.tabs [data-nav="${k}"]` : `.nav [data-nav="${k}"]`) || document.querySelector(`[data-nav="${k}"]`);
     const ETAPES = [
-      ['atelier', 'Écrire votre livre', 'Votre atelier : créez un livre, écrivez page par page ou importez un manuscrit (Word, PDF, EPUB), dessinez votre couverture, puis publiez — gratuitement ou contre paiement.'],
+      ['ecrits', 'Écrire', 'La plume : un poème, une pensée, une prière, un récit ou un conte, en quelques secondes. Ou un livre entier, page après page, que vous publiez quand vous voulez.'],
       ['accueil', 'L’accueil', 'Ce qui paraît, ce que vous lisez, et vos premiers pas : Sōzō vous indique toujours la prochaine étape.'],
       ['explorer', 'Explorer', 'Tout le catalogue, par catégorie, avec une recherche par titre, auteur ou thème.'],
-      ['bibliotheque', 'Votre bibliothèque', 'Les livres que vous suivez, votre progression, vos passages épinglés et vos notifications.']
+      ['bibliotheque', 'Votre bibliothèque', 'Les livres que vous lisez, les écrits que vous gardez, vos passages épinglés et vos notifications.']
     ];
     let i = 0;
     const bulle = document.createElement('div');
@@ -605,5 +648,5 @@ window.SOZO = (() => {
 
   return { D, leger, esc, icon, img, money, dateLong, dateShort, dayLong, relDays, parse, now, book, author, booksBy, status, access, readable,
            visiblePages, stats, accessLabel, priceFrom, chapterOf, pagesRange, follows, isFollowed, toggleFollow, notifications, markSeen,
-           unread, majCloche, libelleAppareil, sess, cover, bookCard, visite, POLICES, NOMS_POLICES, couvUrl, mise, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced };
+           unread, majCloche, libelleAppareil, sess, cover, bookCard, visite, monogramme, PLUME_SVG, emphase, POLICES, NOMS_POLICES, couvUrl, mise, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced };
 })();

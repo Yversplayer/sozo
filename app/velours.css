@@ -1,0 +1,325 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Sōzō — « VELOURS » (21/10/2026)
+
+   Le propriétaire a envoyé l'image de ce qu'il veut voir en se connectant :
+   papier ivoire, bordeaux, or, la plume ; des titres en serif ; un fond de
+   velours bordeaux pour ce qui compte ; et AUCUNE photo (« enlève toutes les
+   images, garde seulement les fonds importants »). Sōzō devient « plus
+   modeste, calme et sérieux », tourné vers l'écriture.
+
+   Ce fichier est chargé EN DERNIER par chaque écran de app/ : il redéfinit
+   les jetons de couleur et la forme des composants communs. Les nouvelles
+   pièces sont préfixées vl-. La landing ne le charge pas.
+
+   Une seule audace : le velours (bandeau d'accueil, couvertures, plume).
+   Tout le reste reste calme, sur l'ivoire.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --ink-rgb: 42, 27, 30;
+  --bone: #F7F1E7;               /* le papier : fond de chaque écran */
+  --paper: #FFFCF6;              /* cartes, barres */
+  --surface: #EFE6D7;            /* champs, pastilles, zones douces */
+  --surface-2: #E6DAC6;
+  --ink: #2A1B1E;
+  --ash: #6B5B56;                /* 5,4:1 sur l'ivoire (AA) */
+  --line: rgba(74, 20, 28, .13);
+  --ver: #6B0F1A;                /* bordeaux du propriétaire */
+  --ver-ink: #FBF6EC;
+  --ver-text: #6B0F1A;
+  --wine: #6B0F1A;
+  --gold: #D4AF37;               /* or du propriétaire : plume, filets */
+  --gold-ink: #2A1A06;
+  --gold-line: #C29B2E;
+  --gold-text: #7A5C17;          /* or lisible sur ivoire : 5,2:1 */
+  --forest: #2A0A10;
+  --on-dark: #F8F1E4;
+  --logo-ink: #6B0F1A;
+  --logo-bg: var(--bone);
+  --velours: radial-gradient(120% 95% at 12% 0%, rgba(150, 32, 52, .55), transparent 58%),
+             radial-gradient(90% 80% at 100% 100%, rgba(20, 3, 7, .7), transparent 62%),
+             linear-gradient(158deg, #5C0E1B 0%, #3A0811 55%, #23050A 100%);
+  --velours-plat: #3A0811;
+  --shadow: 0 18px 40px -28px rgba(58, 8, 17, .55);
+  --ombre-couv: 0 12px 24px -14px rgba(35, 5, 10, .6);
+  --r: 12px;
+}
+html[data-theme="dark"] {
+  --ink-rgb: 243, 234, 223;
+  --bone: #14090C;               /* mode sombre de l'image : bordeaux presque noir */
+  --paper: #1F1013;
+  --surface: #2A161B;
+  --surface-2: #361D23;
+  --ink: #F3EADF;
+  --ash: #BBAAA2;
+  --line: rgba(212, 175, 55, .14);
+  --ver: #D4AF37;
+  --ver-ink: #1F1013;
+  --ver-text: #E6C873;
+  --wine: #C9566A;
+  --gold-text: #E6C873;
+  --logo-ink: #F3EADF;
+  --shadow: 0 18px 40px -24px rgba(0, 0, 0, .9);
+}
+body { background: var(--bone); color: var(--ink); font-size: 16px; }
+
+/* ─── typographie : le serif pour ce qui se LIT et pour les titres d'écran ─── */
+h1, h2, h3, .sec-title, .ac-titre, .at-title, .md-title, .panel h2, .bk-hero h1 {
+  font-family: var(--serif); font-weight: 600; letter-spacing: -0.005em; line-height: 1.1;
+}
+.sec-title { font-size: clamp(24px, 2.6vw, 32px); }
+.kicker { color: var(--gold-text); font: 500 13px/1.3 var(--sans); }
+
+/* ─── boutons : bordeaux plein, or pour la plume, contour fin sinon ─── */
+.btn { --b: var(--ver); --bt: var(--ver-ink); border-radius: 10px; font: 600 15px/1 var(--sans); letter-spacing: 0; min-height: 46px; }
+.btn--sm { min-height: 36px; font-size: 13.5px; border-radius: 9px; }
+.btn--accent { background: var(--gold); border-color: var(--gold); color: var(--gold-ink); }
+.btn--ghost { background: transparent; border-color: rgba(var(--ink-rgb), .22); color: var(--ink); }
+.btn--ghost:hover { background: rgba(var(--ink-rgb), .05); filter: none; }
+html[data-theme="dark"] .btn--ghost { background: transparent; }
+.chip { background: transparent; border: 1px solid rgba(var(--ink-rgb), .2); color: var(--ink); border-radius: 999px; }
+.chip[aria-pressed="true"], .ex-cat[aria-pressed="true"] { background: var(--ver); border-color: var(--ver); color: var(--ver-ink); }
+.badge { border-radius: 6px; }
+.icon-btn:hover { background: rgba(var(--ink-rgb), .07); }
+
+/* ─── surfaces ─── */
+.panel, .empty { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; }
+input, select, textarea { accent-color: var(--ver); }
+.search input, .top-cherche { background: var(--paper); border: 1px solid var(--line); }
+.top { background: color-mix(in srgb, var(--bone) 90%, transparent); }
+.nav { background: var(--paper) !important; }
+.nav-a.is-active { background: rgba(107, 15, 26, .07); color: var(--ink); }
+.nav-a.is-active .ic { color: var(--ver); }
+html[data-theme="dark"] .nav-a.is-active { background: rgba(212, 175, 55, .1); }
+html[data-theme="dark"] .nav-a.is-active .ic { color: var(--gold); }
+.nav-a[data-nav="ecrire"] .ic { background: var(--gold); color: var(--gold-ink); }
+.avatar { background: var(--ver); border-color: var(--ver); color: var(--ver-ink); }
+html[data-theme="dark"] .avatar { color: #1F1013; }
+.foot { background: transparent; border-top: 1px solid var(--line); }
+
+/* barre du bas (téléphone) : la plume dorée au centre, comme sur l'image */
+@media (max-width: 899px) {
+  .a-nav .tabs { background: var(--paper); border-top: 1px solid var(--line); }
+  .a-nav .tabs a.is-active { color: var(--ver); }
+  .a-nav .tabs a.is-active .ic { color: var(--ver); }
+  html[data-theme="dark"] .a-nav .tabs a.is-active, html[data-theme="dark"] .a-nav .tabs a.is-active .ic { color: var(--gold); }
+  .a-nav .tabs a.tabs-ecrire .ic { background: var(--velours); color: var(--gold) !important; box-shadow: 0 10px 22px -10px rgba(58, 8, 17, .8), 0 0 0 5px var(--paper); }
+}
+
+/* ─── couvertures sans photo : typographie sur velours, filet d'or ─── */
+.cv-face { border-radius: 6px; }
+.cv--velours .cv-face { background: var(--velours); color: #F6EBD8; text-align: center; grid-template-rows: auto 1fr auto; padding: 14% 12% 12%; }
+.cv--velours .cv-face::after { content: ''; position: absolute; inset: 5%; border: 1px solid rgba(212, 175, 55, .55); border-radius: 3px; pointer-events: none; }
+.cv--velours .cv-photo { display: none; }
+.cv--velours .cv-cat { order: -1; color: #D4AF37; opacity: 1; margin: 0; }
+.cv--velours .cv-title { align-self: center; font-family: var(--serif); font-weight: 600; font-size: 1.5em; line-height: 1.05; color: #F8EEDC; }
+.cv--velours .cv-author { color: rgba(248, 238, 220, .8); align-self: end; }
+.cv-plume { display: block; width: 18%; margin: 0 auto .5em; color: #D4AF37; }
+.cv--velours.cv--b .cv-face { background: radial-gradient(110% 90% at 85% 0%, rgba(212, 175, 55, .18), transparent 55%), linear-gradient(165deg, #2B1418, #140709); }
+.cv--velours.cv--c .cv-face { background: linear-gradient(170deg, #FBF5EA, #EFE3CF); color: #3A0811; }
+.cv--velours.cv--c .cv-title { color: #5C0E1B; }
+.cv--velours.cv--c .cv-author { color: #6B5B56; }
+.cv--velours.cv--c .cv-cat, .cv--velours.cv--c .cv-plume { color: #8E6B1F; }
+.cv--velours.cv--c .cv-face::after { border-color: rgba(142, 107, 31, .5); }
+.cv--velours.cv--d .cv-face { background: radial-gradient(100% 80% at 50% 0%, rgba(255, 230, 160, .22), transparent 60%), linear-gradient(160deg, #6E521A, #3B2A0B); }
+
+/* ─── monogramme : à la place des portraits (plus aucune photo de personne) ─── */
+.vl-mono { display: inline-grid; place-items: center; flex: 0 0 auto; width: var(--t, 44px); height: var(--t, 44px); border-radius: 50%;
+  background: var(--velours); color: #E9CB6E; font: 600 calc(var(--t, 44px) * .4)/1 var(--serif); letter-spacing: .02em; }
+
+/* ─── le velours : bandeaux qui comptent (accueil, à la une, connexion) ─── */
+.vl-velours { position: relative; isolation: isolate; overflow: hidden; background: var(--velours); color: #F8EEDC; border-radius: 18px; }
+.vl-velours::before { content: ''; position: absolute; inset: 0; z-index: -1; opacity: .5;
+  background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .025) 0 2px, transparent 2px 5px); }
+.vl-velours .vl-or { color: #E2C25E; }
+.vl-velours .btn--accent { color: #2A1A06; }
+
+/* ─── plume (signature) ─── */
+.vl-plume { display: inline-block; width: 1em; height: 1em; vertical-align: -.12em; color: var(--gold); }
+
+@media (prefers-reduced-motion: reduce) { .vl-velours, .cv--velours { transition: none !important; } }
+.cv-bloc-v { align-self: center; display: grid; justify-items: center; gap: .1em; }
+
+/* ─── page d'un auteur, connexion : velours à la place des photos ─── */
+.au-hero.vl-velours { border-radius: 0; height: clamp(160px, 24vw, 260px); }
+.au-hero.vl-velours::after { display: none; }
+.au-big { width: auto; height: auto; }
+.au-big .vl-mono { border: 6px solid var(--bone); box-shadow: var(--shadow); }
+@media (max-width: 760px) { .au-big .vl-mono { --t: 92px !important; } }
+.cx-brand { background: var(--velours); }
+.ex-au .vl-mono { margin: 0 auto 8px; }
+.author-card .vl-mono, .lv-carte .vl-mono { --t: 48px; }
+
+/* ═══════════ ACCUEIL (image du propriétaire) ═══════════ */
+.vl-ac { padding-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.vl-ac > * { min-width: 0; }   /* une rangée qui défile ne doit pas élargir la page */
+.vl-ac > .ac-sec, .vl-ac > .sec { margin: 0; padding: 26px 0 0; }
+.vl-salut h1 { font-size: clamp(34px, 5vw, 52px); font-weight: 600; color: var(--ink); }
+.vl-salut p { margin-top: 2px; font: 400 clamp(18px, 2.2vw, 22px)/1.3 var(--serif); font-style: italic; color: var(--ash); }
+.vl-cherche { margin-top: 18px; max-width: 640px; }
+.vl-plume-carte { margin-top: 22px; padding: clamp(20px, 3vw, 30px); display: grid; gap: 18px; }
+.vl-plume-t h2 { display: flex; align-items: center; gap: 10px; font-size: clamp(26px, 3vw, 34px); color: #F8EEDC; }
+.vl-plume-g { width: 30px; height: 30px; color: #D4AF37; }
+.vl-plume-t p { margin-top: 4px; max-width: 46ch; color: rgba(248, 238, 220, .82); font-size: 15.5px; }
+.vl-natures { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.vl-nature { display: grid; gap: 3px; align-content: start; padding: 14px 14px 13px; border-radius: 12px; background: rgba(255, 246, 230, .07); border: 1px solid rgba(212, 175, 55, .28); color: #F8EEDC; transition: background .2s, border-color .2s; }
+.vl-nature:hover, .vl-nature:focus-visible { background: rgba(255, 246, 230, .13); border-color: rgba(212, 175, 55, .6); }
+.vl-nature strong { font: 600 19px/1.1 var(--serif); }
+.vl-nature small { font-size: 12.5px; line-height: 1.3; color: rgba(248, 238, 220, .72); }
+.vl-nature--livre strong { color: #E2C25E; }
+@media (max-width: 980px) { .vl-natures { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .vl-natures { grid-template-columns: repeat(2, minmax(0, 1fr)); } .vl-nature small { display: none; } .vl-nature { padding: 12px; } }
+
+.vl-une { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 22px; padding: clamp(20px, 3vw, 32px); min-height: 200px; }
+.vl-une-t { display: grid; gap: 6px; justify-items: start; }
+.vl-une-t .vl-or { font: 500 13px/1 var(--sans); letter-spacing: .02em; }
+.vl-une-t h2 { font-size: clamp(28px, 3.6vw, 42px); color: #F8EEDC; }
+.vl-une-t p { color: rgba(248, 238, 220, .78); margin-bottom: 8px; }
+.vl-une-cv { width: clamp(92px, 14vw, 140px); }
+.vl-rang { display: grid; grid-auto-flow: column; grid-auto-columns: clamp(118px, 14vw, 150px); gap: 16px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+.vl-rang::-webkit-scrollbar { display: none; }
+.vl-livre { display: grid; gap: 4px; }
+.vl-livre .cv { margin-bottom: 6px; }
+.vl-livre strong { font: 600 16px/1.2 var(--serif); }
+.vl-livre small { color: var(--ash); font-size: 13px; }
+
+/* ═══════════ UN ÉCRIT (carte) ═══════════ */
+.vl-fil { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); align-items: start; }
+.vl-ecrit { position: relative; display: grid; gap: 12px; padding: 20px 20px 14px; border-radius: 16px; background: var(--paper); border: 1px solid var(--line); }
+.vl-ecrit-h { display: flex; align-items: center; gap: 10px; }
+.vl-ecrit-h strong { display: block; font-size: 14.5px; font-weight: 600; }
+.vl-ecrit-h strong a:hover { text-decoration: underline; }
+.vl-ecrit-h small { display: block; color: var(--ash); font-size: 12.5px; }
+.vl-ecrit-titre { font-size: 24px; }
+.vl-texte { font-family: var(--pg-police, var(--serif)); font-size: 18px; line-height: 1.6; overflow-wrap: anywhere; }
+.vl-texte p + p { margin-top: .5em; }
+.vl-texte p:empty::before { content: '\00a0'; }
+.vl-texte .pg-t { font-family: inherit; font-size: 1.2em; margin: .4em 0 .2em; }
+.vl-texte .pg-cit { margin: .5em 0; padding-left: 1em; border-left: 2px solid var(--gold); font-style: italic; color: var(--ash); }
+.vl-texte .pg-sep { text-align: center; color: var(--gold-text); }
+.vl-texte--pensee { font-size: 22px; line-height: 1.45; font-style: italic; }
+.vl-grand { font-size: 21px; }
+.vl-al-centre { text-align: center; }
+.vl-al-justifie { text-align: justify; hyphens: auto; }
+.vl-suite { justify-self: start; font-size: 14px; font-weight: 600; color: var(--ver-text); }
+.vl-suite:hover { text-decoration: underline; }
+/* fonds choisis par l'auteur */
+.vl-fond-velours { background: var(--velours); border-color: transparent; color: #F8EEDC; }
+.vl-fond-velours .vl-ecrit-h small, .vl-fond-velours .vl-texte .pg-cit { color: rgba(248, 238, 220, .75); }
+.vl-fond-velours .vl-suite { color: #E2C25E; }
+.vl-fond-nuit { background: #1A1416; border-color: transparent; color: #F3EADF; }
+.vl-fond-nuit .vl-ecrit-h small { color: #BBAAA2; }
+.vl-fond-parchemin { background: linear-gradient(170deg, #FBF4E4, #F0E2C8); border-color: rgba(142, 107, 31, .25); color: #3B2A1A; }
+.vl-fond-parchemin .vl-ecrit-h small { color: #6E5A3F; }
+/* gestes */
+.vl-gestes { display: flex; align-items: center; gap: 4px; margin: 2px -8px 0; padding-top: 8px; border-top: 1px solid var(--line); }
+.vl-fond-velours .vl-gestes, .vl-fond-nuit .vl-gestes { border-top-color: rgba(212, 175, 55, .2); }
+.vl-geste { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 10px; border: 0; border-radius: 999px; background: none; color: inherit; font: 500 14px/1 var(--sans); cursor: pointer; opacity: .85; }
+.vl-geste:hover { background: rgba(var(--ink-rgb), .06); opacity: 1; }
+.vl-fond-velours .vl-geste:hover, .vl-fond-nuit .vl-geste:hover { background: rgba(255, 246, 230, .1); }
+.vl-geste .ic { width: 19px; height: 19px; }
+.vl-geste[aria-pressed="true"] { opacity: 1; color: var(--ver); }
+.vl-geste[aria-pressed="true"] .ic { fill: currentColor; }
+.vl-fond-velours .vl-geste[aria-pressed="true"], .vl-fond-nuit .vl-geste[aria-pressed="true"], html[data-theme="dark"] .vl-geste[aria-pressed="true"] { color: #E2C25E; }
+.vl-geste[data-geste="partager"] { margin-left: auto; }
+.vl-geste[disabled] { opacity: .5; cursor: wait; }
+@media (max-width: 420px) { .vl-geste-l { display: none; } }
+.vl-lien { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+
+/* ═══════════ ÉCRIRE : mes écrits (comme des notes) ═══════════ */
+.vl-ecrits { padding-top: 22px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.vl-ecrits-h h1 { font-size: clamp(34px, 5vw, 48px); }
+.vl-ecrits-h p { color: var(--ash); font: italic 400 19px/1.35 var(--serif); }
+.vl-onglets { display: flex; gap: 6px; border-bottom: 1px solid var(--line); }
+.vl-onglets button { position: relative; padding: 10px 14px 12px; border: 0; background: none; color: var(--ash); font: 600 15px/1 var(--sans); cursor: pointer; }
+.vl-onglets button[aria-selected="true"] { color: var(--ink); }
+.vl-onglets button[aria-selected="true"]::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--ver); }
+html[data-theme="dark"] .vl-onglets button[aria-selected="true"]::after { background: var(--gold); }
+.vl-onglets span { color: var(--ash); font-weight: 500; margin-left: 4px; }
+.vl-notes-l { list-style: none; display: grid; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.vl-notes-l li { display: flex; align-items: center; gap: 10px; padding-right: 12px; }
+.vl-notes-l li + li { border-top: 1px solid var(--line); }
+.vl-note { flex: 1; min-width: 0; display: grid; gap: 2px; padding: 14px 18px; }
+.vl-note:hover { background: rgba(var(--ink-rgb), .03); }
+.vl-note-n { font: 600 12px/1 var(--sans); color: var(--gold-text); }
+.vl-note strong { font: 600 18px/1.3 var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vl-note small { color: var(--ash); font-size: 13px; }
+
+/* ═══════════ la plume : un écrit ═══════════ */
+.vl-compo { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.vl-compo .pl-doc { padding-bottom: 10px; }
+.vl-compo .pl-feuille { min-height: 42vh; }
+.vl-compo-natures { display: flex; flex-wrap: wrap; gap: 8px; }
+.vl-compo-titre { width: 100%; border: 0; background: none; color: var(--ink); font: 600 clamp(28px, 4vw, 40px)/1.15 var(--serif); padding: 6px 2px; outline: none; }
+.vl-compo-titre::placeholder { color: rgba(var(--ink-rgb), .35); }
+.pl-feuille[data-placeholder]:has(> p:only-child > br:only-child) { position: relative; }
+.pl-feuille[data-placeholder]:has(> p:only-child > br:only-child)::before { content: attr(data-placeholder); position: absolute; pointer-events: none; color: rgba(var(--ink-rgb), .35); font-style: italic; }
+.vl-compo-fond { margin-top: 10px; padding: 20px; border-radius: 16px; background: var(--paper); border: 1px solid var(--line); }
+.vl-fonds { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 8px 0 12px; }
+.vl-fond { display: grid; justify-items: center; gap: 4px; padding: 14px 8px 10px; border-radius: 12px; border: 1px solid var(--line); cursor: pointer; font: 500 13px/1 var(--sans); }
+.vl-fond span { font: 600 26px/1 var(--serif); }
+.vl-fond[aria-checked="true"] { outline: 2px solid var(--ver); outline-offset: 2px; }
+html[data-theme="dark"] .vl-fond[aria-checked="true"] { outline-color: var(--gold); }
+.vl-fond.vl-fond-ivoire { background: var(--paper); color: var(--ink); }
+.vl-trop { color: #B3261E; }
+html[data-theme="dark"] .vl-trop { color: #F2A29B; }
+@media (max-width: 520px) { .vl-fonds { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ═══════════ un écrit, en entier ═══════════ */
+.vl-lecture-ecrit { max-width: 760px; padding-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.vl-retour { display: inline-flex; align-items: center; gap: 6px; color: var(--ash); font-size: 14px; justify-self: start; }
+.vl-ecrit--entier { padding: clamp(22px, 5vw, 48px); }
+.vl-ecrit--entier .vl-ecrit-titre { font-size: clamp(28px, 4vw, 38px); }
+.vl-ecrit--entier .vl-texte { font-size: 20px; }
+.vl-ecrit--entier .vl-texte--pensee { font-size: clamp(24px, 3.2vw, 30px); }
+.vl-coms h2 { font-size: 26px; margin-bottom: 12px; }
+.vl-com-form { display: grid; gap: 8px; padding: 14px; border-radius: 14px; background: var(--paper); border: 1px solid var(--line); }
+.vl-com-form textarea { width: 100%; resize: vertical; min-height: 64px; border: 0; background: none; color: var(--ink); font: 400 17px/1.5 var(--serif); outline: none; }
+.vl-com-a { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.vl-com-l { list-style: none; display: grid; gap: 4px; margin-top: 14px; }
+.vl-com { display: flex; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+.vl-com > div { min-width: 0; flex: 1; }
+.vl-com-h strong { font-size: 14.5px; }
+.vl-com-h small { font-size: 12.5px; margin-left: 4px; }
+.vl-com-t { margin-top: 2px; font: 400 17px/1.5 var(--serif); overflow-wrap: anywhere; }
+.vl-com-acts { display: flex; gap: 14px; margin-top: 4px; }
+.vl-com-acts .ec-lien, .vl-signaler { font-size: 13px; color: var(--ash); background: none; border: 0; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 6px; }
+.vl-com-acts .ec-lien:hover, .vl-signaler:hover { color: var(--ink); text-decoration: underline; }
+.vl-signaler { margin-top: 18px; }
+.vl-signaler .ic { width: 15px; height: 15px; }
+.vl-com-vide { padding: 12px 4px; }
+
+/* ═══════════ EXPLORER : tuiles de velours, vues Livres / Écrits ═══════════ */
+.ex-vues { margin-top: 10px; }
+.vl-tuiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.vl-tuile { display: grid; justify-items: start; align-content: end; gap: 2px; min-height: 108px; padding: 16px; border: 0; text-align: left; cursor: pointer; border-radius: 14px; }
+.vl-tuile .ic { width: 24px; height: 24px; color: #D4AF37; margin-bottom: auto; }
+.vl-tuile strong { font: 600 21px/1.1 var(--serif); color: #F8EEDC; }
+.vl-tuile small { color: rgba(248, 238, 220, .72); font-size: 12.5px; }
+.vl-tuile:hover { filter: brightness(1.08); }
+@media (min-width: 900px) { .vl-tuiles { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+#vueEcrits .ex-cats { margin: 18px 0; }
+.ex-plus { display: flex; justify-content: center; margin-top: 18px; }
+.at-corbeille { margin-left: 6px; }
+.at-corb { list-style: none; display: grid; gap: 2px; }
+.at-corb li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.at-corb li > div { flex: 1; min-width: 0; }
+.at-corb p { margin-top: 4px; font: 400 16px/1.45 var(--serif); color: var(--ash); overflow-wrap: anywhere; }
+
+/* titres et citations de la mise en forme (liseuse, atelier, aperçus) */
+.rd-text .pg-t { font-family: var(--pg-police, var(--serif)); font-size: 1.35em; font-weight: 600; line-height: 1.2; margin: 1.1em 0 .4em; }
+.rd-text .pg-t2 { font-size: 1.12em; font-style: italic; }
+.rd-text .pg-cit { margin: .9em 0; padding-left: 1.1em; border-left: 2px solid var(--gold); font-style: italic; }
+.rd-text .pg-cit p { margin: 0; }
+.rd-text.pg-al-centre { text-align: center; }
+.rd-text.pg-al-centre .pg-cit { border-left: 0; padding-left: 0; }
+
+/* ═══════════ FICHE D'UN LIVRE : l'en-tête sur velours (image du propriétaire) ═══════════ */
+.lv-tete { position: relative; isolation: isolate; padding-top: 34px; }
+/* le velours descend jusqu'à mi-hauteur de la couverture, quelle que soit sa taille :
+   le titre reste toujours sur l'ivoire, lisible */
+.lv-tete .lv-cv { position: relative; }
+.lv-tete .lv-cv::before { content: ''; position: absolute; z-index: -1; left: 50%; top: -34px; width: 100vw; height: calc(58% + 34px); transform: translateX(-50%);
+  background: var(--velours); border-radius: 0 0 28px 28px; }
+.lv-tete .lv-cv .cv-face { box-shadow: 0 24px 40px -18px rgba(20, 3, 7, .6); }
+.lv-tete .lv-titre { margin-top: 18px; }
+@media (max-width: 760px) { .vl-compo { padding-left: 16px; padding-right: 16px; } .vl-compo .pl-barre { margin-left: -16px; margin-right: -16px; max-width: none; width: calc(100% + 32px); } }

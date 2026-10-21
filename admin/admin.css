@@ -35,3 +35,4 @@ html[data-theme="dark"] .ad-refus td { color: #FF8A7A; }
 .ad-test { font-size: 10.5px; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: #2E5E8C; color: #fff; }
 .ad-dlg select { width: 100%; height: 44px; border: 1px solid var(--line); border-radius: var(--r); padding: 0 10px; background: var(--paper); color: var(--ink); font: inherit; font-size: 15px; }
 .ad-dlg [hidden] { display: none !important; }
+.ad-motif-in { width: 160px; height: 32px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); }

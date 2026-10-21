@@ -1,12 +1,19 @@
 {
   "name": "Sōzō",
   "short_name": "Sōzō",
-  "description": "Lire et publier, page après page.",
+  "description": "Écrire et lire : une pensée, un poème, une prière, un livre.",
   "lang": "fr",
   "start_url": "/app/decouvrir.html",
   "scope": "/app/",
   "display": "standalone",
-  "background_color": "#F8F5EB",
+  "background_color": "#F7F1E7",
   "theme_color": "#6B0F1A",
-  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }

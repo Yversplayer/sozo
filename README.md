@@ -58,6 +58,13 @@ Les deux suites doivent être vertes. Chaque garde-fou a été **vu tomber** qua
   - Chaque enregistrement crée une version, et aucune n'est effacée.
   - Une page publiée ne se corrige qu'avec Plume.
   - Deux onglets ouverts sur la même page sont détectés (`version_attendue`, réponse 409).
+  - Corbeille des pages : seuls les brouillons de fin de livre y vont (une page sortie ne bouge jamais) ; toutes les versions sont gardées, la page se récupère.
+  - Le texte reste du TEXTE avec quelques marques (`#`, `>`, `***`, `**gras**`, `*italique*`, `texte.py`) : aucun HTML n'est jamais enregistré ; une épingle compare le texte lu, sans les marques.
+- **Écrits** (poème, récit, conte, pensée, prière — `ecrits.py`, `test_ecrits.py`).
+  - Un brouillon n'existe que pour son auteur (404 pour tout autre compte, et la RLS le cache aussi).
+  - L'auteur vient de la session ; un j'aime par personne ; on ne « like » qu'un écrit publié.
+  - Un commentaire se retire par son auteur ou par celui de l'écrit ; il reste en base, daté.
+  - Un signalement va à la modération (rôle `moderation`), qui retire sans détruire.
 - **Argent.**
   - Le prix est toujours calculé par le serveur.
   - Un livre d'exemple (`books.demo = 1`) ne se vend jamais.
