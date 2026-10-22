@@ -738,10 +738,12 @@ window.SOZO = (() => {
       nav.querySelector('#navRecents').hidden = false;
     };
     recents();
-    /* téléphone : la même barre glisse depuis la gauche, bord courbe qui se tend */
+    /* téléphone : la même barre, mais HORIZONTALE (demande du propriétaire) : une bande
+       qui glisse depuis la gauche sous la barre du haut et défile au doigt */
     const tb = head.querySelector('#tiroirBtn');
     const voile = document.createElement('div'); voile.className = 'nav-voile'; document.body.appendChild(voile);
     const tiroir = (ouvrir) => {
+      nav.style.setProperty('--haut', `${Math.round(head.getBoundingClientRect().bottom)}px`);   // la bande se pose sous la barre du haut
       nav.classList.toggle('is-tiroir', ouvrir); voile.classList.toggle('is-on', ouvrir);
       document.body.classList.toggle('tiroir-ouvert', ouvrir);
       tb.setAttribute('aria-expanded', String(ouvrir)); tb.setAttribute('aria-label', ouvrir ? 'Fermer le menu' : 'Ouvrir le menu');

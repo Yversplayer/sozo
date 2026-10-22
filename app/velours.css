@@ -831,3 +831,29 @@ body.bb-lecture .bb-v:not(.is-lu) { opacity: .38; }
 .nav-recents:not([hidden]) + .nav-bas { margin-top: 0; }
 .nav-a { min-height: 40px; }
 .nav-sec { margin-top: 8px; }
+
+/* 22/10/2026 — sur téléphone la barre est HORIZONTALE (rappel du propriétaire) :
+   le menu devient une bande qui glisse depuis la gauche sous la barre du haut,
+   défile au doigt, avec le cercle du compte au bout. Remplace le tiroir vertical. */
+@media (max-width: 899px) {
+  .a-nav .nav { top: var(--haut, 60px); bottom: auto; width: 100%; height: auto; overflow: visible;
+    border-bottom: 1px solid var(--line); box-shadow: 0 18px 40px -24px rgba(0, 0, 0, .55);
+    transform: translateX(-104%); }
+  .a-nav .nav .nav-in { flex-direction: row; align-items: center; gap: 6px; height: auto; padding: 10px 16px 12px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  .a-nav .nav .nav-tete, .a-nav .nav .nav-sec, .nav-courbe { display: none !important; }
+  .a-nav .nav .nav-a { flex: 0 0 auto; width: auto; min-height: 40px; padding: 0 14px; gap: 8px; border-radius: 999px; background: rgba(var(--ink-rgb), .05); scroll-snap-align: start; font-size: 14px; }
+  .a-nav .nav .nav-a.is-active::before { display: none; }
+  .a-nav .nav .nav-a::after { left: 14px; right: 14px; bottom: 4px; }
+  .a-nav .nav .nav-nouveau { margin: 0; }
+  .a-nav .nav .nav-recents, .a-nav .nav .nav-rec-l, .a-nav .nav .nav-bas { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; overflow: visible; }
+  .a-nav .nav .nav-recents[hidden] { display: none; }
+  .a-nav .nav .nav-recents { padding-left: 8px; margin-left: 2px; border-left: 1px solid var(--line); }
+  .a-nav .nav .nav-rec { flex: 0 0 auto; max-width: 180px; min-height: 40px; border-radius: 999px; border: 1px solid var(--line); padding: 0 12px; scroll-snap-align: start; }
+  .a-nav .nav .nav-bas { padding-left: 8px; border-left: 1px solid var(--line); }
+  .a-nav .nav .nav-moi { margin: 0; padding: 0; border: 0; position: static; }
+  .a-nav .nav .nav-moi-b { background: none; padding: 0 4px; min-height: 40px; }
+  .a-nav .nav .nav-moi-t { display: none; }
+  .a-nav .nav .nav-moi-menu { position: fixed; left: 12px; right: 12px; top: calc(var(--haut, 60px) + 70px); bottom: auto; }
+  .nav-voile { top: var(--haut, 60px); }
+  body.tiroir-ouvert { overflow: auto; }
+}
