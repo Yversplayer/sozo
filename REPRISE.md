@@ -48,6 +48,19 @@ Ajouts du 17-18/10/2026 (déployés, commit b29e2e5) :
 2. **Paiements (19/10/2026)** : les DEUX, dans l'ordre. (a) **Fait** : l'administration « Cadeaux » offre un livre entier ou Plume (table `dons`, rôle finance + code frais, motif, audit, notification, retirable ; aucun argent : ni paiement, ni reçu, ni revenu pour l'auteur ; tests `test_dons.py`, vus tomber). (b) **Reste** : quand le propriétaire donne ses numéros Mobile Money (`SOZO_PAIEMENT_NUMEROS` sur Render), les vraies ventes s'ouvrent ; il confirme chaque paiement dans l'admin.
 3. Le propriétaire teste le logiciel ce week-end : traiter ses retours en priorité.
 
+## 12. Version web du 22/10/2026 (images du propriétaire) — PAS ENCORE POUSSÉE
+
+Le propriétaire : on s'inspirait trop des applications de téléphone ; le web peut avoir son propre visage (même identité, autre composition). Il a envoyé des images (Pinterest : « Mark Twain », « Harry Potter », « Haiku », « S.O.A.P. », « My Library », une liseuse « Secret Project »). Commits `af77602`, `7118afd` et suivant.
+- **Les images reviennent** (« je t'ai dit de diminuer les images, là tu as abusé ») : couverture = la photo choisie à la création (`books.couverture`, photos CC0 de `images/`) sous la mise en page velours et un voile bordeaux ; l'éditeur de couverture retrouve « Photo » (modèle par défaut). Un écrit peut porter une photo de la bibliothèque (`apparence.image`, liste fermée lue sur le disque, `test_images.py`).
+- **Explorer** (`explorer.js`, préfixe `xp-`) : grande une sur la photo du livre (titre en très grand, « Lire « titre » », couvertures à droite qui changent la une), rangées qui défilent vers la gauche (Netflix), écrits posés sur leur photo, puis le catalogue et sa recherche.
+- **Fiche d'un livre** sur ordinateur : bandeau photo, couverture inclinée à gauche, accroche, bouton « Lire « titre » ».
+- **Accueil « votre monde »** (`decouvrir.js`, préfixe `mo-`) : photo selon l'heure, prénom, date, verset du jour, lecture en cours, raccourcis ; puis « Vos lectures », « Pour vous », « Le meilleur de Sōzō », « Les écrits les plus aimés » (briques partagées `S.rangee`, `S.xpEcrit`).
+- **Liseuse** (lecture continue, ordinateur) : grand numéro de page qui reste à gauche (« 01 »), texte à droite, paragraphes qui apparaissent en entrant dans l'écran (seulement sous `body.rd-anim`, jamais en mouvement réduit) ; la concentration garde la main sur l'opacité.
+- **Bible** : « Lire seulement » (le texte seul, les chapitres s'enchaînent au défilement, le verset lu éclairé) ; versets gardés **surlignés à la couleur choisie** (or, rose, ciel, menthe, lavande, pêche — `versets.couleur`, schéma **v16**, liste fermée côté serveur), petite palette sous le verset.
+- **Bibliothèque en piles** (`suivis.js`, préfixe `bp-`) : En cours, À commencer, Mes achats, Écrits gardés, Mes versets — éventails de couvertures sous une bande de verre teintée.
+- Données LOCALES pour concevoir : les 13 livres d'exemple remis (`demo.py --remettre`, local seulement ; en ligne il en reste un) et quelques écrits d'essai. Le catalogue local est l'ANCIEN (romans, manga) : ne pas l'utiliser pour des captures destinées au propriétaire.
+- Ne pas mettre en ligne avant son go : pousser, Manual Deploy Render (schémas v14, v15, v16).
+
 ## 11. Refonte « lecteur puis Plume » du 22/10/2026 — PAS ENCORE POUSSÉE
 
 Décidée par le propriétaire après le conseil de 5 conseillers du 21/10 (verdict : on entre lecteur, on « passe Pro » pour devenir auteur ; on fait évoluer, on ne refait pas) et les retours de ses testeurs (« trop côté écriture »). Ordre voulu : d'abord le logiciel connecté (fait ici), puis la personnalisation de chaque onglet (il donnera ses consignes), puis la refonte de la landing (avec images, prix présentés comme sur celle de Klassio).
@@ -190,7 +203,7 @@ cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py
 ## 6. Règles de travail
 - **Ne jamais affaiblir ni supprimer un test.** Tout nouveau garde-fou doit être vu échouer quand on retire son code, puis restauré.
 - **Les deux suites doivent être vertes avant de rendre la main.**
-- **Migrations additives uniquement** (`db._migrer`, `VERSION_SCHEMA = 15`). Pour toute table qui contient des données d'un utilisateur, ajouter sa règle dans `db.RLS`.
+- **Migrations additives uniquement** (`db._migrer`, `VERSION_SCHEMA = 16`). Pour toute table qui contient des données d'un utilisateur, ajouter sa règle dans `db.RLS`.
 - **Aucun faux succès à l'écran** : l'interface ne change qu'après la réponse du serveur. Tout texte venant de la base passe par `S.esc()`.
 - **Commits successifs**, avec une ligne `Co-Authored-By` en fin de message. Ne pousser que si le propriétaire le demande et une fois le dépôt créé. Vérifier l'absence de secrets avant.
 - **Fin de chaque rapport** : 🔴 BLOQUANTS / 🟠 NON-BLOQUANTS / 🟢 BACKLOG / 🚦 DÉCISION.

@@ -699,3 +699,25 @@ body.bb-lecture .bb-v { transition: opacity .35s; }
 body.bb-lecture .bb-v:not(.is-lu) { opacity: .38; }
 @media (prefers-reduced-motion: reduce) { body.bb-lecture .bb-v { transition: none; } }
 .bb-sortir[hidden] { display: none; }
+
+/* ═══ La bibliothèque en piles (22/10/2026) — préfixe bp- ═══
+   Chaque collection : un éventail de couvertures sur une bande de verre teintée. */
+.bp { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 22px; margin: 0 0 36px; }
+.bp-pile { position: relative; display: grid; gap: 10px; justify-items: center; padding: 18px 12px 14px; text-decoration: none; color: inherit; border-radius: 22px; }
+.bp-pile::before { content: ''; position: absolute; left: 0; right: 0; top: 46%; height: 42%; border-radius: 22px; background: linear-gradient(135deg, var(--surl), rgba(255, 255, 255, .35));
+  border: 1px solid rgba(255, 255, 255, .6); backdrop-filter: blur(4px); z-index: 1; }
+.bp-fan { position: relative; display: block; width: 100%; height: 170px; }
+.bp-carte { position: absolute; left: 50%; bottom: 8px; width: 92px; transform-origin: 50% 110%;
+  transform: translateX(calc(-50% + (var(--i) - (var(--n) - 1) / 2) * 30px)) rotate(calc((var(--i) - (var(--n) - 1) / 2) * 7deg)); transition: transform .3s; }
+.bp-pile:hover .bp-carte, .bp-pile:focus-visible .bp-carte { transform: translateX(calc(-50% + (var(--i) - (var(--n) - 1) / 2) * 40px)) rotate(calc((var(--i) - (var(--n) - 1) / 2) * 10deg)) translateY(-6px); }
+.bp-t { position: relative; z-index: 2; display: flex; align-items: baseline; gap: 8px; }
+.bp-t strong { font: 600 22px/1.1 var(--serif); }
+.bp-t small { font-size: 13px; color: var(--ash); }
+.bp-ecrit, .bp-verset { display: flex; align-items: center; justify-content: center; aspect-ratio: 2 / 3; padding: 10px; border-radius: 8px; overflow: hidden; position: relative; isolation: isolate;
+  font: italic 400 12px/1.35 var(--serif); text-align: center; box-shadow: 0 10px 20px -12px rgba(0, 0, 0, .5); }
+.bp-ecrit { color: #FBF4E6; background: var(--velours, linear-gradient(160deg, #5C0E1B, #23050A)); }
+.bp-ecrit.has-photo::before { content: ''; position: absolute; inset: 0; z-index: -2; background: var(--xp-photo) center / cover; }
+.bp-ecrit::after { content: ''; position: absolute; inset: 0; z-index: -1; background: rgba(20, 4, 8, .55); }
+.bp-verset { color: var(--ink); background: linear-gradient(var(--surl), var(--surl)), var(--paper); }
+.bp-pile:focus-visible { outline: 2px solid var(--ver); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .bp-carte { transition: none; } }

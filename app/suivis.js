@@ -25,6 +25,30 @@ window.SOZO_PRET.then(async () => {
   if (!ONGLETS.some(([k]) => k === onglet)) onglet = 'livres';
   const main = $('#main');
 
+  /* 22/10/2026 — la bibliothèque « en piles » (image « My Library » du
+     propriétaire) : chaque collection est un éventail de couvertures, ou
+     d'écrits posés sur leur photo ; un toucher mène à son contenu. */
+  function eventail(items) {
+    return `<span class="bp-fan" aria-hidden="true">${items.slice(0, 5).map((h, i, a) => `<span class="bp-carte" style="--i:${i};--n:${a.length}">${h}</span>`).join('')}</span>`;
+  }
+  function piles(fol) {
+    const lus = fol.filter((b) => D.reader.progress[b.id]);
+    const aCommencer = fol.filter((b) => !D.reader.progress[b.id]);
+    const achetes = Object.keys(D.reader.purchases || {}).map((id) => S.book(id)).filter(Boolean);
+    const ecr = (gardes || []).map((e) => `<span class="bp-ecrit${(e.apparence || {}).image ? ' has-photo' : ''}"${(e.apparence || {}).image ? ` style="--xp-photo:url('${S.esc(S.img(e.apparence.image, true))}')"` : ''}><span>${S.esc(String(e.texte || '').replace(/[#>*•]/g, '').slice(0, 60))}</span></span>`);
+    const vers = versets.map((x) => `<span class="bp-verset bb-c-${S.esc(x.couleur || 'or')}"><span>${S.esc(String(x.t || '').slice(0, 70))}</span></span>`);
+    const P = [
+      ['En cours', lus.map((b) => S.cover(b, { d3: false })), '#livres-progression', 'rose'],
+      ['À commencer', aCommencer.map((b) => S.cover(b, { d3: false })), '#livres-progression', 'or'],
+      ['Mes achats', achetes.map((b) => S.cover(b, { d3: false })), 'compte.html', 'menthe'],
+      ['Écrits gardés', ecr, '#ecrits', 'lavande'],
+      ['Mes versets', vers, '#epingles', 'ciel']
+    ].filter(([, l]) => l.length);
+    if (!P.length) return '';
+    return `<div class="bp" role="list" aria-label="Mes piles">${P.map(([t, l, h, c]) => `<a class="bp-pile bb-c-${c}" role="listitem" href="${h}"${h.startsWith('#') ? ` data-pile="${h.slice(1)}"` : ''}>
+      ${eventail(l)}<span class="bp-t"><strong>${S.esc(t)}</strong><small>${l.length}</small></span></a>`).join('')}</div>`;
+  }
+
   function render() {
     const fol = S.follows().map((id) => S.book(id)).filter(Boolean);
     const upcoming = [];
@@ -88,12 +112,13 @@ window.SOZO_PRET.then(async () => {
         </div>
       </section>
       <section class="sec" id="livres" style="padding-top:28px"${onglet === 'livres' ? '' : ' hidden'}>
+        ${piles(fol)}
         <div class="sec-head"><h2 class="sec-title" data-ink-text="Livres [[suivis]]"></h2><span class="mono ash">${fol.length} livre${fol.length > 1 ? 's' : ''}</span></div>
         ${fol.length ? `<div class="bi-etageres" role="list" aria-label="Mes livres sur l’étagère">${(() => {
             const par = innerWidth < 600 ? 3 : 6, rangees = []; for (let i = 0; i < fol.length; i += par) rangees.push(fol.slice(i, i + par));
             return rangees.map((r) => `<div class="bi-rangee">${r.map((b) => { const lu = D.reader.progress[b.id]; return `<a class="bi-livre" role="listitem" href="livre.html?id=${encodeURIComponent(b.id)}" aria-label="${S.esc(b.title)}${lu ? `, lu jusqu’à la page ${lu}` : ''}">${S.cover(b, { d3: false })}${lu ? `<span class="bi-marque">p. ${lu}</span>` : ''}</a>`; }).join('')}</div><div class="bi-planche" aria-hidden="true"></div>`).join('');
           })()}</div>
-          <h3 class="bi-sous">Progression</h3>
+          <h3 class="bi-sous" id="livres-progression">Progression</h3>
           <div class="follow-list">${fol.map((b) => {
           const st = S.stats(b), vis = S.visiblePages(b), pub = vis.filter((p) => S.access(b, p.n) !== 'soon');
           const read = D.reader.progress[b.id] || 0, pct = pub.length ? Math.round((Math.min(read, pub.length) / pub.length) * 100) : 0;
@@ -116,6 +141,11 @@ window.SOZO_PRET.then(async () => {
       t.addEventListener('click', () => { onglet = t.dataset.bi; history.replaceState(null, '', '#' + onglet); render(); document.getElementById('bi-' + onglet).focus(); });
       t.addEventListener('keydown', (e) => { const k = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!k) return; e.preventDefault(); onglet = tabs[(i + k + tabs.length) % tabs.length].dataset.bi; history.replaceState(null, '', '#' + onglet); render(); document.getElementById('bi-' + onglet).focus(); });
     });
+    // une pile mène à son onglet (écrits, versets) ou à sa liste (progression)
+    document.querySelectorAll('[data-pile]').forEach((x) => x.addEventListener('click', (e) => {
+      const cible = x.dataset.pile;
+      if (cible === 'ecrits' || cible === 'epingles') { e.preventDefault(); onglet = cible; history.replaceState(null, '', '#' + onglet); render(); document.getElementById('bi-' + onglet).focus(); }
+    }));
     document.querySelectorAll('[data-signet], [data-verset]').forEach((x) => x.addEventListener('click', async () => {
       x.disabled = true;
       const sig = x.dataset.signet;
