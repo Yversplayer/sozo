@@ -946,7 +946,7 @@ html[data-theme="dark"] .nav-a.is-active .ic { color: var(--gold-text); }
   .a-nav .tabs a.is-active { color: var(--ink); }
   .a-nav .tabs a.is-active .ic { color: var(--wine); }
   html[data-theme="dark"] .a-nav .tabs a.is-active .ic { color: var(--gold-text); }
-  .a-nav .tabs a.tabs-ecrire .ic { box-sizing: content-box; width: 24px; height: 24px; padding: 12px; margin-top: -26px; border-radius: 50%; background: var(--gold); color: var(--gold-ink) !important; box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .55), 0 0 0 5px var(--paper); }
+  .a-nav .tabs .tabs-ecrire .ic { box-sizing: content-box; width: 24px; height: 24px; padding: 12px; margin-top: -26px; border-radius: 50%; background: var(--gold); color: var(--gold-ink) !important; box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .55), 0 0 0 5px var(--paper); }
 }
 @media (prefers-reduced-motion: reduce) { .nav, .nav-l, .nav-logo, .nav-sec span { transition: none !important; } }
 

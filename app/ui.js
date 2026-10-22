@@ -633,8 +633,41 @@ window.SOZO = (() => {
     });
     const tabs = document.createElement('nav');
     tabs.className = 'tabs'; tabs.setAttribute('aria-label', 'Navigation');
-    tabs.innerHTML = ONGLETS.map(([k, h, l, ic]) => `<a href="${h}" class="${active === k || (k === 'ecrits' && active === 'atelier') || (k === 'profil' && active === 'compte') ? 'is-active' : ''}${k === 'ecrits' ? ' tabs-ecrire' : ''}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}">${icon(ic)}<span>${l}</span></a>`).join('');
+    tabs.innerHTML = ONGLETS.map(([k, h, l, ic]) => k === 'ecrits'
+      ? `<button type="button" class="tabs-ecrire${['ecrits', 'atelier', 'ecrire', 'importer'].includes(active) ? ' is-active' : ''}" id="pilBtn" aria-expanded="false" aria-controls="pilule" data-nav="${k}">${icon(ic)}<span>${l}</span></button>`
+      : `<a href="${h}" class="${active === k || (k === 'profil' && active === 'compte') ? 'is-active' : ''}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}">${icon(ic)}<span>${l}</span></a>`).join('');
     document.body.appendChild(tabs);
+
+    /* 22/10/2026 — la plume déplie une pilule en relief (inspirée du
+       « 3D adaptive navigation bar » montré par le propriétaire, portée sans
+       React ni bibliothèque : la CSP n'en laisse entrer aucune). Elle porte
+       le contenu « Écrire » de la barre latérale. Toucher la plume, Échap ou
+       toucher ailleurs la replie ; aria-expanded dit toujours la vérité. */
+    const pil = document.createElement('div');
+    pil.className = 'pil'; pil.id = 'pilule'; pil.hidden = true;
+    pil.innerHTML = `<div class="pil-corps" role="menu" aria-label="Écrire"><i class="pil-reflet" aria-hidden="true"></i><i class="pil-reflet2" aria-hidden="true"></i>
+      ${NAV.ecrire.map(([k, h, l, ic], i) => `<a role="menuitem" href="${h}" class="pil-a${active === k ? ' is-active' : ''}" style="--i:${i}">${icon(ic)}<span>${k === 'importer' ? 'Importer' : l}</span></a>`).join('')}</div>`;
+    tabs.before(pil);
+    const pb = tabs.querySelector('#pilBtn');
+    const plier = (ouvrir, focus) => {
+      clearTimeout(pil._t);
+      pb.setAttribute('aria-expanded', String(ouvrir));
+      if (ouvrir) {
+        pil.hidden = false; void pil.offsetWidth; pil.classList.add('is-on');
+        if (focus) pil.querySelector('.pil-a').focus();
+      } else {
+        pil.classList.remove('is-on');
+        pil._t = setTimeout(() => { pil.hidden = true; }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420);
+      }
+    };
+    pb.addEventListener('click', (e) => { e.stopPropagation(); plier(pb.getAttribute('aria-expanded') !== 'true', e.detail === 0); });
+    document.addEventListener('click', (e) => { if (!pil.hidden && !e.target.closest('.pil')) plier(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pil.hidden) { plier(false); pb.focus(); } });
+    pil.addEventListener('keydown', (e) => {
+      if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      const l = [...pil.querySelectorAll('.pil-a')], i = l.indexOf(document.activeElement);
+      l[(i + (e.key === 'ArrowRight' ? 1 : l.length - 1)) % l.length].focus(); e.preventDefault();
+    });
 
     /* barre latérale : épinglée (bouton), ou dépliée le temps du survol / du clavier */
     const menu = nav.querySelector('#navMenu');
