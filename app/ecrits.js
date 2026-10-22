@@ -174,6 +174,11 @@ window.SOZO_PRET.then(async () => {
       <section class="vl-compo-fond" aria-label="Apparence">
         <p class="kicker">Le fond de votre écrit</p>
         <div class="vl-fonds" role="radiogroup" aria-label="Fond">${Object.entries(FONDS).map(([k, l]) => `<button type="button" role="radio" class="vl-fond vl-fond-${k}" data-fond="${k}" aria-checked="${(etat.apparence.fond || 'ivoire') === k}"${lectureSeule ? ' disabled' : ''}><span>Aa</span>${l}</button>`).join('')}</div>
+        <p class="kicker" style="margin-top:14px">Une photo derrière le texte <small class="ash">facultatif</small></p>
+        <div class="vl-photos" role="radiogroup" aria-label="Photo">
+          <button type="button" role="radio" class="vl-ph vl-ph--sans" data-photo="" aria-checked="${!etat.apparence.image}"${lectureSeule ? ' disabled' : ''}>Sans photo</button>
+          ${E.PHOTOS.map((k) => `<button type="button" role="radio" class="vl-ph" data-photo="${k}" aria-checked="${etat.apparence.image === k}" aria-label="Photo ${k.replace(/-/g, ' ')}"${lectureSeule ? ' disabled' : ''}><img src="${S.esc(S.img(k, true))}" alt="" loading="lazy"></button>`).join('')}
+        </div>
         <label class="pl-coche"><input type="checkbox" id="cGrand"${etat.apparence.taille === 'grande' ? ' checked' : ''}${lectureSeule ? ' disabled' : ''}> Texte en grand</label>
         <p class="kicker" style="margin-top:18px">Aperçu, tel que les lecteurs le verront</p>
         <div id="apercu"></div>
@@ -192,7 +197,7 @@ window.SOZO_PRET.then(async () => {
     f.el.dataset.placeholder = { pensee: 'Une phrase qui vous habite…', poeme: 'Le premier vers…', priere: 'Seigneur,…', recit: 'Il était une fois, ou un matin comme les autres…', conte: 'Il était une fois…' }[etat.nature];
     let enregistre = ecrit ? JSON.stringify([ecrit.nature, ecrit.titre, ecrit.texte, ecrit.apparence, ecrit.themes || []]) : JSON.stringify([etat.nature, '', '', {}, []]);
     const courant = () => JSON.stringify([etat.nature, $('#cTitre').value.trim(), ed.texte(f), nettoyerApp(), etat.themes]);
-    const nettoyerApp = () => { const a = {}; ['police', 'alignement', 'fond', 'taille'].forEach((k) => { if (etat.apparence[k]) a[k] = etat.apparence[k]; }); return a; };
+    const nettoyerApp = () => { const a = {}; ['police', 'alignement', 'fond', 'taille', 'image'].forEach((k) => { if (etat.apparence[k]) a[k] = etat.apparence[k]; }); return a; };
     let envoi = null, tAuto = null;
     const marque = (t) => { $('#cEtat').textContent = t; };
 
@@ -263,6 +268,11 @@ window.SOZO_PRET.then(async () => {
     }));
     $$('[data-nature]').forEach((b) => b.addEventListener('click', () => { etat.nature = b.dataset.nature; peindreEtat(); change(); }));
     $$('[data-fond]').forEach((b) => b.addEventListener('click', () => { etat.apparence.fond = b.dataset.fond === 'ivoire' ? undefined : b.dataset.fond; peindreEtat(); change(); }));
+    $$('[data-photo]').forEach((b) => b.addEventListener('click', () => {
+      etat.apparence.image = b.dataset.photo || undefined;
+      $$('[data-photo]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+      change();
+    }));
     $('#cGrand').addEventListener('change', (e) => { etat.apparence.taille = e.target.checked ? 'grande' : undefined; change(); });
     const pub = $('#cPublier');
     if (pub) pub.addEventListener('click', async () => {

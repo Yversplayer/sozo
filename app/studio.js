@@ -606,12 +606,12 @@ window.SOZO_PRET.then(() => {
       <p class="cx-field">Couverture <small>vous pourrez tout modifier ensuite dans « Ma couverture »</small></p>
       <div class="nv-modeles" role="radiogroup" aria-label="Modèle de couverture" id="nvModeles"></div>
       <div data-nv-image hidden><label class="drop dz-drop">${S.icon('upload')}<strong>Choisir mon image</strong><br>JPEG, PNG ou WebP, réduite sur votre appareil avant l’envoi.<input type="file" id="nvFichier" class="sr" accept="image/jpeg,image/png,image/webp"></label><p class="cx-err" id="nvErrImg" role="alert"></p></div>
-      <input type="hidden" name="couverture" value="couv-pages">
+      <input type="hidden" name="couverture" value="${['couv-mer', 'couv-jardin', 'couv-lumieres', 'couv-fenetre', 'foi-champ-dore', 'foi-soleil-mer', 'couv-eventail', 'couv-pages'][Math.floor(Math.random() * 8)]}">
       <p class="cx-err" id="errNouv" role="alert"></p></form>`,
       actions: [{ label: 'Annuler' }, { label: 'Créer le livre', primary: true, onClick: async (close) => {
         const f = $('#formNouv'), err = $('#errNouv');
         if (!f.elements.titre.value.trim()) { err.textContent = 'Donnez un titre à votre livre.'; f.elements.titre.focus(); return; }
-        const k = (f.querySelector('input[name="modele"]:checked') || { value: 'classique' }).value;
+        const k = (f.querySelector('input[name="modele"]:checked') || { value: 'photo' }).value;
         if (k === 'image' && !image) { err.textContent = 'Choisissez votre image, ou un autre modèle.'; return; }
         const corps = { titre: f.elements.titre.value.trim(), categorie: f.elements.categorie.value, description: f.elements.description.value.trim(), mode: f.elements.mode.value, acces: f.elements.acces.value, couverture: f.elements.couverture.value, style: 'a', apparence: { couv: MODELES[k] } };
         if (corps.acces !== 'free') { const p = lirePrix(f); if (!p) { err.textContent = 'Prix invalide : un nombre comme 0,50.'; return; } Object.assign(corps, p); }
@@ -655,7 +655,8 @@ window.SOZO_PRET.then(() => {
      rien n'est enregistré avant « Enregistrer », et seulement si le serveur
      l'accepte (image reconnue par son contenu, valeurs sur liste fermée). */
   const MODELES = {
-    // 21/10/2026 : plus aucune photo (demande du propriétaire) — velours, ivoire, or
+    // 22/10/2026 : la photo revient, en premier (velours par-dessus, voile bordeaux)
+    photo: { fond: 'photo', voile: 45, voile_couleur: '#2A0610', couleur_titre: '#F8EEDC', couleur_texte: '#E2C25E', police_titre: 'cormorant', position: 'bas', alignement: 'centre', ornement: 'filet', couleur_ornement: '#D4AF37' },
     classique: { fond: 'degrade', couleur1: '#5C0E1B', couleur2: '#23050A', angle: 160, couleur_titre: '#F8EEDC', couleur_texte: '#E2C25E', police_titre: 'cormorant', position: 'milieu', alignement: 'centre', ornement: 'cadre', couleur_ornement: '#D4AF37' },
     capitales: { fond: 'degrade', couleur1: '#2B1418', couleur2: '#140709', angle: 170, couleur_titre: '#F3EADF', couleur_texte: '#D4AF37', police_titre: 'inter', capitales: true, espacement: 14, taille_titre: 70, graisse: 500, position: 'milieu', alignement: 'centre', ornement: 'filet', couleur_ornement: '#D4AF37' },
     bandeau: { fond: 'uni', couleur1: '#F7F1E7', couleur_titre: '#F8EEDC', couleur_texte: '#6B0F1A', police_titre: 'cormorant', position: 'milieu', alignement: 'centre', ornement: 'bandeau', couleur_ornement: '#6B0F1A' },
@@ -665,7 +666,7 @@ window.SOZO_PRET.then(() => {
     minimal: { fond: 'uni', couleur1: '#FFFFFF', couleur_titre: '#111111', couleur_texte: '#555555', police_titre: 'moderne', graisse: 700, position: 'haut', alignement: 'gauche', ornement: 'aucun', afficher_categorie: false },
     image: { fond: 'image', image_seule: true }
   };
-  const NOMS_MODELES = { classique: 'Classique', capitales: 'Capitales', bandeau: 'Bandeau', medaillon: 'Médaillon', nuit: 'Nuit dorée', parchemin: 'Parchemin', minimal: 'Minimal', image: 'Mon image seule' };
+  const NOMS_MODELES = { photo: 'Photo', classique: 'Classique', capitales: 'Capitales', bandeau: 'Bandeau', medaillon: 'Médaillon', nuit: 'Nuit dorée', parchemin: 'Parchemin', minimal: 'Minimal', image: 'Mon image seule' };
 
   /* Réduit l'image sur l'appareil avant l'envoi : 1 200 × 1 800 au plus, en
      JPEG. Une photo de téléphone (4 à 8 Mo) part en ~250 Ko — Kinshasa, 3G. */
@@ -695,7 +696,7 @@ window.SOZO_PRET.then(() => {
   function dessinerCouverture() {
     const depart = (livre.apparence && livre.apparence.couv) || {};
     let c = { ...depart }, nouvelleImage = null, retirerImage = false;
-    if (!c.fond || c.fond === 'photo') c.fond = livre.image ? 'image' : 'degrade';   // « photo » n'existe plus (21/10/2026)
+    if (!c.fond) c.fond = livre.image ? 'image' : 'photo';   // 22/10/2026 : la photo revient
     const champ = (k, l, html) => `<label class="dz-f"><span>${l}</span>${html}</label>`;
     const coul = (k, d) => `<input type="color" data-k="${k}" value="${S.esc(c[k] || d)}">`;
     const plage = (k, a, z, d, pas = 1) => `<input type="range" data-k="${k}" min="${a}" max="${z}" step="${pas}" value="${c[k] != null ? c[k] : d}" data-num>`;
@@ -707,13 +708,14 @@ window.SOZO_PRET.then(() => {
         <p class="mono ash">Partir d’un modèle</p>
         <div class="dz-modeles">${Object.entries(NOMS_MODELES).map(([k, l]) => `<button type="button" class="chip" data-modele="${k}">${l}</button>`).join('')}</div>
         <details class="dz-sec" open><summary>Le fond</summary>
-          ${seg('fond', [['degrade', 'Velours'], ['uni', 'Couleur'], ['image', 'Mon image']], 'degrade')}
+          ${seg('fond', [['photo', 'Photo'], ['degrade', 'Velours'], ['uni', 'Couleur'], ['image', 'Mon image']], 'photo')}
+          <div data-si="photo"><div class="dz-photos" role="radiogroup" aria-label="Photo de la couverture">${(at.images || []).filter((k) => /^(couv|foi|lib|livre|lecteur|lectrice|trail|ecriture|tasse|cafe|hero|mains)/.test(k)).map((k) => `<label class="dz-ph"><input type="radio" name="dzPhoto" value="${S.esc(k)}"${livre.couverture === k ? ' checked' : ''}><img src="${S.esc(S.img(k, true))}" alt="" loading="lazy"></label>`).join('')}</div></div>
           <div data-si="image"><label class="drop dz-drop">${S.icon('upload')}<strong>Choisir une image</strong><br>Photo, dessin ou couverture déjà faite (JPEG, PNG, WebP). Elle est réduite sur votre appareil avant l’envoi.<input type="file" id="dzFichier" class="sr" accept="image/jpeg,image/png,image/webp"></label>
             <p class="cx-err" id="dzErrImg" role="alert"></p>
             ${livre.image ? `<button type="button" class="btn btn--ghost btn--sm" id="dzRetirer">${S.icon('x')} Retirer mon image</button>` : ''}
             ${coche('image_seule', 'Image seule : ma couverture est déjà complète (sans texte ajouté)', false)}</div>
           <div data-si="uni degrade" class="dz-ligne">${champ('couleur1', 'Couleur', coul('couleur1', '#5C0E1B'))}<span data-si="degrade">${champ('couleur2', 'Seconde couleur', coul('couleur2', '#23050A'))}${champ('angle', 'Angle', plage('angle', 0, 360, 160, 5))}</span></div>
-          <div data-si="image">${champ('cadrage_x', 'Cadrage horizontal', plage('cadrage_x', 0, 100, 50))}${champ('cadrage_y', 'Cadrage vertical', plage('cadrage_y', 0, 100, 50))}${champ('zoom', 'Zoom', plage('zoom', 100, 300, 100, 5))}
+          <div data-si="image photo">${champ('cadrage_x', 'Cadrage horizontal', plage('cadrage_x', 0, 100, 50))}${champ('cadrage_y', 'Cadrage vertical', plage('cadrage_y', 0, 100, 50))}${champ('zoom', 'Zoom', plage('zoom', 100, 300, 100, 5))}
             <div class="dz-ligne">${champ('voile', 'Voile sur l’image', plage('voile', 0, 90, 35))}${champ('voile_couleur', 'Couleur du voile', coul('voile_couleur', '#0C0909'))}</div></div>
         </details>
         <details class="dz-sec" open><summary>Le titre</summary>

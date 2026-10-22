@@ -256,12 +256,15 @@ window.SOZO = (() => {
     const st = b.cover.style;
     const tail = `${b.demo ? '<span class="cv-exemple">Exemple</span>' : ''}`;
     const cls = `cv${opts.d3 === false ? '' : ' cv3d'}${opts.cls ? ' ' + opts.cls : ''}`;
-    /* 21/10/2026 : plus aucune photo dans le logiciel (demande du propriétaire).
-       Sans réglage de l'auteur, la couverture est TYPOGRAPHIQUE : velours,
-       filet d'or, la plume. Le style a/b/c/d choisit la teinte. */
+    /* 22/10/2026 : les photos reviennent (« les livres là-bas ont tous leur
+       image ; je t'ai dit de diminuer les images, là tu as abusé »). Sans
+       réglage de l'auteur, la couverture garde la mise en page velours — filet
+       d'or, plume, titre — posée sur la photo choisie à la création du livre,
+       sous un voile. Sans photo connue : velours seul, comme avant. */
     if (!c && !b.image) {
-      return `<div class="${cls} cv--velours cv--${st}">
-      <div class="cv-face">
+      const ph = b.cover && b.cover.img;
+      return `<div class="${cls} cv--velours cv--${st}${ph ? ' cv--photo' : ''}"${ph ? ` style="--cv:url('${esc(img(ph, !opts.big))}')"` : ''}>
+      <div class="cv-face">${ph ? '<span class="cv-photo" aria-hidden="true"></span>' : ''}
         <span class="cv-cat">${esc(b.cat)}</span>
         <span class="cv-bloc-v">${PLUME_SVG}<span class="cv-title">${esc(b.title)}</span></span>
         <span class="cv-author">${esc(a.name)}</span>
@@ -271,10 +274,9 @@ window.SOZO = (() => {
     }
     const k = c || {};
     // « photo » (ancien réglage) n'existe plus : on le rend en velours
-    let fond = k.fond || (b.image ? 'image' : 'degrade');
-    if (fond === 'photo') fond = 'degrade';
+    const fond = k.fond || (b.image ? 'image' : 'photo');
     const url = fond === 'image' ? (opts.imageUrl || couvUrl(b)) : null;   // imageUrl : aperçu d'une image pas encore envoyée
-    const photo = false;
+    const photo = fond === 'photo' && b.cover && b.cover.img;               // 22/10/2026 : la photo de la bibliothèque revient
     const v = [];
     if (url) v.push(`--cv:url('${url}')`);
     else if (photo) v.push(`--cv:url('${img(b.cover.img, !opts.big)}')`);
@@ -338,6 +340,31 @@ window.SOZO = (() => {
       }).join('');
     }
   };
+
+  /* 22/10/2026 — briques de l'Explorer réutilisées par l'Accueil : une rangée
+     qui défile vers la gauche, et un écrit posé sur sa photo. */
+  function rangee(titre, livres, opts = {}) {
+    if (!livres.length) return '';
+    return `<section class="xp-rang" aria-label="${esc(titre)}">
+      <div class="xp-rang-h"><h2>${esc(titre)}</h2>${opts.lien ? `<a class="ec-lien" href="${esc(opts.lien)}">Tout voir</a>` : ''}
+        <span class="xp-fleches"><button type="button" class="xp-fl" data-fl="-1" aria-label="Précédents">${icon('left')}</button><button type="button" class="xp-fl" data-fl="1" aria-label="Suivants">${icon('right')}</button></span></div>
+      <div class="xp-defile" tabindex="0">${livres.map((b) => `<a class="xp-livre" href="livre.html?id=${encodeURIComponent(b.id)}">${cover(b, { d3: false })}<strong>${esc(b.title)}</strong><small>${esc(author(b.author).name)}</small></a>`).join('')}</div>
+    </section>`;
+  }
+  function xpEcrit(e, natures) {
+    const ph = (e.apparence || {}).image;
+    const t = String(e.texte || '').replace(/[#>*•]/g, '');
+    return `<a class="xp-ecrit${ph ? ' has-photo' : ''}" href="ecrit.html?id=${e.id}"${ph ? ` style="--xp-photo:url('${esc(img(ph, true))}')"` : ''}>
+      <span class="xp-ecrit-n">${esc((natures || {})[e.nature] || '')}</span>
+      ${e.titre ? `<strong class="xp-ecrit-t">${esc(e.titre)}</strong>` : ''}
+      <span class="xp-ecrit-x">${esc(t.slice(0, 180))}${t.length > 180 ? '…' : ''}</span>
+      <span class="xp-ecrit-a">— ${esc(e.auteur.nom)}${e.jaime ? ` · ${icon('heart')} ${e.jaime}` : ''}</span></a>`;
+  }
+  function brancherRangees(scope = document) {
+    scope.querySelectorAll('.xp-rang').forEach((r) => r.querySelectorAll('[data-fl]').forEach((f) => f.addEventListener('click', () => {
+      const z = r.querySelector('.xp-defile'); z.scrollBy({ left: +f.dataset.fl * z.clientWidth * 0.85, behavior: reduced ? 'auto' : 'smooth' });
+    })));
+  }
 
   function bookCard(b, opts = {}) {
     const a = author(b.author), st = stats(b), pf = priceFrom(b);
@@ -728,5 +755,5 @@ window.SOZO = (() => {
 
   return { D, leger, esc, icon, img, money, dateLong, dateShort, dayLong, relDays, parse, now, book, author, booksBy, status, access, readable,
            visiblePages, stats, accessLabel, priceFrom, chapterOf, pagesRange, follows, isFollowed, toggleFollow, notifications, markSeen,
-           unread, majCloche, libelleAppareil, sess, cover, bookCard, visite, monogramme, PLUME_SVG, emphase, installer, POLICES, NOMS_POLICES, couvUrl, mise, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced };
+           unread, majCloche, libelleAppareil, sess, cover, bookCard, visite, monogramme, PLUME_SVG, emphase, installer, POLICES, NOMS_POLICES, couvUrl, mise, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced, rangee, xpEcrit, brancherRangees };
 })();

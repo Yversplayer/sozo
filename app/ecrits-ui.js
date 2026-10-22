@@ -43,6 +43,14 @@ window.SOZO_ECRITS = (() => {
     return `<div class="vl-texte vl-al-${al}${a.taille === 'grande' ? ' vl-grand' : ''}${e.nature === 'pensee' ? ' vl-texte--pensee' : ''}" style="--pg-police:${s.POLICES[police]}">${s.mise.paragraphes(e.texte, {}, (t) => s.esc(t) || '&nbsp;')}</div>`;
   }
   const fond = (e) => (['ivoire', 'velours', 'nuit', 'parchemin'].includes((e.apparence || {}).fond) ? e.apparence.fond : 'ivoire');
+  /* 22/10/2026 : une photo derrière le texte, à la manière des cartes de poèmes
+     (image « Haiku » du propriétaire). Choisie dans la bibliothèque de Sōzō ;
+     le serveur ne garde que ces noms-là (ecrits.apparence_propre). */
+  const PHOTOS = ['foi-soleil-mer', 'foi-champ-dore', 'foi-croix-ciel', 'foi-croix-lac', 'foi-aube-bras', 'foi-priere-lumiere', 'foi-priere-bordeaux',
+    'foi-bougie', 'foi-bougie-nuit', 'foi-bougies', 'foi-bougies-rang', 'foi-chapelle', 'foi-cathedrale', 'foi-porte-eglise', 'foi-bancs-rouges',
+    'foi-bible-cafe', 'foi-bible-mains', 'foi-livre-nuit', 'foi-fleurs-claires', 'foi-fleurs-sechees', 'hero-crepuscule', 'couv-mer', 'couv-jardin',
+    'couv-lumieres', 'couv-marais', 'trail-mer', 'trail-herbe', 'trail-parc', 'trail-fenetre', 'tasse-fenetre', 'ecriture-herbe'];
+  const photo = (e) => { const k = (e.apparence || {}).image; return /^[a-z0-9-]+$/.test(k || '') ? k : null; };
 
   function lienAuteur(e) {
     const s = S(), id = e.auteur.id;
@@ -63,7 +71,8 @@ window.SOZO_ECRITS = (() => {
 
   function carte(e, opts = {}) {
     const s = S();
-    return `<article class="vl-ecrit vl-fond-${fond(e)}${opts.entier ? ' vl-ecrit--entier' : ''}" data-ecrit="${e.id}">
+    const ph = photo(e);
+    return `<article class="vl-ecrit vl-fond-${fond(e)}${opts.entier ? ' vl-ecrit--entier' : ''}${ph ? ' vl-ecrit--photo' : ''}" data-ecrit="${e.id}"${ph ? ` style="--vl-photo:url('${s.esc(s.img(ph, !opts.entier))}')"` : ''}>
       <header class="vl-ecrit-h">${s.monogramme(e.auteur.nom, 36)}
         <div><strong>${lienAuteur(e)}</strong><small>${s.esc(NATURES[e.nature] || '')}${e.publie_le ? ` · ${s.esc(depuis(e.publie_le))}` : e.statut === 'brouillon' ? ' · brouillon' : ''}</small></div>
       </header>
@@ -211,5 +220,5 @@ window.SOZO_ECRITS = (() => {
     });
   }
 
-  return { NATURES, AIDE, carte, corps, brancher, depuis, partager, dessiner, carteImage };
+  return { NATURES, AIDE, PHOTOS, carte, corps, brancher, depuis, partager, dessiner, carteImage };
 })();

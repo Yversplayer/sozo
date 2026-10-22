@@ -14,6 +14,18 @@ window.SOZO_PRET.then(() => {
   books.forEach((b) => { compte[b.cat] = (compte[b.cat] || 0) + 1; });
   const cats = Object.keys(compte).sort((x, y) => compte[y] - compte[x] || x.localeCompare(y, 'fr'));
 
+  /* 22/10/2026 — Explorer pour le WEB (images « Mark Twain » et « Haiku » du
+     propriétaire) : une grande une sur la photo du livre, des rangées qui
+     défilent vers la gauche (à la Netflix), des écrits posés sur leur photo ;
+     la recherche et tout le catalogue restent dessous. */
+  const parution = (b) => Math.max(0, ...b.pages.filter((p) => S.status(p) === 'published' && p.date).map((p) => +S.parse(p.date)));
+  const autres = books.filter((b) => !b.owner);
+  const recents = [...autres].sort((x, y) => parution(y) - parution(x));
+  const une = recents.slice(0, 6);
+  const rangees = [['Nouveautés', recents.slice(0, 14), '']]
+    .concat(cats.filter((c) => compte[c] >= 2).slice(0, 5).map((c) => [c, autres.filter((b) => b.cat === c), c]))
+    .concat([['Gratuits, à lire tout de suite', autres.filter((b) => b.access === 'free'), '']])
+    .filter(([, l]) => l.length);
   const vue0 = S.q('vue') === 'ecrits' ? 'ecrits' : 'livres';
   main.innerHTML = `<div class="wrap ex">
     <section class="ex-tete">
@@ -24,11 +36,26 @@ window.SOZO_PRET.then(() => {
       </div>
     </section>
     <div id="vueLivres"${vue0 === 'livres' ? '' : ' hidden'}>
-    <section class="ex-tete">
+    ${une.length ? `<section class="xp-une" id="xpUne" aria-roledescription="carrousel" aria-label="À la une">
+      <div class="xp-une-fond" id="xpFond" aria-hidden="true"></div>
+      <div class="xp-une-t" id="xpTexte" aria-live="polite"></div>
+      <div class="xp-une-rang" role="list" aria-label="Choisir le livre à la une">${une.map((b, i) => `<button type="button" role="listitem" class="xp-une-cv" data-une="${i}" aria-label="${S.esc(b.title)}">${S.cover(b, { d3: false })}</button>`).join('')}</div>
+    </section>` : ''}
+    ${rangees.map(([titre, liste, lien]) => `<section class="xp-rang" aria-label="${S.esc(titre)}">
+      <div class="xp-rang-h"><h2>${S.esc(titre)}</h2>${lien ? `<button type="button" class="ec-lien" data-voir="${S.esc(lien)}">Tout voir</button>` : ''}
+        <span class="xp-fleches"><button type="button" class="xp-fl" data-fl="-1" aria-label="Précédents">${S.icon('left')}</button><button type="button" class="xp-fl" data-fl="1" aria-label="Suivants">${S.icon('right')}</button></span></div>
+      <div class="xp-defile" tabindex="0">${liste.map((b) => `<a class="xp-livre" href="livre.html?id=${encodeURIComponent(b.id)}">${S.cover(b, { d3: false })}<strong>${S.esc(b.title)}</strong><small>${S.esc(S.author(b.author).name)}</small></a>`).join('')}</div>
+    </section>`).join('')}
+    <section class="xp-rang xp-rang--ecrits" aria-label="Poèmes, pensées, prières">
+      <div class="xp-rang-h"><h2>Poèmes, pensées, prières</h2><button type="button" class="ec-lien" data-vue-ecrits>Tous les écrits</button>
+        <span class="xp-fleches"><button type="button" class="xp-fl" data-fl="-1" aria-label="Précédents">${S.icon('left')}</button><button type="button" class="xp-fl" data-fl="1" aria-label="Suivants">${S.icon('right')}</button></span></div>
+      <div class="xp-defile" id="xpEcrits" tabindex="0"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>
+    </section>
+    <section class="ex-tete" id="tout">
+      <h2 class="xp-tout">Tout le catalogue</h2>
       <label class="search ex-cherche"><span class="sr">Rechercher un titre, un auteur, un thème</span>${S.icon('search')}
         <input type="search" id="q" placeholder="Rechercher un livre, un écrit, un auteur…" autocomplete="off"></label>
-      ${cats.length ? `<div class="ex-cats" role="group" aria-label="Catégories"><button class="chip ex-cat" type="button" data-cat="" aria-pressed="true">Toutes <small>${books.length}</small></button>${cats.map((c) => `<button class="chip ex-cat" type="button" data-cat="${S.esc(c)}" aria-pressed="false">${S.esc(c)} <small>${compte[c]}</small></button>`).join('')}</div>
-      <div class="vl-tuiles">${cats.slice(0, 6).map((c) => `<button type="button" class="vl-tuile vl-velours" data-cat="${S.esc(c)}">${S.icon(ICONE[c] || 'book')}<strong>${S.esc(c)}</strong><small>${compte[c]} livre${compte[c] > 1 ? 's' : ''}</small></button>`).join('')}</div>` : ''}
+      ${cats.length ? `<div class="ex-cats" role="group" aria-label="Catégories"><button class="chip ex-cat" type="button" data-cat="" aria-pressed="true">Toutes <small>${books.length}</small></button>${cats.map((c) => `<button class="chip ex-cat" type="button" data-cat="${S.esc(c)}" aria-pressed="false">${S.esc(c)} <small>${compte[c]}</small></button>`).join('')}</div>` : ''}
     </section>
     <section class="ex-sec ex-recherche" id="recherche" hidden aria-live="polite"></section>
     <section class="ex-sec" id="catalogue">
@@ -57,6 +84,45 @@ window.SOZO_PRET.then(() => {
       <div class="ex-plus"><button class="btn btn--ghost" type="button" id="plus" hidden>Voir plus d’écrits</button></div>
     </div>
   </div>`;
+
+  /* ─── la une : la photo du livre, son titre en grand, « Lire » ─── */
+  let iUne = 0, tUne = null;
+  function peindreUne(i) {
+    const b = une[i]; if (!b) return;
+    iUne = i;
+    const st = S.stats(b), a = S.author(b.author);
+    $('#xpFond').style.setProperty('--xp-photo', `url('${S.img(b.cover.img)}')`);
+    $('#xpTexte').innerHTML = `<p class="xp-une-k">${S.esc(b.cat)}${b.demo ? ' · exemple' : ''}</p>
+      <h2 class="xp-une-titre">${S.esc(b.title)}</h2>
+      <p class="xp-une-a">${S.esc(a.name)}</p>
+      <dl class="xp-une-meta"><div><dt>Pages</dt><dd>${st.published}</dd></div><div><dt>Accès</dt><dd>${S.esc(S.accessLabel(b))}</dd></div>${st.next ? `<div><dt>Prochaine page</dt><dd>${S.esc(S.dateShort(st.next.date))}</dd></div>` : ''}</dl>
+      <p class="xp-une-d">${S.esc((b.desc || '').slice(0, 220))}${(b.desc || '').length > 220 ? '…' : ''}</p>
+      <div class="xp-une-acts"><a class="btn btn--accent" href="lire.html?id=${encodeURIComponent(b.id)}">${S.icon('book')} Lire « ${S.esc(b.title)} »</a><a class="btn xp-btn-clair" href="livre.html?id=${encodeURIComponent(b.id)}">Découvrir</a></div>`;
+    $$('[data-une]').forEach((x) => x.setAttribute('aria-current', String(+x.dataset.une === i)));
+  }
+  if (une.length) {
+    peindreUne(0);
+    $$('[data-une]').forEach((x) => x.addEventListener('click', () => { clearInterval(tUne); peindreUne(+x.dataset.une); }));
+    if (!S.reduced && une.length > 1) tUne = setInterval(() => { if (!document.hidden) peindreUne((iUne + 1) % une.length); }, 8000);
+    $('#xpUne').addEventListener('pointerenter', () => clearInterval(tUne));
+  }
+  /* les rangées : glisser au doigt, ou les flèches */
+  $$('.xp-rang').forEach((r) => r.querySelectorAll('[data-fl]').forEach((f) => f.addEventListener('click', () => {
+    const z = r.querySelector('.xp-defile'); z.scrollBy({ left: +f.dataset.fl * z.clientWidth * 0.85, behavior: S.reduced ? 'auto' : 'smooth' });
+  })));
+  $$('[data-voir]').forEach((x) => x.addEventListener('click', () => { state.cat = x.dataset.voir; render(); $('#tout').scrollIntoView({ behavior: S.reduced ? 'auto' : 'smooth' }); }));
+  /* les écrits du moment, posés sur leur photo : les plus aimés d'abord */
+  window.SOZO_API('GET', '/api/ecrits').then((r) => {
+    const z = $('#xpEcrits');
+    const l = r.ok ? [...r.d.ecrits].sort((x, y) => (y.jaime || 0) - (x.jaime || 0)).slice(0, 12) : [];
+    z.innerHTML = l.length ? l.map((e) => `<a class="xp-ecrit${(e.apparence || {}).image ? ' has-photo' : ''}" href="ecrit.html?id=${e.id}"${(e.apparence || {}).image ? ` style="--xp-photo:url('${S.esc(S.img(e.apparence.image, true))}')"` : ''}>
+        <span class="xp-ecrit-n">${S.esc(E.NATURES[e.nature] || '')}</span>
+        ${e.titre ? `<strong class="xp-ecrit-t">${S.esc(e.titre)}</strong>` : ''}
+        <span class="xp-ecrit-x">${S.esc(String(e.texte || '').replace(/[#>*•]/g, '').slice(0, 180))}${String(e.texte || '').length > 180 ? '…' : ''}</span>
+        <span class="xp-ecrit-a">— ${S.esc(e.auteur.nom)}${e.jaime ? ` · ${S.icon('heart')} ${e.jaime}` : ''}</span></a>`).join('')
+      : `<div class="empty"><strong>Aucun écrit pour l’instant</strong>Le premier peut être le vôtre.</div>`;
+  });
+  $$('[data-vue-ecrits]').forEach((x) => x.addEventListener('click', () => montrer('ecrits')));
 
   /* ─── les écrits : du serveur, par nature, page après page ─── */
   let ecrits = [], suite = null, nature = '', theme = S.q('theme') || '', charge = false;
@@ -134,13 +200,10 @@ window.SOZO_PRET.then(() => {
   $('#sort').addEventListener('change', (e) => { state.sort = e.target.value; render(); });
   $$('[data-access]').forEach((c) => c.addEventListener('click', () => { state.access = c.dataset.access; $$('[data-access]').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); render(); }));
   $$('[data-run]').forEach((c) => c.addEventListener('click', () => { state.run = c.dataset.run; $$('[data-run]').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); render(); }));
-  $$('.ex-cat, .vl-tuile').forEach((c) => c.addEventListener('click', () => {
-    state.cat = c.dataset.cat; render();
-    if (c.classList.contains('vl-tuile')) $('#catalogue').scrollIntoView({ behavior: S.reduced ? 'auto' : 'smooth' });
-  }));
+  $$('.ex-cat').forEach((c) => c.addEventListener('click', () => { state.cat = c.dataset.cat; render(); }));
   render();
   if (state.q) rechercher(state.q);
   S.inkAll(); S.prepAll(); S.reveals(); S.footer();
   if (location.hash === '#q') setTimeout(() => $('#q').focus(), 60);
-  else if (S.q('cat')) setTimeout(() => $('#catalogue').scrollIntoView(), 60);
+  else if (S.q('cat')) setTimeout(() => $('#tout').scrollIntoView(), 60);
 }).catch(window.SOZO_ERREUR);

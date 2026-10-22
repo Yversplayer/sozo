@@ -45,16 +45,27 @@ _APPARENCE = {
 }
 
 
+def _photos():
+    """22/10/2026 : un écrit peut porter une PHOTO de la bibliothèque de Sōzō
+    (images/, licence CC0), affichée derrière le texte — jamais une image
+    envoyée par quelqu'un : la liste est fermée, lue sur le disque."""
+    import os
+    import config
+    d = os.path.join(config.RACINE_SITE, "images")
+    return {f[:-4] for f in os.listdir(d) if f.endswith(".jpg") and not f.endswith("-480.jpg")} if os.path.isdir(d) else set()
+
+
 def apparence_propre(d):
     if d is None:
         return None
-    if not isinstance(d, dict) or set(d) - set(_APPARENCE):
+    permis = {**_APPARENCE, "image": _photos()}
+    if not isinstance(d, dict) or set(d) - set(permis):
         raise v.Invalide("Apparence invalide.", "apparence")
     out = {}
     for k, val in d.items():
         if val is None:
             continue
-        if isinstance(val, bool) or val not in _APPARENCE[k]:
+        if isinstance(val, bool) or val not in permis[k]:
             raise v.Invalide(f"Valeur refusée pour « {k} ».", "apparence")
         out[k] = val
     return out

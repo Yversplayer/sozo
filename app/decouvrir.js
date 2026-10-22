@@ -49,37 +49,56 @@ window.SOZO_PRET.then(() => {
      recherche, la plume (écrire tout de suite), à la une sur velours, les
      nouveautés, puis les écrits du jour. Calme, sans photo. */
   const E = window.SOZO_ECRITS;
+  /* 22/10/2026 — « en cliquant sur Accueil, l'utilisateur doit se sentir comme
+     s'il venait d'ouvrir son propre monde » (le propriétaire). En haut, SON
+     monde : une photo selon l'heure, son prénom, sa lecture en cours, ses
+     raccourcis. Ensuite, le meilleur de Sōzō avec le dessin d'Explorer. */
+  const PHOTO_HEURE = heure < 5 ? 'foi-bougie-nuit' : heure < 11 ? 'foi-soleil-mer' : heure < 17 ? 'foi-champ-dore' : heure < 20 ? 'hero-crepuscule' : 'foi-livre-nuit';
+  const lecture = enCours[0];
+  const pctDe = (b) => { const lu = D.reader.progress[b.id] || 0; const pub = S.visiblePages(b).filter((p) => S.access(b, p.n) !== 'soon'); return pub.length ? Math.round((Math.min(lu, pub.length) / pub.length) * 100) : 0; };
+  const lienLecture = (b) => { const lu = D.reader.progress[b.id]; const vis = S.visiblePages(b); return `lire.html?id=${encodeURIComponent(b.id)}&p=${vis.find((x) => x.n === lu) ? lu : (vis[0] ? vis[0].n : 1)}`; };
+  const catsSuivies = [...new Set(enCours.map((b) => b.cat))];
+  const pourVous = autres.filter((b) => catsSuivies.includes(b.cat) && !enCours.includes(b));
   main.innerHTML = `<div class="wrap ac vl-ac">
-    <section class="vl-salut">
-      <h1>${S.esc(salut)}${prenom ? `, ${S.esc(prenom)}` : ''}</h1>
-      <p>Que voulez-vous lire aujourd’hui ?</p>
-      <p class="vl-jour" id="versetJour" hidden></p>
-      <a class="ac-cherche vl-cherche" href="explorer.html#q">${S.icon('search')}<span>Rechercher un livre, un écrit, un auteur…</span></a>
+    <section class="mo-hero" style="--mo-photo:url('${S.esc(S.img(PHOTO_HEURE))}')">
+      <div class="mo-hero-t">
+        <p class="mo-k">Votre Sōzō · ${S.esc(new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }))}</p>
+        <h1>${S.esc(salut)}${prenom ? `, ${S.esc(prenom)}` : ''}</h1>
+        <p class="mo-q">Que voulez-vous lire aujourd’hui ?</p>
+        <p class="vl-jour mo-jour" id="versetJour" hidden></p>
+        <a class="ac-cherche vl-cherche mo-cherche" href="explorer.html#q">${S.icon('search')}<span>Rechercher un livre, un écrit, un auteur…</span></a>
+      </div>
+      <div class="mo-moi">
+        ${lecture ? `<a class="mo-lecture" href="${lienLecture(lecture)}"><span class="mo-lecture-cv">${S.cover(lecture, { d3: false })}</span>
+          <span class="mo-lecture-t"><small>Reprendre la lecture</small><strong>${S.esc(lecture.title)}</strong><span class="ash">${S.esc(S.author(lecture.author).name)}</span>
+          <span class="prog" role="progressbar" aria-valuenow="${pctDe(lecture)}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression"><i style="width:${pctDe(lecture)}%"></i></span></span></a>`
+          : `<a class="mo-lecture mo-lecture--vide" href="explorer.html"><span class="mo-lecture-t"><small>Votre première lecture</small><strong>Trouvez un livre qui vous parle</strong><span class="ash">Explorer le catalogue ${S.icon('right')}</span></span></a>`}
+        <nav class="mo-raccourcis" aria-label="Mes raccourcis">
+          <a href="suivis.html">${S.icon('library')}<span>Ma bibliothèque</span><small>${D.reader.follows.length} suivi${D.reader.follows.length > 1 ? 's' : ''}</small></a>
+          <a href="ecrits.html">${S.icon('feather')}<span>Mes écrits</span><small>écrire un mot</small></a>
+          <a href="bible.html">${S.icon('book')}<span>La Bible</span><small>le verset du jour</small></a>
+          ${miens.length ? `<a href="studio.html">${S.icon('pen')}<span>Mes livres</span><small>${miens.length} livre${miens.length > 1 ? 's' : ''}</small></a>` : ''}
+        </nav>
+      </div>
     </section>
 
     <aside class="vl-installer" id="bandeauInstaller" hidden><span>${S.icon('upload')} Installez Sōzō sur votre écran d’accueil, et lisez même sans réseau.</span>
       <span class="row-acts"><button class="btn btn--accent btn--sm" type="button" id="instOui">Installer</button><button class="ec-lien" type="button" id="instNon">Plus tard</button></span></aside>
 
-    ${enCours.length ? `<section class="sec ac-sec">
-      <div class="sec-head"><h2 class="sec-title">Reprendre la lecture</h2><a class="sec-link" href="suivis.html">Tout voir ${S.icon('right')}</a></div>
-      <div class="ac-reprise">${enCours.slice(0, 3).map((b) => { const lu = D.reader.progress[b.id]; const vis = S.visiblePages(b); const pub = vis.filter((p) => S.access(b, p.n) !== 'soon'); const p = vis.find((x) => x.n === lu) ? lu : (vis[0] && vis[0].n); const pct = pub.length ? Math.round((Math.min(lu || 0, pub.length) / pub.length) * 100) : 0;
-        return `<a class="ac-rep" href="lire.html?id=${encodeURIComponent(b.id)}&p=${p}"><span class="ac-rep-cv">${S.cover(b, { d3: false })}</span><span class="ac-rep-t"><small class="badge badge--free">${lu ? `Page ${lu}` : 'À commencer'}</small><strong>${S.esc(b.title)}</strong><small class="ash">${S.esc(S.author(b.author).name)}</small><span class="prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression"><i style="width:${pct}%"></i></span></span></a>`; }).join('')}</div>
-    </section>` : ''}
-
-    ${aLaUne ? `<section class="ac-sec"><a class="vl-une vl-velours" href="livre.html?id=${encodeURIComponent(aLaUne.id)}">
-        <div class="vl-une-t"><span class="vl-or">À la une</span><h2>${S.esc(aLaUne.title)}</h2><p>${S.esc(S.author(aLaUne.author).name)}</p><span class="btn btn--accent btn--sm">Découvrir</span></div>
-        <div class="vl-une-cv">${S.cover(aLaUne, { big: true, d3: false })}</div></a></section>` : ''}
+    ${enCours.length > 1 ? S.rangee('Vos lectures', enCours, { lien: 'suivis.html' }) : ''}
+    ${S.rangee('Pour vous', pourVous.slice(0, 14), { lien: 'explorer.html' })}
+    ${S.rangee('Le meilleur de Sōzō', nouveautes, { lien: 'explorer.html' })}
+    <section class="xp-rang" aria-label="Les écrits les plus aimés">
+      <div class="xp-rang-h"><h2>Les écrits les plus aimés</h2><a class="ec-lien" href="explorer.html?vue=ecrits">Tous les écrits</a>
+        <span class="xp-fleches"><button type="button" class="xp-fl" data-fl="-1" aria-label="Précédents">${S.icon('left')}</button><button type="button" class="xp-fl" data-fl="1" aria-label="Suivants">${S.icon('right')}</button></span></div>
+      <div class="xp-defile" id="moAimes" tabindex="0"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>
+    </section>
 
     <nav class="vl-lire-quoi" aria-label="Que voulez-vous lire ?">
       ${[...new Set(autres.map((b) => b.cat))].slice(0, 6).map((c) => `<a class="chip" href="explorer.html?cat=${encodeURIComponent(c)}">${S.esc(c)}</a>`).join('')}
       <a class="chip" href="explorer.html?vue=ecrits">${S.icon('feather')} Écrits courts</a>
       <a class="chip" href="bible.html">${S.icon('book')} La Bible</a>
     </nav>
-
-    ${nouveautes.length ? `<section class="sec ac-sec">
-      <div class="sec-head"><h2 class="sec-title">Nouveautés</h2><a class="sec-link" href="explorer.html">Voir tout ${S.icon('right')}</a></div>
-      <div class="vl-rang" id="nouv">${nouveautes.map((b) => `<a class="vl-livre" href="livre.html?id=${encodeURIComponent(b.id)}">${S.cover(b, { d3: false })}<strong>${S.esc(b.title)}</strong><small>${S.esc(b.cat)}</small></a>`).join('')}</div>
-    </section>` : ''}
 
     <section class="sec ac-sec" aria-labelledby="ecritsT">
       <div class="sec-head"><h2 class="sec-title" id="ecritsT">Écrits du jour</h2><a class="sec-link" href="explorer.html?vue=ecrits">Tous les écrits ${S.icon('right')}</a></div>
@@ -137,6 +156,11 @@ window.SOZO_PRET.then(() => {
       : `<div class="empty"><strong>Aucun écrit pour l’instant</strong>Le premier peut être le vôtre : une phrase suffit.<br><br><a class="btn" href="ecrits.html?nouveau=pensee">${S.icon('feather')} Écrire une pensée</a></div>`;
   };
   chargerFil(false);
+  S.brancherRangees(main);
+  window.SOZO_API('GET', '/api/ecrits').then((r) => {
+    const l = r.ok ? [...r.d.ecrits].sort((x, y) => (y.jaime || 0) - (x.jaime || 0)).slice(0, 10) : [];
+    $('#moAimes').innerHTML = l.length ? l.map((e) => S.xpEcrit(e, E.NATURES)).join('') : `<div class="empty"><strong>Aucun écrit pour l’instant</strong>Le premier peut être le vôtre.</div>`;
+  });
   window.SOZO_API('GET', '/api/bible/jour').then((r) => {
     const x = r.ok && r.d.verset; if (!x) return;
     const nom = S.bible ? S.bible.BOOKS[x.b - 1][0] : '';
