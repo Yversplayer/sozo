@@ -649,9 +649,14 @@ window.SOZO = (() => {
     });
     const tabs = document.createElement('nav');
     tabs.className = 'tabs'; tabs.setAttribute('aria-label', 'Navigation');
-    tabs.innerHTML = ONGLETS.map(([k, h, l, ic]) => k === 'ecrits'
-      ? `<button type="button" class="tabs-ecrire${['ecrits', 'atelier', 'ecrire', 'importer'].includes(active) ? ' is-active' : ''}" id="pilBtn" aria-expanded="false" aria-controls="pilule" data-nav="${k}">${icon(ic)}<span>${l}</span></button>`
-      : `<a href="${h}" class="${active === k || (k === 'profil' && active === 'compte') ? 'is-active' : ''}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}">${icon(ic)}<span>${l}</span></a>`).join('');
+    /* 22/10/2026 — la barre du bas devient une barre GLISSANTE horizontale :
+       Lire à gauche, la plume fixe au milieu, Écrire et le compte à droite ;
+       chaque côté défile au doigt. Le cercle aux initiales remplace « Profil ». */
+    const onglet = ([k, h, l, ic]) => `<a href="${h}" class="tb-a${active === k || (k === 'compte' && active === 'compte') ? ' is-active' : ''}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}" aria-label="${esc(l)}">${icon(ic)}${lettres(l)}</a>`;
+    tabs.innerHTML = `<div class="tb-cote tb-g">${NAV.lire.map(onglet).join('')}</div>
+      <button type="button" class="tabs-ecrire${['ecrits', 'atelier', 'ecrire', 'importer'].includes(active) ? ' is-active' : ''}" id="pilBtn" aria-expanded="false" aria-controls="pilule" data-nav="ecrits">${icon('feather')}<span>Écrire</span></button>
+      <div class="tb-cote tb-d">${[['ecrits', 'ecrits.html', 'Mes écrits', 'file'], ['atelier', 'studio.html', 'Mes livres', 'book'], ['notifications', 'suivis.html#notifications', 'Alertes', 'bell']].map(onglet).join('')}
+        <a href="compte.html" class="tb-a tb-moi${active === 'compte' ? ' is-active' : ''}" data-nav="compte" aria-label="Mon compte et paramètres"><span class="nav-av" aria-hidden="true">${esc(initials())}</span>${lettres('Moi')}</a></div>`;
     document.body.appendChild(tabs);
 
     /* 22/10/2026 — la plume déplie une pilule en relief (inspirée du
