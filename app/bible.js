@@ -129,6 +129,9 @@ window.SOZO_PRET.then(() => {
         S.toast(`${B.BOOKS[bb - 1][0]} ${cc}:${n1} gardé dans votre bibliothèque.`);
       }
       p.querySelector('.bb-palette') && p.querySelector('.bb-palette').remove();
+      // le bouton suit l'état : visible et doré quand le verset est gardé, sans attendre un rechargement
+      const bt = p.querySelector('.bb-garder'), on = choix.dataset.couleur !== 'retirer';
+      if (bt) { bt.classList.toggle('is-on', on); bt.setAttribute('aria-label', on ? `Verset ${n1} gardé : changer sa couleur` : `Garder le verset ${n1}`); }
       return;
     }
     if (!g) return;

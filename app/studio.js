@@ -19,6 +19,8 @@ window.SOZO_PRET.then(() => {
   const API = window.SOZO_API;
   const enc = encodeURIComponent;
   const usd = (c) => (c == null ? '—' : S.money(c / 100));
+  // 22/10/2026 : trois offres Plume — le nom et la commission viennent de l'offre réelle (/api/moi)
+  const offrePro = () => ((window.SozoAuth && SozoAuth.session) || {}).pro || {};
   const versCentimes = (s) => { const t = String(s || '').trim().replace(',', '.'); if (!t) return null; const v = Math.round(parseFloat(t) * 100); return isFinite(v) && v >= 0 ? v : NaN; };
   const enDollars = (c) => (c == null ? '' : (c / 100).toFixed(2));
   const versUTC = (local) => (local ? new Date(local).toISOString().slice(0, 19) + 'Z' : null);
@@ -113,7 +115,7 @@ window.SOZO_PRET.then(() => {
       ${carte('Gagné au total', usd(at.gagne), 'star', 'Après la commission de Sōzō')}
       ${carte('Livres', at.livres.length, 'library', at.livres.some((b) => b.statut === 'retire') ? 'Dont au moins un retiré par la modération' : 'Sur votre étagère')}
       ${carte('Pages sorties', pages, 'book', 'Publiées ou programmées')}
-      ${carte('Plume', at.plume.actif ? 'Active' : 'Non', 'feather', at.plume.actif ? `Jusqu’au ${S.dateLong(at.plume.fin)}` : `${S.money(at.plume.prix)} pour 30 jours`)}
+      ${carte('Plume', at.plume.actif ? (offrePro().nom || 'Active') : 'Non', 'feather', at.plume.actif ? `Jusqu’au ${S.dateLong(at.plume.fin)}` : 'Trois offres, dès 2,00 $ par mois')}
     </div></div>
     <div class="wrap"><nav class="at-actions" aria-label="Que voulez-vous faire ?">
       <p class="kicker">Que voulez-vous faire ?</p>
@@ -456,7 +458,7 @@ window.SOZO_PRET.then(() => {
     const [v, m] = await Promise.all([API('GET', '/api/studio/ventes'), API('GET', '/api/paiements/moyens')]);
     if (!v.ok) { el.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(v.d.erreur || 'Ventes indisponibles pour le moment.')}</span></p>`; return; }
     const d = v.d, ops = (m.ok && m.d.operateurs) || [];
-    const ex = 100, com = d.plume.actif ? d.commission_plume : d.commission;
+    const ex = 100, com = d.plume.actif ? (offrePro().commission ?? d.commission_plume) : d.commission;
     el.innerHTML = `<div class="at-rev-grid">
       <div class="panel">
         <div class="at-money">
@@ -466,7 +468,7 @@ window.SOZO_PRET.then(() => {
         </div>
         <h3 class="at-h3">Par livre</h3>
         ${d.livres.length ? `<div class="tbl-wrap"><table class="tbl at-tbl-min"><thead><tr><th>Livre</th><th>Ventes confirmées</th><th>Net pour vous</th></tr></thead><tbody>${d.livres.map((b) => `<tr><td>${S.esc(b.titre)}</td><td>${b.ventes}${b.remboursees ? ` <small class="ash">· ${b.remboursees} remboursée${b.remboursees > 1 ? 's' : ''}</small>` : ''}</td><td>${usd(b.net)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="ash">Aucun livre.</p>'}
-        <p class="note">${S.icon('tag')} Sur une vente à ${S.money(ex / 100)}, vous recevez ${S.money((ex - Math.round(ex * com / 100)) / 100)} : la commission de Sōzō est de ${com} %${d.plume.actif ? ' (Plume)' : `, ${d.commission_plume} % avec Plume`}. Une vente ne compte qu’une fois le paiement confirmé par Sōzō.</p>
+        <p class="note">${S.icon('tag')} Sur une vente à ${S.money(ex / 100)}, vous recevez ${S.money((ex - Math.round(ex * com / 100)) / 100)} : la commission de Sōzō est de ${com} %${d.plume.actif ? ' (Plume)' : ', de 15 % à 8 % selon l’offre Plume'}. Une vente ne compte qu’une fois le paiement confirmé par Sōzō.</p>
       </div>
       <div class="at-rev-side">
         <form class="panel at-form" id="formRev" novalidate>
@@ -481,9 +483,9 @@ window.SOZO_PRET.then(() => {
         </form>
         <div class="panel at-plume${d.plume.actif ? ' is-on' : ''}">
           <div class="pl-mini">${S.buy.carte({ titulaire: at.nom, validite: '' })}
-            <div><p class="mono">Plume · ${S.money(d.plume.prix)} pour 30 jours</p>
-              <p>${d.plume.actif ? `<strong>Active jusqu’au ${S.esc(S.dateLong(d.plume.fin))}.</strong>` : `Corrigez vos pages publiées, gardez l’historique, et ne laissez que ${d.commission_plume} % de commission.`}</p>
-              <button class="btn btn--accent" type="button" id="plumeBtn" style="margin-top:12px">${d.plume.actif ? 'Prolonger de 30 jours' : 'Découvrir Plume'}</button></div>
+            <div><p class="mono">${d.plume.actif ? `Plume · ${S.esc(offrePro().nom || 'active')}` : 'Plume · trois offres, dès 2,00 $ par mois'}</p>
+              <p>${d.plume.actif ? `<strong>Active jusqu’au ${S.esc(S.dateLong(d.plume.fin))}.</strong>` : `Corrigez vos pages publiées, gardez l’historique, et ne laissez que 15 % à 8 % de commission selon l’offre.`}</p>
+              <button class="btn btn--accent" type="button" id="plumeBtn" style="margin-top:12px">${d.plume.actif ? 'Prolonger ou changer d’offre' : 'Découvrir Plume'}</button></div>
           </div>
         </div>
       </div>
