@@ -578,7 +578,9 @@ window.SOZO = (() => {
   function shell(active) {
     active = ALIAS[active] || active;
     const n = unread();
-    const lien = ([k, h, l, ic]) => `<a class="nav-a${active === k ? ' is-active' : ''}" href="${h}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}">${icon(ic)}<span class="nav-l">${l}</span>${k === 'notifications' ? '<span class="nav-dot" hidden></span>' : ''}</a>`;
+    // 22/10/2026 : au survol, les lettres glissent l'une après l'autre (inspiré du « curved menu » du propriétaire)
+    const lettres = (l) => `<span class="nav-l" aria-hidden="true">${[...l].map((c, j) => `<span style="--j:${j}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</span>`;
+    const lien = ([k, h, l, ic]) => `<a class="nav-a${active === k ? ' is-active' : ''}" href="${h}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}" aria-label="${esc(l)}">${icon(ic)}${lettres(l)}${k === 'notifications' ? '<span class="nav-dot" hidden></span>' : ''}</a>`;
     document.body.classList.add('a-nav');
     const nav = document.createElement('aside');
     nav.className = 'nav'; nav.id = 'sozoNav'; nav.setAttribute('aria-label', 'Navigation principale');
@@ -587,20 +589,34 @@ window.SOZO = (() => {
           <button class="nav-menu" type="button" id="navMenu" aria-controls="sozoNav" aria-expanded="false" aria-label="Déplier le menu">${icon('sliders')}</button>
           <a class="nav-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${window.SOZO_LOGO || 'Sōzō'}</a>
         </div>
+        <a class="nav-a nav-nouveau${active === 'ecrire' ? ' is-active' : ''}" href="ecrits.html?nouveau=1" data-nav="ecrire" aria-label="Écrire">${icon('feather')}${lettres('Écrire')}</a>
         <p class="nav-sec"><span>Lire</span></p>
         ${NAV.lire.map(lien).join('')}
         <p class="nav-sec"><span>Écrire</span></p>
-        ${NAV.ecrire.map(lien).join('')}
+        ${NAV.ecrire.filter(([k]) => k !== 'ecrire').map(lien).join('')}
+        <div class="nav-recents" id="navRecents" hidden><p class="nav-sec"><span>Récents</span></p><div class="nav-rec-l"></div></div>
         <div class="nav-bas">
-          ${NAV.moi.map(lien).join('')}
-          <button class="nav-a" type="button" data-visite>${icon('spark')}<span class="nav-l">Visite guidée</span></button>
+          ${NAV.moi.filter(([k]) => k !== 'compte').map(lien).join('')}
+          <div class="nav-moi">
+            <button class="nav-a nav-moi-b" type="button" id="navMoi" aria-haspopup="true" aria-expanded="false" aria-controls="navMoiMenu"><span class="nav-av" aria-hidden="true">${esc(initials())}</span><span class="nav-l nav-moi-t"><strong>${esc(sess().name || 'Mon compte')}</strong><small>${pro().actif ? `Auteur · ${esc(pro().nom)}` : 'Lecteur'}</small></span></button>
+            <div class="nav-moi-menu" id="navMoiMenu" role="menu" hidden>
+              <p class="acct-mail">${esc(sess().email || '')}</p>
+              <a role="menuitem" href="compte.html">${icon('user')} Mon compte et paramètres</a>
+              <button role="menuitem" type="button" data-plume-ouvrir>${icon('feather')} ${pro().actif ? 'Mon offre Plume' : 'Devenir auteur'}</button>
+              <a role="menuitem" href="studio.html">${icon('book')} Mon atelier</a>
+              <button role="menuitem" type="button" data-visite>${icon('spark')} Visite guidée</button>
+              <button role="menuitem" type="button" data-sortir>${icon('left')} Se déconnecter</button>
+            </div>
+          </div>
         </div>
-      </div>`;
+      </div>
+      <svg class="nav-courbe" viewBox="0 0 100 800" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0 Q0 400 0 800 Z"/></svg>`;
     document.body.prepend(nav);
     const head = document.createElement('header');
     head.className = 'top';
     head.innerHTML = `
       <div class="top-in">
+        <button class="icon-btn top-tiroir" type="button" id="tiroirBtn" aria-controls="sozoNav" aria-expanded="false" aria-label="Ouvrir le menu">${icon('sliders')}</button>
         <a class="top-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${window.SOZO_LOGO || 'Sōzō'}</a>
         <a class="top-cherche" href="explorer.html#q">${icon('search')}<span>Rechercher un livre, un auteur, un thème…</span></a>
         <div class="top-tools">
@@ -693,6 +709,47 @@ window.SOZO = (() => {
     nav.addEventListener('focusout', (e) => { if (!nav.contains(e.relatedTarget)) { nav.classList.remove('is-survol'); etat(); } });
     nav.addEventListener('keydown', (e) => { if (e.key === 'Escape') { nav.classList.remove('is-survol'); etat(); menu.focus(); } });
     etat();
+
+    /* le petit cercle en bas, comme chez Claude ou ChatGPT : il ouvre le compte */
+    const nm = nav.querySelector('#navMoi'), nmm = nav.querySelector('#navMoiMenu');
+    const fermerMoi = () => { nmm.hidden = true; nm.setAttribute('aria-expanded', 'false'); };
+    nm.addEventListener('click', (e) => { e.stopPropagation(); nmm.hidden = !nmm.hidden; nm.setAttribute('aria-expanded', String(!nmm.hidden)); if (!nmm.hidden) nmm.querySelector('a,button').focus(); });
+    document.addEventListener('click', (e) => { if (!e.target.closest('.nav-moi')) fermerMoi(); });
+    nmm.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); fermerMoi(); nm.focus(); } });
+    nmm.addEventListener('click', (e) => {
+      if (e.target.closest('[data-sortir]')) SozoAuth.close();
+      if (e.target.closest('[data-plume-ouvrir]')) { fermerMoi(); if (window.SOZO && window.SOZO.buy) window.SOZO.buy.plume(); else location.href = 'compte.html#plume'; }
+    });
+    /* Récents : les livres en cours et vos derniers écrits, comme l'historique d'une IA */
+    const recents = async () => {
+      try { await window.SOZO_PRET; } catch (e) {}
+      const lignes = [];
+      try {
+        D.reader.follows.map(book).filter((b) => b && D.reader.progress[b.id]).slice(0, 4)
+          .forEach((b) => lignes.push(`<a class="nav-rec" href="lire.html?id=${encodeURIComponent(b.id)}&p=${D.reader.progress[b.id]}" title="${esc(b.title)}">${icon('book')}<span>${esc(b.title)}</span></a>`));
+      } catch (e) {}
+      const r = await window.SOZO_API('GET', '/api/mes-ecrits').catch(() => null);
+      if (r && r.ok) r.d.ecrits.filter((e) => !e.corbeille_le).slice(0, 5).forEach((e) => {
+        const t = (e.titre || (e.texte || '').split('\n').find((x) => x.trim()) || 'Sans titre').replace(/^(#{1,2} |> )/, '').replace(/\*+/g, '').slice(0, 60);
+        lignes.push(`<a class="nav-rec" href="ecrits.html?id=${e.id}" title="${esc(t)}">${icon('file')}<span>${esc(t)}</span></a>`);
+      });
+      if (!lignes.length) return;
+      nav.querySelector('.nav-rec-l').innerHTML = lignes.join('');
+      nav.querySelector('#navRecents').hidden = false;
+    };
+    recents();
+    /* téléphone : la même barre glisse depuis la gauche, bord courbe qui se tend */
+    const tb = head.querySelector('#tiroirBtn');
+    const voile = document.createElement('div'); voile.className = 'nav-voile'; document.body.appendChild(voile);
+    const tiroir = (ouvrir) => {
+      nav.classList.toggle('is-tiroir', ouvrir); voile.classList.toggle('is-on', ouvrir);
+      document.body.classList.toggle('tiroir-ouvert', ouvrir);
+      tb.setAttribute('aria-expanded', String(ouvrir)); tb.setAttribute('aria-label', ouvrir ? 'Fermer le menu' : 'Ouvrir le menu');
+      if (ouvrir) setTimeout(() => nav.querySelector('.nav-nouveau').focus(), 60); else tb.focus();
+    };
+    tb.addEventListener('click', () => tiroir(!nav.classList.contains('is-tiroir')));
+    voile.addEventListener('click', () => tiroir(false));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && nav.classList.contains('is-tiroir')) tiroir(false); });
 
     const ab = head.querySelector('#acctBtn'), am = head.querySelector('#acctMenu');
     const closeMenu = () => { am.hidden = true; ab.setAttribute('aria-expanded', 'false'); };
