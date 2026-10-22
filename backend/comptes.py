@@ -57,7 +57,11 @@ def enregistrer(app):
         nom = v.texte(d, "nom", mini=2, maxi=60)
         email = v.email(d)
         mdp = v.texte(d, "mot_de_passe", mini=MDP_MIN, maxi=MDP_MAX)
-        role = v.choix(d, "role", {"lecteur", "auteur"})
+        # 22/10/2026 : plus de question à l'inscription — on entre LECTEUR ; un
+        # premier livre ou Plume (pro.py) fait l'auteur. Un ancien client qui
+        # envoie encore « role » n'en obtient rien de plus.
+        v.choix(d, "role", {"lecteur", "auteur"}, requis=False)
+        role = "lecteur"
         if d.get("cgu") is not True:
             raise v.Invalide("Les conditions d'utilisation doivent être acceptées.", "cgu")
         if _trop([("inscription:ip", ip_client())]):
@@ -133,7 +137,13 @@ def enregistrer(app):
     @app.get("/api/moi")
     @connectee
     def moi():
-        return jsonify(moi=_moi(g.user))
+        import pro
+        cx = db.connecter()
+        try:
+            e = pro.etat(cx, g.user["id"])
+        finally:
+            cx.fermer()
+        return jsonify(moi={**_moi(g.user), "pro": {"actif": e["pro"], "offre": e["offre"], "nom": e["nom"]}})
 
     def _masquer(email):
         nom, _, dom = email.partition("@")

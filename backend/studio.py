@@ -20,6 +20,7 @@ from flask import g, jsonify, request
 
 import acces
 import argent
+import pro
 import catalogue
 import config
 import db
@@ -284,8 +285,8 @@ def _detail(cx, b):
 def enregistrer(app):
 
     def _auteur():
-        if g.user["role"] != "auteur":
-            return jsonify(erreur="Le studio est réservé aux auteurs. Activez-le depuis votre compte.", code="pas_auteur"), 403
+        """22/10/2026 : l'atelier est ouvert à tous (le premier livre est offert) ;
+        ce qui borne, c'est pro.py — nombre de livres, vente, essais."""
         return None
 
     @app.get("/api/studio")
@@ -359,11 +360,15 @@ def enregistrer(app):
             prix = {k: None for k in prix}
         cx = db.connecter()
         try:
+            refus_pro = pro.peut_creer_livre(cx, g.user["id"], acces_ != "free")
+            if refus_pro:
+                return refus_pro
             m = acces.maintenant()
             slug = _slug(cx, titre)
             bid = cx.inserer("""INSERT INTO books (owner_id, slug, titre, categorie, description, couverture, style, format, mode, acces,
                                 prix_page, prix_chapitre, prix_livre, apparence, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                              (g.user["id"], slug, titre, cat, desc, couv, style, fmt, mode, acces_, prix["prix_page"], prix["prix_chapitre"], prix["prix_livre"], app_, m, m))
+            cx.execute("UPDATE users SET role = 'auteur' WHERE id = ? AND role <> 'auteur'", (g.user["id"],))     # un premier livre fait l'auteur
             auditer("livre.creation", ressource=f"book:{bid}", apres=titre, cx=cx)
             cx.valider()
             catalogue.invalider_vitrine()
@@ -410,6 +415,12 @@ def enregistrer(app):
                     ch[k] = _prix(d, k)       # un nouveau prix ne touche que les achats FUTURS
             if not ch:
                 raise v.Invalide("Rien à modifier.")
+            # Vendre (rendre payant, poser ou changer un prix) fait partie de Plume.
+            # Un livre déjà en vente le reste ; c'est le CHANGEMENT qui est borné.
+            vend = ("acces" in ch and ch["acces"] != "free" and ch["acces"] != b["acces"]) or \
+                   any(k in ch and ch[k] is not None and ch[k] != b[k] for k in ("prix_page", "prix_chapitre", "prix_livre"))
+            if vend and not pro.etat(cx, g.user["id"])["pro"]:
+                return pro.refus("Vendre un livre fait partie de Plume. Votre livre reste gratuit, et lisible par tous.")
             ch["updated_at"] = acces.maintenant()
             for k, val in ch.items():           # colonnes : liste fermée ci-dessus
                 cx.execute(f"UPDATE books SET {k} = ? WHERE id = ?", (val, b["id"]))
@@ -513,6 +524,9 @@ def enregistrer(app):
                 return jsonify(erreur="Introuvable."), 404
             if not ia_correcteur.active():
                 return jsonify(erreur="La relecture par l’IA n’est pas encore activée sur ce serveur.", code="ia_inactive"), 503
+            e = pro.etat(cx, g.user["id"])
+            if not e["pro"] and not e["essais"]["ia"]:
+                return pro.refus("Vos deux relectures offertes sont utilisées. La relecture par l’IA fait partie de Plume.")
             jour = acces.maintenant()[:10]
             cx.execute("""INSERT INTO ia_usages (user_id, jour, n) VALUES (?, ?, 1)
                           ON CONFLICT (user_id, jour) DO UPDATE SET n = ia_usages.n + 1""", (g.user["id"], jour))
@@ -661,6 +675,8 @@ def enregistrer(app):
                                pages=publiees), 409
             if action == "payant" and b["acces"] == "free":
                 return jsonify(erreur="Ce livre est gratuit : changez d'abord son accès (payant ou mixte) et ses prix."), 409
+            if action == "payant" and not pro.etat(cx, g.user["id"])["pro"]:
+                return pro.refus("Rendre des pages payantes fait partie de Plume.")
             if action in ("programmer", "publier"):
                 vides = sorted(n for n in set(ns) if not acces.contenu_courant(cx, pages[n]["id"])[0].strip())
                 if vides:
@@ -1031,7 +1047,7 @@ def enregistrer(app):
         try:
             manuscrits._effacer(cg, cg.tous("SELECT id, empreinte, nature FROM imports WHERE book_id = ? AND efface_le IS NULL", (bid,)))
             cg.execute("DELETE FROM page_versions WHERE page_id IN (SELECT id FROM pages WHERE book_id = ?)", (bid,))
-            for t in ("pages", "chapters", "imports", "follows", "progress", "signalements", "couvertures", "epingles", "signets", "avis"):
+            for t in ("pages", "chapters", "imports", "follows", "progress", "signalements", "couvertures", "epingles", "signets", "avis", "pages_commentaires"):
                 cg.execute(f"DELETE FROM {t} WHERE book_id = ?", (bid,))      # noms de tables : liste fermée ci-dessus
             cg.execute("DELETE FROM books WHERE id = ? AND owner_id = ? AND corbeille_le IS NOT NULL", (bid, g.user["id"]))
             auditer("livre.efface", ressource=f"book:{bid}", avant=b["titre"][:100], cx=cg)
@@ -1064,6 +1080,9 @@ def enregistrer(app):
                                                 (g.user["id"], *ids))}
             if len(miens) != len(ids):
                 return jsonify(erreur="Introuvable."), 404
+            refus_pro = pro.peut_creer_livre(cx, g.user["id"], False)
+            if refus_pro:
+                return refus_pro
             m = acces.maintenant()
             slug = _slug(cx, titre)
             bid = cx.inserer("""INSERT INTO books (owner_id, slug, titre, categorie, description, couverture, style, format, mode, acces, created_at, updated_at)
@@ -1073,6 +1092,7 @@ def enregistrer(app):
             for i in ids:
                 e = miens[i]
                 _creer_page(cx, b, (f"# {e['titre']}\n" if e["titre"] else "") + e["texte"])
+            cx.execute("UPDATE users SET role = 'auteur' WHERE id = ? AND role <> 'auteur'", (g.user["id"],))
             auditer("livre.recueil", ressource=f"book:{bid}", apres=f"{len(ids)} écrits", cx=cx)
             cx.valider()
             return jsonify(livre=_detail(cx, b)), 201
@@ -1117,6 +1137,9 @@ def enregistrer(app):
             b = _a_moi(cx, slug)
             if not b:
                 return jsonify(erreur="Introuvable."), 404
+            e = pro.etat(cx, g.user["id"])
+            if not e["pro"] and not e["essais"]["import"]:
+                return pro.refus("Votre import offert est utilisé. Importer un manuscrit fait partie de Plume.")
             if security.depasse(cx, "import:compte", str(g.user["id"])):
                 cx.valider()
                 return jsonify(erreur="Trop d'imports. Réessayez dans une heure."), 429

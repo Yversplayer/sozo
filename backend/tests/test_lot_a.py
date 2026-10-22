@@ -90,8 +90,8 @@ class Pages(TestBase):
         self.assertEqual(len(a.get(f"/api/studio/livres/{slug}/corbeille").get_json()["pages"]), 1)
 
     def test_restaurer_une_ancienne_version(self):
-        a = Personne(self.app, "auteur")
-        slug = a.livre(pages=2, publier=(1,), payantes=())
+        a = Personne(self.app, "auteur", pro=False)
+        slug = a.livre(acces="free", pages=2, publier=(1,), payantes=())
         a.put(f"/api/studio/livres/{slug}/pages/2", {"contenu": "Version deux."})
         v1 = a.get(f"/api/studio/livres/{slug}/pages/2/versions/1").get_json()["version"]["contenu"]
         r = a.post(f"/api/studio/livres/{slug}/pages/2/versions/1/restaurer")

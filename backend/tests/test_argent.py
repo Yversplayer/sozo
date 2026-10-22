@@ -119,8 +119,16 @@ class Achats(TestBase):
         lignes = {x["beneficiaire"]: x["montant"] for x in sql("SELECT beneficiaire, montant FROM ledger WHERE payment_id = ?", (pid,))}
         self.assertEqual(lignes, {"auteur": 900, "plateforme": 100})
 
-    def test_plume_reserve_aux_auteurs(self):
-        self.assertEqual(Personne(self.app).post("/api/paiements", {"objet": "plume", "idempotency_key": "test-cle-plume-lecteur"}).status_code, 400)
+    def test_un_lecteur_devient_auteur_en_prenant_plume(self):
+        """22/10/2026 : Plume n'est plus réservée aux auteurs — c'est elle qui fait
+        l'auteur. Le prix vient de l'offre et de la durée choisies, côté serveur."""
+        lec = Personne(self.app)
+        r = lec.post("/api/paiements", {"objet": "plume", "offre": "plume", "duree": "annee", "idempotency_key": "test-cle-plume-lecteur"})
+        self.assertEqual((r.status_code, r.get_json()["paiement"]["montant"]), (201, 2000))       # 10 mois pour un an
+        self.assertEqual(lec.post("/api/paiements", {"objet": "plume", "offre": "or-pur", "idempotency_key": "test-cle-plume-x"}).status_code, 400)
+        confirmer_paiement(r.get_json()["paiement"]["id"])
+        moi = lec.get("/api/moi").get_json()["moi"]
+        self.assertEqual((moi["role"], moi["pro"]["actif"], moi["pro"]["offre"]), ("auteur", True, "plume"))
 
     def test_un_droit_ne_disparait_jamais(self):
         lec = Personne(self.app)

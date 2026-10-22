@@ -34,7 +34,8 @@ class Recueil(TestBase):
         avant = sql("SELECT COUNT(*) AS n FROM books")[0]["n"]
         self.assertEqual(a.post("/api/studio/recueils", {"titre": "Vol", "categorie": "Poésie", "ecrits": [mien, autre]}).status_code, 404)
         self.assertEqual(sql("SELECT COUNT(*) AS n FROM books")[0]["n"], avant)       # rien n'a été créé
-        self.assertEqual(Personne(self.app).post("/api/studio/recueils", {"titre": "X", "categorie": "Poésie", "ecrits": [autre]}).status_code, 403)
+        # un lecteur (l'atelier lui est ouvert depuis le 22/10) ne rassemble pas davantage les écrits d'un autre
+        self.assertEqual(Personne(self.app).post("/api/studio/recueils", {"titre": "X", "categorie": "Poésie", "ecrits": [autre]}).status_code, 404)
 
 
 class Themes(TestBase):

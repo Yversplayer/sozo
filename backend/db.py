@@ -17,7 +17,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 13   # v13 (21/10/2026) : avis sur les livres ; v12 (21/10/2026) : charte de la communauté ; v11 (21/10/2026) : corbeille et retrait des livres, réponses, e-mail ; v10 : écrits ; v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
+VERSION_SCHEMA = 15   # v15 (22/10/2026) : commentaires des pages ; v14 (22/10/2026) : Plume en trois offres (pro.py) ; v13 (21/10/2026) : avis sur les livres ; v12 (21/10/2026) : charte de la communauté ; v11 (21/10/2026) : corbeille et retrait des livres, réponses, e-mail ; v10 : écrits ; v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
 _verrou = threading.Lock()
 
 
@@ -232,6 +232,9 @@ RLS = {
     "signets": f"user_id = {_MOI}",
     # Backlog : un avis visible se lit par tous ; on n'écrit que le sien
     "avis": (f"user_id = {_MOI} OR retire_le IS NULL", f"user_id = {_MOI}"),
+    # Commentaires de pages : lisibilité de la page vérifiée par l'application ;
+    # l'auteur du livre peut retirer ceux laissés sous ses pages
+    "pages_commentaires": (f"user_id = {_MOI} OR retire_le IS NULL OR book_id IN {_MES_LIVRES}", f"user_id = {_MOI} OR book_id IN {_MES_LIVRES}"),
 }
 
 
@@ -406,3 +409,9 @@ def _migrer(cx):
     # une nouvelle version de la charte se fait accepter de nouveau.
     _ajouter_colonne(cx, "users", "charte_version", "TEXT")
     _ajouter_colonne(cx, "users", "charte_le", "TEXT")
+    # v14 (22/10/2026) : « passer Pro ». L'offre choisie (plume, plume_or,
+    # scriptorium) et sa durée en jours. NULL = la Plume d'avant (= plume_or).
+    _ajouter_colonne(cx, "subscriptions", "offre", "TEXT")
+    _ajouter_colonne(cx, "payments", "offre", "TEXT")
+    _ajouter_colonne(cx, "payments", "jours", "INTEGER")
+    _ajouter_colonne(cx, "dons", "offre", "TEXT")

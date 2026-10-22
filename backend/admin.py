@@ -406,11 +406,13 @@ def enregistrer(app):
                                       f"Sōzō vous offre « {b['titre']} » en entier, pages à venir comprises.", f"/app/livre.html?id={slug}", f"don:{did}")
             else:
                 jours = v.entier(d, "jours", mini=1, maxi=365, requis=False) or 30
+                import pro
+                offre = v.choix(d, "offre", set(pro.OFFRES), requis=False) or pro.ANCIENNE
                 from datetime import datetime, timedelta, timezone
                 depart = max(m, argent.plume_actif(cx, u["id"])["fin"] or m)        # prolonge une Plume en cours
                 fin = (datetime.strptime(depart, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc) + timedelta(days=jours)).strftime("%Y-%m-%dT%H:%M:%SZ")
-                did = cx.inserer("INSERT INTO dons (user_id, objet, debut, fin, motif, admin_id, created_at) VALUES (?, 'plume', ?, ?, ?, ?, ?)",
-                                 (u["id"], depart, fin, motif, g.admin["id"], m))
+                did = cx.inserer("INSERT INTO dons (user_id, objet, debut, fin, motif, admin_id, created_at, offre) VALUES (?, 'plume', ?, ?, ?, ?, ?, ?)",
+                                 (u["id"], depart, fin, motif, g.admin["id"], m, offre))
                 notifications.emettre(cx, u["id"], "plume", "Plume vous est offerte",
                                       f"Sōzō vous offre Plume pendant {jours} jours.", "/app/studio.html#revenus", f"don:{did}")
             _trace("don." + objet, f"don:{did}", f"{email} — {motif}", cx)

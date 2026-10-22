@@ -556,3 +556,17 @@ CREATE TABLE IF NOT EXISTS avis (
   UNIQUE (user_id, book_id)
 );
 CREATE INDEX IF NOT EXISTS avis_livre ON avis (book_id, id);
+
+-- v15 (22/10/2026) : commenter une page de livre, à la manière d'un webtoon.
+-- Retiré par son auteur ou par celui du livre : la ligne reste, datée.
+CREATE TABLE IF NOT EXISTS pages_commentaires (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_id INTEGER NOT NULL REFERENCES books (id),
+  n INTEGER NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users (id),
+  texte TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  retire_le TEXT,
+  retire_par TEXT CHECK (retire_par IS NULL OR retire_par IN ('commentateur', 'auteur', 'moderation'))
+);
+CREATE INDEX IF NOT EXISTS pages_commentaires_page ON pages_commentaires (book_id, n, id);

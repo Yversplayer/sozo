@@ -200,6 +200,10 @@ class Balayage(TestBase):
         "avis_donner": [("PUT", "/api/livres/{slug_brouillon}/avis", {404}, {"note": 3})],
         "avis_retirer": [("DELETE", "/api/livres/{slug_brouillon}/avis", {404})],
         "moderer_avis": [("POST", "/api/admin/avis/1/retirer", {401}, {"motif": "essai"})],
+        # 22/10 : commentaires des pages — une page d'un brouillon d'autrui n'existe pas
+        "page_commentaires": [("GET", "/api/livres/{slug_brouillon}/pages/1/commentaires", {404})],
+        "page_commenter": [("POST", "/api/livres/{slug_brouillon}/pages/1/commentaires", {404}, {"texte": "Volé"})],
+        "page_commentaire_retirer": [("DELETE", "/api/pages-commentaires/{pcid}", {404})],
     }
     # Routes paramétrées hors balayage, avec la raison :
     EXEMPTES = {
@@ -238,6 +242,7 @@ class Balayage(TestBase):
             sid = cx.un("SELECT id FROM sessions WHERE user_id = ? ORDER BY id DESC LIMIT 1", (a.id,))["id"]
             vid = cx.inserer("INSERT INTO versets (user_id, b, c, v1, v2, created_at) VALUES (?, 43, 3, 16, 16, ?)", (a.id, "2026-10-22T00:00:00Z"))
             sgid = cx.inserer("INSERT INTO signets (user_id, book_id, n, created_at) VALUES (?, ?, 1, ?)", (a.id, bid, "2026-10-22T00:00:00Z"))
+            pcid = cx.inserer("INSERT INTO pages_commentaires (book_id, n, user_id, texte, created_at) VALUES (?, 1, ?, 'Texte secret', ?)", (bid, a.id, "2026-10-22T00:00:00Z"))
             cx.valider()
         finally:
             cx.fermer()
@@ -247,7 +252,7 @@ class Balayage(TestBase):
         a.post(f"/api/studio/livres/{slug}/pages", {"contenu": "Texte secret jeté."})
         n_jete = a.get(f"/api/studio/livres/{slug}").get_json()["livre"]["pages"][-1]["n"]
         pgid = a.delete(f"/api/studio/livres/{slug}/pages/{n_jete}").get_json()["page"]
-        cle = {"slug": slug, "slug_brouillon": slug, "pid": pid, "rid": 1, "n": 1, "aid": aid, "eid": eid, "ecid": ecid, "cmid": cmid, "pgid": pgid, "nid": nid, "sid": sid, "vid": vid, "sgid": sgid}
+        cle = {"slug": slug, "slug_brouillon": slug, "pid": pid, "rid": 1, "n": 1, "aid": aid, "eid": eid, "ecid": ecid, "cmid": cmid, "pgid": pgid, "nid": nid, "sid": sid, "vid": vid, "sgid": sgid, "pcid": pcid}
         for ep, essais in self.ROUTES.items():
             for essai in essais:
                 meth, url, attendus = essai[:3]

@@ -76,7 +76,7 @@ class Cadeaux(TestBase):
         self.assertEqual(c.post(f"/api/admin/dons/{did}/retirer", json={"motif": "Encore"}, headers=self.h(c)).status_code, 404)
 
     def test_plume_offerte(self):
-        auteur = Personne(self.app, "auteur")
+        auteur = Personne(self.app, "auteur", pro=False)
         self.assertFalse(auteur.get("/api/studio").get_json()["plume"]["actif"])
         c = self.connecter("finance@sozo.test")
         self.reauth(c, "finance@sozo.test")

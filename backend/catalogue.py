@@ -493,6 +493,7 @@ def enregistrer(app):
             cx.execute("DELETE FROM versets WHERE user_id = ?", (uid,))
             cx.execute("DELETE FROM signets WHERE user_id = ?", (uid,))
             cx.execute("DELETE FROM avis WHERE user_id = ?", (uid,))
+            cx.execute("UPDATE pages_commentaires SET retire_le = COALESCE(retire_le, ?), retire_par = COALESCE(retire_par, 'commentateur') WHERE user_id = ?", (m, uid))
             cx.execute("DELETE FROM abonnements WHERE user_id = ?", (uid,))
             security.revoquer_toutes(cx, uid)
             auditer("compte.suppression", ressource=f"user:{uid}", cx=cx)

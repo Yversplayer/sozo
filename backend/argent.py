@@ -44,11 +44,10 @@ def _now():
 # ── Plume ──────────────────────────────────────────────────────────────────
 
 def plume_actif(cx, user_id, a=None):
-    r = cx.un("SELECT MAX(fin) AS fin FROM subscriptions WHERE user_id = ? AND revoque_le IS NULL", (user_id,))
-    d = cx.un("SELECT MAX(fin) AS fin FROM dons WHERE user_id = ? AND objet = 'plume' AND revoque_le IS NULL", (user_id,))
-    fins = [x["fin"] for x in (r, d) if x and x["fin"]]            # Plume payée ou offerte
-    fin = max(fins) if fins else None
-    return {"actif": bool(fin and fin > (a or _now())), "fin": fin, "prix": config.plume_prix_centimes() / 100}
+    """Plume payée ou offerte, quelle que soit l'offre (pro.py, 22/10/2026)."""
+    import pro
+    e = pro.etat(cx, user_id, a)
+    return {"actif": e["pro"], "fin": e["fin"], "offre": e["offre"], "nom": e["nom"], "prix": pro.OFFRES[pro.ANCIENNE]["mois"] / 100}
 
 
 # ── Ce qu'on peut acheter ──────────────────────────────────────────────────
@@ -82,9 +81,13 @@ def _calculer(cx, user, d):
     n'est pas en vente ou déjà acquis. Le prix vient de la base."""
     objet = v.choix(d, "objet", {"page", "chapitre", "livre", "plume"})
     if objet == "plume":
-        if user["role"] != "auteur":
-            raise v.Invalide("Plume est réservé aux auteurs.", "objet")
-        return objet, None, None, None, config.plume_prix_centimes()
+        # 22/10/2026 : Plume n'est plus réservée aux auteurs — c'est elle qui fait
+        # devenir auteur. L'offre et la durée viennent de la liste du serveur.
+        import pro
+        offre = v.choix(d, "offre", set(pro.OFFRES), requis=False) or pro.ANCIENNE
+        duree = v.choix(d, "duree", set(pro.DUREES), requis=False) or "mois"
+        montant, _ = pro.prix(offre, duree)
+        return objet, None, None, None, montant
     slug = v.texte(d, "livre", maxi=80)
     b0 = cx.un("SELECT id FROM books WHERE slug = ?", (slug,))
     b = acces.livre(cx, user, b0["id"] if b0 else None)
@@ -137,16 +140,23 @@ def confirmer(cx, payment_id, par, frais=0):
         return False
     p = cx.un("SELECT * FROM payments WHERE id = ?", (payment_id,))
     if p["objet"] == "plume":
-        actuel = plume_actif(cx, p["user_id"], m)
-        debut = actuel["fin"] if actuel["actif"] else m
-        fin = (datetime.strptime(debut, "%Y-%m-%dT%H:%M:%SZ") + timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        cx.execute("INSERT INTO subscriptions (user_id, debut, fin, payment_id) VALUES (?, ?, ?, ?)", (p["user_id"], debut, fin, payment_id))
+        import pro
+        offre = p["offre"] or pro.ANCIENNE
+        # Renouveler la MÊME offre la prolonge ; en prendre une autre l'ouvre tout
+        # de suite (l'ancienne court jusqu'à sa fin, la plus haute l'emporte).
+        meme = cx.un("SELECT MAX(fin) AS fin FROM subscriptions WHERE user_id = ? AND COALESCE(offre, ?) = ? AND revoque_le IS NULL AND fin > ?",
+                     (p["user_id"], pro.ANCIENNE, offre, m))
+        debut = meme["fin"] if meme and meme["fin"] else m
+        fin = (datetime.strptime(debut, "%Y-%m-%dT%H:%M:%SZ") + timedelta(days=p["jours"] or 30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        cx.execute("INSERT INTO subscriptions (user_id, debut, fin, payment_id, offre) VALUES (?, ?, ?, ?, ?)", (p["user_id"], debut, fin, payment_id, offre))
+        cx.execute("UPDATE users SET role = 'auteur' WHERE id = ?", (p["user_id"],))
         cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, 'plateforme', NULL, ?, ?)", (payment_id, p["montant"] - frais, m))
     else:
         cx.execute("INSERT INTO entitlements (user_id, book_id, page_de, page_a, payment_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                    (p["user_id"], p["book_id"], p["page_de"], p["page_a"], payment_id, m))
         auteur = cx.un("SELECT owner_id FROM books WHERE id = ?", (p["book_id"],))["owner_id"]
-        pct = config.commission_pct(plume=plume_actif(cx, auteur, m)["actif"])
+        import pro
+        pct = pro.commission(cx, auteur, m)                     # selon l'offre de l'auteur (15 % sans Plume)
         commission = (p["montant"] * pct + 50) // 100           # arrondi au centime, en entiers
         cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, 'auteur', ?, ?, ?)", (payment_id, auteur, p["montant"] - commission, m))
         cx.execute("INSERT INTO ledger (payment_id, beneficiaire, author_id, montant, created_at) VALUES (?, 'plateforme', NULL, ?, ?)", (payment_id, commission - frais, m))
@@ -249,7 +259,7 @@ def solde_auteur(cx, author_id):
 
 
 def _public(p):
-    return {k: p[k] for k in ("id", "objet", "montant", "devise", "etat", "page_de", "page_a", "operateur", "reference", "motif_refus", "created_at", "confirme_le")}
+    return {k: p[k] for k in ("id", "objet", "montant", "devise", "etat", "page_de", "page_a", "operateur", "reference", "motif_refus", "created_at", "confirme_le", "offre", "jours")}
 
 
 def traiter_evenement(prestataire, d):
@@ -332,9 +342,14 @@ def enregistrer(app):
                 return jsonify(erreur="Introuvable."), 404
             objet, b, de, a, montant = r
             m = _now()
-            pid = cx.inserer("""INSERT INTO payments (user_id, objet, book_id, page_de, page_a, montant, etat, idempotency_key, created_at, updated_at)
-                                VALUES (?, ?, ?, ?, ?, ?, 'CREATED', ?, ?, ?)""",
-                             (g.user["id"], objet, b["id"] if b else None, de, a, montant, cle, m, m))
+            offre = jours = None
+            if objet == "plume":
+                import pro
+                offre = d.get("offre") or pro.ANCIENNE
+                jours = pro.DUREES[d.get("duree") or "mois"][0]
+            pid = cx.inserer("""INSERT INTO payments (user_id, objet, book_id, page_de, page_a, montant, etat, idempotency_key, created_at, updated_at, offre, jours)
+                                VALUES (?, ?, ?, ?, ?, ?, 'CREATED', ?, ?, ?, ?, ?)""",
+                             (g.user["id"], objet, b["id"] if b else None, de, a, montant, cle, m, m, offre, jours))
             auditer("paiement.creation", ressource=f"payment:{pid}", apres=f"{objet}:{montant}", cx=cx)
             cx.valider()
             return jsonify(paiement=_public(cx.un("SELECT * FROM payments WHERE id = ?", (pid,)))), 201

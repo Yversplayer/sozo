@@ -59,9 +59,17 @@ class Studio(TestBase):
         return a.c.post(f"/api/studio/livres/{slug}/import", data={"fichier": (io.BytesIO(octets), nom)},
                         headers=a._h(), content_type="multipart/form-data")
 
-    def test_lecteur_sans_studio(self):
-        r = Personne(self.app).post("/api/studio/livres", {"titre": "X", "categorie": "Roman", "mode": "integral", "acces": "free"})
-        self.assertEqual(r.status_code, 403)
+    def test_un_lecteur_a_un_livre_offert(self):
+        """22/10/2026 : l'atelier n'est plus fermé aux lecteurs. Sans Plume, UN
+        livre gratuit est offert ; un second, ou un livre payant, demande Plume."""
+        lec = Personne(self.app)
+        nouveau = lambda t, acces="free", **k: lec.post("/api/studio/livres", {"titre": t, "categorie": "Foi", "mode": "integral", "acces": acces, **k})
+        r = nouveau("Payant", "paid", prix_livre=300)
+        self.assertEqual((r.status_code, r.get_json()["code"]), (403, "pro_requis"))
+        self.assertEqual(nouveau("Mon premier").status_code, 201)
+        self.assertEqual(lec.get("/api/moi").get_json()["moi"]["role"], "auteur")          # un premier livre fait l'auteur
+        r = nouveau("Mon second")
+        self.assertEqual((r.status_code, r.get_json()["code"]), (403, "pro_requis"))
 
     def test_import_docx_cree_des_brouillons_invisibles(self):
         a = Personne(self.app, "auteur")
@@ -123,8 +131,8 @@ class Studio(TestBase):
             self.assertIn(self.app.test_client().get(url).status_code, (404, 401))
 
     def test_versions_et_page_publiee_verrouillee_sans_plume(self):
-        a = Personne(self.app, "auteur")
-        slug = a.livre()
+        a = Personne(self.app, "auteur", pro=False)
+        slug = a.livre(acces="free", payantes=())
         self.assertEqual(a.put(f"/api/studio/livres/{slug}/pages/5", {"contenu": "Brouillon v2"}).get_json()["version"], 2)
         r = a.put(f"/api/studio/livres/{slug}/pages/1", {"contenu": "Correction"})
         self.assertEqual((r.status_code, r.get_json()["code"]), (403, "plume_requis"))

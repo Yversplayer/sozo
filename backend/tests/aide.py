@@ -66,10 +66,23 @@ _compteur = itertools.count(1)
 MDP = "Lumiere-2026!"
 
 
+def _offrir_pro(user_id, offre="plume"):
+    import db
+    cx = db.connecter(globale=True)
+    try:
+        a = cx.un("SELECT id FROM admin_users WHERE email = 'aide-pro@sozo.test'")
+        aid = a["id"] if a else cx.inserer("INSERT INTO admin_users (email, nom, password_hash, totp_secret, roles, created_at) VALUES ('aide-pro@sozo.test', 'Aide', 'x', 'x', 'lecture', '2026-01-01T00:00:00Z')")
+        cx.execute("INSERT INTO dons (user_id, objet, debut, fin, motif, admin_id, created_at, offre) VALUES (?, 'plume', '2020-01-01T00:00:00Z', '2099-01-01T00:00:00Z', 'tests', ?, '2020-01-01T00:00:00Z', ?)",
+                   (user_id, aid, offre))
+        cx.valider()
+    finally:
+        cx.fermer()
+
+
 class Personne:
     """Un client de test connecté, avec son jeton CSRF posé sur chaque mutation."""
 
-    def __init__(self, app, role="lecteur", nom=None, charte=True):
+    def __init__(self, app, role="lecteur", nom=None, charte=True, pro=None):
         self.c = app.test_client()
         k = next(_compteur)
         self.email = f"p{k}-{os.getpid()}@exemple.cd"
@@ -77,6 +90,11 @@ class Personne:
                         environ_base={"REMOTE_ADDR": f"10.{k // 250}.{k % 250}.1"})
         assert r.status_code == 201, r.get_json()
         self.id = r.get_json()["moi"]["id"]
+        if pro if pro is not None else role == "auteur":
+            # 22/10/2026 : on n'entre plus « auteur » à l'inscription ; un auteur de
+            # test reçoit l'offre « Plume » (3 livres, commission 15 % comme avant)
+            # en cadeau de l'administration. pro=False : un auteur SANS Plume.
+            _offrir_pro(self.id)
         if charte:
             # Lot E : publier ou commenter exige la charte acceptée. Par défaut,
             # une personne de test l'a acceptée ; test_lot_e éprouve le cas contraire.
