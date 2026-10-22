@@ -82,30 +82,63 @@
       zone.addEventListener('pointerleave', () => { ['--rx', '--ry', '--gx'].forEach((k) => c.style.removeProperty(k)); });
     });
   }
-  function plume(prix, etat) {
-    const nom = (S.sess() && S.sess().name) || '';
-    const actif = etat && etat.actif;
-    const m = S.modal({ title: actif ? 'Prolonger Plume' : 'Passer à Plume', body: `
-      <div class="pl">
-        ${carte({ titulaire: nom, validite: actif ? `jusqu’au ${S.dateShort(etat.fin)}` : `${S.money(prix)} · 30 jours`, etat: actif ? 'Membre Plume' : '' })}
-        <div>
-          <p class="pl-lead">Plume, c’est l’atelier sans limite : vos pages restent vivantes après leur publication, et vous gardez davantage sur chaque vente.</p>
-          <div class="pl-offres" style="margin-top:14px">
-            <div class="pl-offre"><h3>Gratuit</h3><p class="pl-prix">0 $</p><ul>
-              <li>Écrire, importer, publier</li><li>Vendre à la page, au chapitre, au livre</li><li>Commission de Sōzō : 15 %</li>
-              <li class="is-non">Corriger une page publiée</li><li class="is-non">Historique des versions</li></ul></div>
-            <div class="pl-offre is-or"><span class="pl-medaille">${actif ? 'Votre forfait' : 'Recommandé'}</span><h3>Plume</h3>
-              <p class="pl-prix">${S.money(prix)} <small>/ 30 jours</small></p><ul>
-              <li>Tout le gratuit</li><li>Corriger une page déjà publiée</li><li>Historique de chaque version</li>
-              <li>Commission réduite à 10 %</li><li>Les lecteurs gardent leurs droits</li></ul></div>
-          </div>
-          <p class="pl-note">${S.icon('shield')} Sans reconduction automatique : vous payez 30 jours, rien n’est prélevé ensuite. ${actif ? 'Les jours achetés s’ajoutent à votre échéance actuelle.' : ''}</p>
+  /* Plume — devenir auteur (22/10/2026). Trois offres, au mois ou à l'année.
+     Les prix ne s'affichent QUE si la personne ouvre elle-même cette fenêtre :
+     lire, aimer, commenter et publier des écrits courts restent gratuits, et
+     la fenêtre le dit d'abord. Offres et prix viennent du serveur (pro.py). */
+  async function plume() {
+    const r = await window.SOZO_API('GET', '/api/moi/pro');
+    if (!r.ok) { S.toast(r.d.erreur || 'Plume est indisponible pour le moment.'); return; }
+    const v = r.d.pro;
+    let duree = 'annee';
+    const offre = (o) => `<div class="pl-offre${o.id === 'plume_or' ? ' is-or' : ''}${v.offre === o.id ? ' is-mien' : ''}">
+        ${v.offre === o.id ? '<span class="pl-medaille">Votre offre</span>' : o.id === 'plume_or' ? '<span class="pl-medaille">Le plus choisi</span>' : ''}
+        <h3>${S.esc(o.nom)}</h3><p class="pl-pour">${S.esc(o.pour)}</p>
+        <p class="pl-prix" data-prix="${o.id}"></p>
+        <ul><li>${o.livres ? `Jusqu’à ${o.livres} livres` : 'Livres sans limite'}</li><li>Vendre à la page, au chapitre, au livre</li>
+          <li>Sōzō garde ${o.commission} % d’une vente</li><li>Corriger une page déjà publiée</li><li>Relecture par l’IA, import de manuscrits</li></ul>
+        <button class="btn ${o.id === 'plume_or' ? 'btn--accent' : 'btn--ghost'} pl-choisir" type="button" data-offre="${o.id}">${v.offre === o.id ? 'Prolonger' : 'Choisir'}</button>
+      </div>`;
+    const m = S.modal({ title: v.pro ? `Votre offre : ${v.nom}` : 'Devenir auteur avec Plume', body: `
+      <div class="pl pl--offres">
+        <p class="pl-lead">Lire, aimer, commenter et partager vos écrits courts resteront toujours gratuits. Plume, c’est pour celles et ceux qui veulent écrire des livres et les faire vivre.</p>
+        <div class="pl-duree" role="radiogroup" aria-label="Durée">
+          <button type="button" role="radio" data-duree="mois" aria-checked="false">Au mois</button>
+          <button type="button" role="radio" data-duree="annee" aria-checked="true">À l’année <small>2 mois offerts</small></button>
         </div>
-      </div>`,
-      actions: [{ label: 'Plus tard' }, { label: `${actif ? 'Prolonger' : 'Passer à Plume'} — ${S.money(prix)}`, primary: true, onClick: (close) => { close(); payer({ objet: 'plume' }, cle()); } }] });
+        <div class="pl-offres pl-offres--3">${v.offres.map(offre).join('')}</div>
+        <p class="pl-note">${S.icon('shield')} Payé par Mobile Money, vérifié par Sōzō. Rien n’est prélevé ensuite : vous prolongez si vous le voulez.${v.pro ? ` Votre offre court jusqu’au ${S.esc(S.dateShort(v.fin))}.` : ''}</p>
+      </div>`, actions: [{ label: 'Plus tard' }] });
     m.el.querySelector('.md').classList.add('md--plume');
-    animerCarte(m.el);
+    const peindre = () => {
+      m.el.querySelectorAll('[data-duree]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.duree === duree)));
+      v.offres.forEach((o) => { m.el.querySelector(`[data-prix="${o.id}"]`).innerHTML = duree === 'annee' ? `${S.money(o.annee)} <small>/ an</small>` : `${S.money(o.mois)} <small>/ mois</small>`; });
+    };
+    m.el.querySelectorAll('[data-duree]').forEach((b) => b.addEventListener('click', () => { duree = b.dataset.duree; peindre(); }));
+    m.el.querySelectorAll('[data-offre]').forEach((b) => b.addEventListener('click', () => { m.close(); payer({ objet: 'plume', offre: b.dataset.offre, duree }, cle()); }));
+    peindre();
   }
+
+  /* La petite note dans un coin (22/10/2026, demande du propriétaire) : quand
+     une fonction demande Plume, pas d'écran entier — une carte discrète, qui
+     explique et propose de découvrir Plume, puis s'efface d'elle-même. */
+  function avisPro(message) {
+    let n = document.querySelector('.pl-avis');
+    if (!n) {
+      n = document.createElement('aside');
+      n.className = 'pl-avis'; n.setAttribute('role', 'status');
+      document.body.appendChild(n);
+    }
+    n.innerHTML = `<span class="pl-avis-ic" aria-hidden="true">${S.icon('feather')}</span>
+      <div><p>${S.esc(message || 'Cette fonction fait partie de Plume.')}</p><button type="button" class="pl-avis-lien">Découvrir Plume</button></div>
+      <button type="button" class="pl-avis-x" aria-label="Fermer">${S.icon('x')}</button>`;
+    requestAnimationFrame(() => n.classList.add('is-on'));
+    const fermer = () => n.classList.remove('is-on');
+    clearTimeout(n._t); n._t = setTimeout(fermer, 9000);
+    n.querySelector('.pl-avis-x').addEventListener('click', fermer);
+    n.querySelector('.pl-avis-lien').addEventListener('click', () => { fermer(); plume(); });
+  }
+  window.SOZO_AVIS_PRO = avisPro;
 
   async function payer(criteres, idempotency_key) {
     const m = await window.SOZO_API('GET', '/api/paiements/moyens');
@@ -163,5 +196,5 @@
       actions: [{ label: 'Mon compte', onClick: () => { location.href = 'compte.html'; } }, { label: 'Fermer', primary: true, onClick: (close) => { close(); if (p.etat === 'CONFIRMED') location.reload(); } }] });
   }
 
-  S.buy = { options, recap, plume, payer, reprendre, carte, animerCarte };
+  S.buy = { options, recap, plume, payer, reprendre, carte, animerCarte, avisPro };
 })();

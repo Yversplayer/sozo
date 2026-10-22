@@ -32,6 +32,12 @@
     }).then(function (res) {
       // Lot E : publier ou commenter sans la charte → la montrer, puis rejouer
       // la demande UNE fois si elle est acceptée (le serveur reste seul juge).
+      // 22/10/2026 : une fonction réservée à Plume — une petite note dans un coin,
+      // jamais un écran entier ; la réponse suit son cours chez l'appelant.
+      if (res.status === 403 && res.d && (res.d.code === 'pro_requis' || res.d.code === 'plume_requis') && window.SOZO_AVIS_PRO) {
+        window.SOZO_AVIS_PRO(res.d.erreur);
+        res.d.avisPro = true;
+      }
       if (res.status === 403 && res.d && res.d.code === 'charte' && window.SOZO_CHARTE && !(options && options.sansCharte)) {
         return window.SOZO_CHARTE(res.d.version).then(function (ok) {
           return ok ? window.SOZO_API(methode, url, corps, Object.assign({}, options, { sansCharte: true })) : res;

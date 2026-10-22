@@ -492,6 +492,7 @@ window.SOZO = (() => {
      · téléphone : cinq onglets en bas, « Écrire » au centre ;
      · aria-expanded dit toujours la vérité ; le mouvement réduit coupe l'animation. */
   const sess = () => (window.SozoAuth && SozoAuth.session) || {};
+  const pro = () => sess().pro || {};
   const initials = () => { const n = (sess().name || '?').trim().split(/\s+/); return ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase(); };
   const ALIAS = { decouvrir: 'accueil', suivis: 'bibliotheque', studio: 'atelier' };
   const NAV = {
@@ -559,10 +560,10 @@ window.SOZO = (() => {
           <button class="nav-menu" type="button" id="navMenu" aria-controls="sozoNav" aria-expanded="false" aria-label="Déplier le menu">${icon('sliders')}</button>
           <a class="nav-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${window.SOZO_LOGO || 'Sōzō'}</a>
         </div>
-        <p class="nav-sec"><span>Écrire</span></p>
-        ${NAV.ecrire.map(lien).join('')}
         <p class="nav-sec"><span>Lire</span></p>
         ${NAV.lire.map(lien).join('')}
+        <p class="nav-sec"><span>Écrire</span></p>
+        ${NAV.ecrire.map(lien).join('')}
         <div class="nav-bas">
           ${NAV.moi.map(lien).join('')}
           <button class="nav-a" type="button" data-visite>${icon('spark')}<span class="nav-l">Visite guidée</span></button>
@@ -576,7 +577,8 @@ window.SOZO = (() => {
         <a class="top-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${window.SOZO_LOGO || 'Sōzō'}</a>
         <a class="top-cherche" href="explorer.html#q">${icon('search')}<span>Rechercher un livre, un auteur, un thème…</span></a>
         <div class="top-tools">
-          <a class="btn btn--sm top-ecrire" href="studio.html?action=ecrire">${icon('pen')} Écrire</a>
+          <button class="top-plume${pro().actif ? ' is-pro' : ''}" type="button" data-plume-ouvrir title="${pro().actif ? `Votre offre ${esc(pro().nom)}` : 'Devenir auteur avec Plume'}">${icon('feather')}<span>${pro().actif ? esc(pro().nom) : 'Devenir auteur'}</span></button>
+          <a class="btn btn--sm top-ecrire" href="ecrits.html?nouveau=pensee">${icon('pen')} Écrire</a>
           <a class="icon-btn top-loupe" href="explorer.html#q" aria-label="Rechercher un livre">${icon('search')}</a>
           <a class="icon-btn" href="suivis.html#notifications" aria-label="Notifications${n ? ` : ${n} nouvelle${n > 1 ? 's' : ''}` : ''}">${icon('bell')}${n ? `<span class="dot dot--abs">${n}</span>` : ''}</a>
           <div class="acct">
@@ -584,7 +586,8 @@ window.SOZO = (() => {
             <div class="acct-menu" id="acctMenu" hidden>
               <p class="acct-name">${esc(sess().name || 'Mon compte')}</p>
               <p class="acct-mail">${esc(sess().email || '')}</p>
-              <p class="mono ash">${sess().role === 'auteur' ? 'Auteur et lecteur' : 'Lecteur'}${sess().email_verifie ? '' : ' · e-mail à confirmer'}</p>
+              <p class="mono ash">${pro().actif ? `Auteur · ${esc(pro().nom)}` : sess().role === 'auteur' ? 'Lecteur · premier livre offert' : 'Lecteur'}${sess().email_verifie ? '' : ' · e-mail à confirmer'}</p>
+              <button type="button" data-plume-ouvrir>${icon('feather')} ${pro().actif ? 'Mon offre Plume' : 'Devenir auteur'}</button>
               <a href="compte.html">${icon('user')} Mon compte</a>
               <a href="studio.html">${icon('feather')} Mon atelier</a>
               <a href="suivis.html">${icon('library')} Ma bibliothèque</a>
@@ -595,6 +598,12 @@ window.SOZO = (() => {
         </div>
       </div>`;
     nav.after(head);
+    // « Devenir auteur » / l'offre en cours : la fenêtre Plume ne s'ouvre que sur ce geste
+    head.addEventListener('click', (e) => {
+      if (!e.target.closest('[data-plume-ouvrir]')) return;
+      const m = head.querySelector('#acctMenu'); if (m) m.hidden = true;
+      if (window.SOZO.buy) window.SOZO.buy.plume(); else location.href = 'compte.html#plume';
+    });
     const tabs = document.createElement('nav');
     tabs.className = 'tabs'; tabs.setAttribute('aria-label', 'Navigation');
     tabs.innerHTML = ONGLETS.map(([k, h, l, ic]) => `<a href="${h}" class="${active === k || (k === 'ecrits' && active === 'atelier') || (k === 'profil' && active === 'compte') ? 'is-active' : ''}${k === 'ecrits' ? ' tabs-ecrire' : ''}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}">${icon(ic)}<span>${l}</span></a>`).join('');

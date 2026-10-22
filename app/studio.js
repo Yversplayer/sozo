@@ -33,7 +33,7 @@ window.SOZO_PRET.then(() => {
 
   /* Une couverture du studio, dessinée comme celles du catalogue */
   const couv = (b, opts) => { D.authors.moi = { name: at.nom }; return S.cover({ id: b.id, author: 'moi', cover: { img: b.couverture, style: b.style || 'a' }, title: b.titre, cat: b.categorie, apparence: b.apparence, image: b.image }, opts); };
-  const erreur = (r) => S.toast(r.d.erreur || 'Le serveur a refusé l’opération.');
+  const erreur = (r) => { if (!r.d.avisPro) S.toast(r.d.erreur || 'Le serveur a refusé l’opération.'); };   // un refus Plume a déjà sa note
   function attente(btn, on) { if (!btn) return; btn.disabled = on; btn.setAttribute('aria-busy', String(on)); }
   function urlEtat() {
     const p = new URLSearchParams();
@@ -91,10 +91,10 @@ window.SOZO_PRET.then(() => {
         <div class="at-id">
           <p class="at-kicker">${lecteur ? 'Studio auteur' : `Atelier · ${S.esc(AMB[amb])}`}</p>
           <h1 class="at-title" data-ink-text="${S.esc(lecteur ? 'Votre [[atelier]] vous attend' : nom)}"></h1>
-          ${lecteur ? `<p class="at-quote">Écrivez dans l’éditeur ou importez un manuscrit, publiez page par page, gratuitement ou contre paiement. Vous restez lecteur : rien ne change dans vos achats ni vos suivis.</p>`
+          ${lecteur ? `<p class="at-quote">Votre premier livre est offert : écrivez-le page par page et publiez-le gratuitement. Pour en écrire d’autres ou les vendre, il y a Plume — quand vous le voudrez.</p>`
             : a.citation ? `<blockquote class="at-quote">« ${S.esc(a.citation)} »</blockquote>` : `<p class="at-quote at-quote--vide">Ajoutez une phrase qui vous accompagne quand vous écrivez.</p>`}
           <div class="at-acts">
-            ${lecteur ? `<button class="btn btn--accent" type="button" id="devenir">${S.icon('feather')} Ouvrir mon atelier d’auteur</button>`
+            ${lecteur ? `<button class="btn btn--accent" type="button" id="devenir">${S.icon('feather')} Commencer mon premier livre</button>`
               : `<button class="btn btn--accent" type="button" id="nouveau">${S.icon('plus')} Nouveau livre</button>
                  <button class="btn at-btn-ghost" type="button" id="perso">${S.icon('sliders')} Personnaliser l’atelier</button>
                  ${at.livres_jetes ? `<button class="btn at-btn-ghost" type="button" id="corbLivres">${S.icon('corbeille')} Corbeille des livres (${at.livres_jetes})</button>` : ''}`}
@@ -493,7 +493,7 @@ window.SOZO_PRET.then(() => {
     </tbody></table></div>` : ''}`;
     if (!el.isConnected) return;     // l'atelier a été redessiné entre-temps : ce bloc n'est plus affiché
     S.inkAll(el);
-    $('#plumeBtn', el).addEventListener('click', () => S.buy.plume(d.plume.prix, d.plume));
+    $('#plumeBtn', el).addEventListener('click', () => S.buy.plume());
     const f = $('#formRev', el);
     if (f.elements.montant) f.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -910,7 +910,7 @@ window.SOZO_PRET.then(() => {
     $$('[data-act]').forEach((b) => b.addEventListener('click', () => action(b.dataset.act)));
     const perso = $('#perso'); if (perso) perso.addEventListener('click', personnaliser);
     const cl = $('#corbLivres'); if (cl) cl.addEventListener('click', corbeilleLivres);
-    $$('[data-prolonger]').forEach((b) => b.addEventListener('click', () => S.buy.plume(at.plume.prix, at.plume)));
+    $$('[data-prolonger]').forEach((b) => b.addEventListener('click', () => S.buy.plume()));
     $$('[data-livre]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); filtre = 'all'; ouvrirLivre(a.dataset.livre); }));
     if (!livre) return;
 
@@ -962,8 +962,8 @@ window.SOZO_PRET.then(() => {
       $$('[data-corriger]').forEach((a) => a.addEventListener('click', (e) => {
         if (at.plume.actif) return;
         e.preventDefault();
-        S.modal({ title: `Corriger la page ${a.dataset.corriger}`, body: `<p>Cette page est publiée : son accès, son prix et sa date ne changent plus, parce que des lecteurs ont peut-être déjà des droits dessus.</p><p>Avec <strong>Plume</strong>, vous pouvez en corriger le <em>texte</em> : Sōzō crée une nouvelle version et garde l’ancienne dans l’historique.</p>`,
-          actions: [{ label: 'Fermer' }, { label: `Passer à Plume — ${S.money(at.plume.prix)}`, primary: true, onClick: (close) => { close(); S.buy.plume(at.plume.prix, at.plume); } }] });
+        // 22/10/2026 : une note discrète, pas une fenêtre de prix
+        S.buy.avisPro('Cette page est publiée : corriger son texte fait partie de Plume. Une nouvelle version est créée, l’ancienne reste.');
       }));
       syncSel();
     }

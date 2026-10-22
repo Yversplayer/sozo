@@ -468,3 +468,62 @@ html:not([data-theme="dark"]) .av-etoiles { color: #8A6A12; }
 .av-liste p { margin: 4px 0; }
 .av-tete a { font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ─── Plume, devenir auteur (22/10/2026) ───
+   Discret partout : une pastille dorée en haut, une note dans un coin. */
+.top-plume { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(184, 144, 42, .55);
+  background: transparent; color: var(--ink); font: 600 13px/1 var(--sans); cursor: pointer; }
+.top-plume svg { width: 15px; height: 15px; color: #B8902A; }
+.top-plume:hover, .top-plume:focus-visible { background: rgba(212, 175, 55, .12); }
+.top-plume.is-pro { border-color: transparent; background: rgba(212, 175, 55, .16); }
+@media (max-width: 760px) { .top-plume span { display: none; } .top-plume { width: 34px; padding: 0; justify-content: center; } }
+
+.pl-avis { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 90;
+  display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; width: min(360px, calc(100vw - 32px));
+  padding: 14px 14px 14px 16px; border-radius: 12px; background: var(--paper); color: var(--ink); border: 1px solid rgba(184, 144, 42, .45);
+  box-shadow: 0 18px 40px -18px rgba(40, 10, 15, .45); opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity .25s, transform .25s; }
+.pl-avis.is-on { opacity: 1; transform: none; pointer-events: auto; }
+.pl-avis p { margin: 0 0 6px; font-size: 14px; line-height: 1.45; }
+.pl-avis-ic svg { width: 20px; height: 20px; color: #B8902A; margin-top: 2px; }
+.pl-avis-lien { background: none; border: 0; padding: 0; color: var(--ver); font: 600 14px/1.3 var(--sans); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.pl-avis-x { background: none; border: 0; color: var(--ash); cursor: pointer; padding: 2px; }
+.pl-avis-x svg { width: 16px; height: 16px; }
+@media (max-width: 760px) { .pl-avis { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
+@media (prefers-reduced-motion: reduce) { .pl-avis { transition: none; } }
+
+.pl--offres .pl-lead { margin: 0 0 14px; }
+.pl-duree { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(var(--ink-rgb), .06); margin-bottom: 14px; }
+.pl-duree button { border: 0; background: transparent; border-radius: 999px; padding: 7px 14px; font: 600 13px/1 var(--sans); color: var(--ash); cursor: pointer; }
+.pl-duree button small { font-weight: 500; color: #8A6A12; margin-left: 4px; }
+.pl-duree button[aria-checked="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 2px 8px -4px rgba(0,0,0,.3); }
+.pl-offres--3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 760px) { .pl-offres--3 { grid-template-columns: minmax(0, 1fr); } }
+.pl-offres--3 .pl-offre { display: flex; flex-direction: column; }
+.pl-offres--3 .pl-offre ul { flex: 1; }
+.pl-pour { margin: 2px 0 8px; font-size: 13px; color: var(--ash); }
+.pl-choisir { margin-top: 12px; width: 100%; justify-content: center; }
+.pl-offre.is-mien { outline: 2px solid #B8902A; }
+
+/* Accueil, la lecture d'abord (22/10/2026) */
+.vl-lire-quoi { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; }
+.vl-lire-quoi .chip svg { width: 14px; height: 14px; }
+.vl-plume-carte--calme { padding-block: 20px; }
+.vl-plume-carte--calme .vl-plume-t h2 { font-size: 24px; }
+/* la fenêtre Plume à trois offres : une colonne de lecture, pas la grille carte + texte d'avant */
+.pl.pl--offres { display: block; padding-top: 6px; }
+.md.md--plume:has(.pl--offres) { width: min(980px, 100%); }
+.pl--offres .pl-offre { padding-top: 20px; }
+.pl--offres .pl-offre ul { margin: 6px 0 0; padding-left: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; }
+/* la bulle de sélection de la liseuse : épingler, ou partager en carte */
+.rd-bulle:not([hidden]) { display: flex; gap: 6px; }
+.rd-bulle-partager { background: var(--paper); color: var(--ink); border: 1px solid rgba(184, 144, 42, .55); }
+
+/* commentaires d'une page (22/10/2026) */
+.rd-coms { margin: 18px 0 0; text-align: center; }
+.rd-coms .ec-lien { display: inline-flex; align-items: center; gap: 6px; }
+.rd-coms .ec-lien svg { width: 15px; height: 15px; }
+.rd-coms-l { max-height: 46vh; overflow-y: auto; }
+.rd-coms-u { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.rd-coms-u li { border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.rd-coms-u p { margin: 2px 0; }
+.rd-coms-t a { font-weight: 600; }

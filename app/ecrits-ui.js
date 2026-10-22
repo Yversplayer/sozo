@@ -162,6 +162,26 @@ window.SOZO_ECRITS = (() => {
     });
   }
 
+  /* 22/10/2026 — partager un PASSAGE (d'un livre ou d'un écrit), à la manière
+     de Spotify : la citation devient une carte velours et or, dessinée sur
+     l'appareil, prête pour WhatsApp ou un statut. Seul le texte que la
+     personne a sélectionné — et qu'elle peut donc lire — y entre. */
+  async function carteImage(e, titreFenetre) {
+    const s = S();
+    const m = s.modal({ title: titreFenetre || 'Partager ce passage', body: `<div id="vlCarte" class="vl-carte-apercu"><p class="ash"><span class="spin" aria-hidden="true"></span> La carte se dessine…</p></div>`, actions: [{ label: 'Fermer', primary: true }] });
+    const zone = m.el.querySelector('#vlCarte');
+    const c = await dessiner(e);
+    const url = c.toDataURL('image/png');
+    const nom = `sozo-${String(e.id || 'passage').replace(/[^\w-]/g, '')}.png`;
+    zone.innerHTML = `<img src="${url}" alt="Carte du passage, prête à partager"><div class="vl-carte-a">${navigator.canShare ? `<button class="btn btn--accent btn--sm" type="button" data-envoyer>${s.icon('partager')} Partager l’image</button>` : ''}<a class="btn btn--ghost btn--sm" href="${url}" download="${nom}">Enregistrer l’image</a></div>`;
+    const env = zone.querySelector('[data-envoyer]');
+    if (env) env.addEventListener('click', () => c.toBlob(async (blob) => {
+      const f = new File([blob], nom, { type: 'image/png' });
+      if (navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: 'Sōzō' }); } catch (er) {} }
+      else s.toast('Ce téléphone ne partage pas les images directement : enregistrez-la, puis envoyez-la.');
+    }, 'image/png'));
+  }
+
   /* Branche les gestes de toutes les cartes d'un conteneur. `liste` donne
      l'écrit d'après son identifiant (pour partager, mettre à jour). */
   function brancher(conteneur, trouver) {
@@ -191,5 +211,5 @@ window.SOZO_ECRITS = (() => {
     });
   }
 
-  return { NATURES, AIDE, carte, corps, brancher, depuis, partager, dessiner };
+  return { NATURES, AIDE, carte, corps, brancher, depuis, partager, dessiner, carteImage };
 })();

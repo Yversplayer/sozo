@@ -21,12 +21,14 @@ window.SOZO_PRET.then(() => {
 
   /* réglages de lecture : préférence de l'appareil (stockage optionnel) */
   const PREF = 'sozo-liseuse';
-  let pref = { fs: 20, w: 'm', mode: 'light', defil: 'page', auteur: true, focusP: true };
+  // 22/10/2026 : le défilement continu par défaut, à la manière d'un webtoon (la
+  // préférence déjà choisie sur l'appareil est gardée)
+  let pref = { fs: 20, w: 'm', mode: 'light', defil: 'continu', auteur: true, focusP: true };
   let stored = null;
   try { stored = JSON.parse(localStorage.getItem(PREF)); } catch (e) {}
   if (stored) pref = { ...pref, ...stored };
   else if (window.SozoTheme && SozoTheme.get() === 'dark') pref.mode = 'dark';   // première visite : suit le thème du site
-  if (!['page', 'glisser', 'continu'].includes(pref.defil)) pref.defil = 'page';
+  if (!['page', 'glisser', 'continu'].includes(pref.defil)) pref.defil = 'continu';
   const save = () => { try { localStorage.setItem(PREF, JSON.stringify(pref)); } catch (e) {} };
   const W = { s: '32em', m: '38em', l: '46em' };
   const apply = () => {
@@ -147,8 +149,41 @@ window.SOZO_PRET.then(() => {
     if (!d.contenu || !d.contenu.trim()) return `<div class="empty"><strong>Page vide</strong>L'auteur n'a pas encore écrit cette page.</div>`;
     const m = pg();
     return `<div class="rd-text ${S.mise.classes(m)}${poeme ? ' is-poem' : ''}${d.filigrane ? ' is-protege' : ''}" style="${S.esc(S.mise.style(m))}" data-page="${k}">${S.mise.paragraphes(d.contenu, m)}</div>`
-      + (d.filigrane ? `<p class="rd-filigrane">${S.icon('shield')} ${S.esc(d.filigrane)} · reproduction interdite</p>` : '');
+      + (d.filigrane ? `<p class="rd-filigrane">${S.icon('shield')} ${S.esc(d.filigrane)} · reproduction interdite</p>` : '')
+      + `<p class="rd-coms"><button type="button" class="ec-lien" data-coms="${k}">${S.icon('bulle')} Commenter la page ${k}</button></p>`;
   }
+
+  /* 22/10/2026 — les commentaires d'une page, à la manière d'un webtoon. Le
+     serveur ne les montre que pour une page lisible ; la charte est demandée
+     au premier commentaire (SOZO_API la gère). */
+  document.addEventListener('click', async (ev) => {
+    const bt = ev.target.closest('[data-coms]'); if (!bt) return;
+    const n = +bt.dataset.coms, url = `/api/livres/${encodeURIComponent(b.id)}/pages/${n}/commentaires`;
+    const m = S.modal({ title: `Page ${n} — commentaires`, body: `<div class="rd-coms-l" id="comsL" aria-busy="true"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>
+      <label class="cx-field">Votre commentaire<textarea id="comsT" rows="3" maxlength="1000" placeholder="Ce que cette page vous inspire…"></textarea></label>
+      <p class="cx-err" id="comsE" role="alert"></p><p class="note">Restez bienveillant : chaque commentaire peut être signalé.</p>`,
+      actions: [{ label: 'Fermer' }, { label: 'Publier', primary: true, onClick: async () => {
+        const t = m.el.querySelector('#comsT'), err = m.el.querySelector('#comsE');
+        if (!t.value.trim()) { err.textContent = 'Écrivez quelques mots.'; return; }
+        const r = await API('POST', url, { texte: t.value });
+        if (!r.ok) { err.textContent = r.d.erreur || 'Le commentaire n’est pas parti.'; return; }
+        t.value = ''; err.textContent = ''; liste();
+      } }] });
+    async function liste() {
+      const z = m.el.querySelector('#comsL');
+      const r = await API('GET', url);
+      z.removeAttribute('aria-busy');
+      if (!r.ok) { z.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'Les commentaires n’ont pas pu se charger.')}</span></p>`; return; }
+      z.innerHTML = r.d.commentaires.length ? `<ul class="rd-coms-u">${r.d.commentaires.map((c) => `<li><p class="rd-coms-t"><a href="auteur.html?id=${encodeURIComponent(c.auteur.id)}">${S.esc(c.auteur.nom)}</a> <span class="ash">${S.esc(S.dateShort(c.le))}</span></p><p>${S.esc(c.texte)}</p>${c.peut_retirer ? `<button type="button" class="ec-lien" data-com-retirer="${c.id}">Retirer</button>` : ''}</li>`).join('')}</ul>`
+        : '<p class="ash">Personne n’a encore commenté cette page. Soyez le premier.</p>';
+      z.querySelectorAll('[data-com-retirer]').forEach((x) => x.addEventListener('click', async () => {
+        const y = await API('DELETE', `/api/pages-commentaires/${x.dataset.comRetirer}`);
+        if (!y.ok) { S.toast(y.d.erreur || 'Retrait impossible.'); return; }
+        liste();
+      }));
+    }
+    liste();
+  });
   const charges = new Set();
   async function chargerTexte(zone) {
     const k = +zone.dataset.texte;
@@ -331,7 +366,7 @@ window.SOZO_PRET.then(() => {
   // Bouton flottant « Épingler » sur une sélection dans une page lisible
   const bulle = document.createElement('div');
   bulle.className = 'rd-bulle'; bulle.hidden = true;
-  bulle.innerHTML = `<button type="button" class="btn btn--accent btn--sm" id="epingler">${S.icon('tag')} Épingler</button>`;
+  bulle.innerHTML = `<button type="button" class="btn btn--accent btn--sm" id="epingler">${S.icon('tag')} Épingler</button><button type="button" class="btn btn--sm rd-bulle-partager" id="partagerPassage">${S.icon('partager')} Partager</button>`;
   body.appendChild(bulle);
   let selection = null;
   document.addEventListener('selectionchange', () => {
@@ -351,6 +386,16 @@ window.SOZO_PRET.then(() => {
     }, 220);
   });
   $('#epingler', bulle).addEventListener('mousedown', (e) => e.preventDefault());   // garder la sélection
+  // 22/10/2026 : partager le passage en carte (à la manière de Spotify)
+  $('#partagerPassage', bulle).addEventListener('mousedown', (e) => e.preventDefault());
+  $('#partagerPassage', bulle).addEventListener('click', () => {
+    if (!selection || !window.SOZO_ECRITS) return;
+    if (selection.texte.length > 600) { S.toast('Choisissez un passage plus court (600 signes au plus) pour la carte.'); return; }
+    // les vers gardent leurs retours à la ligne sur la carte
+    const brut = (getSelection().toString() || selection.texte).replace(/\n{3,}/g, '\n\n').trim();
+    window.SOZO_ECRITS.carteImage({ id: `${b.id}-p${selection.n}`, titre: '', texte: brut, nature: 'pensee', themes: [b.title], auteur: { nom: S.author(b.author).name } });
+    getSelection().removeAllRanges(); bulle.hidden = true;
+  });
   $('#epingler', bulle).addEventListener('click', async () => {
     if (!selection) return;
     const max = selection.protege ? 300 : 600;

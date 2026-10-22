@@ -32,7 +32,7 @@ window.SOZO_PRET.then(() => {
       <div class="cp-head">
         <span class="cp-av" aria-hidden="true">${S.esc(ini)}</span>
         <div><p class="kicker">Mon compte</p><h1>${S.esc(u.nom)}</h1>
-          <p>${S.esc(u.email)} · ${u.role === 'auteur' ? 'lecteur et auteur' : 'lecteur'} · membre depuis le ${S.esc(S.dateLong(u.created_at).replace(/ à .*/, ''))}</p></div>
+          <p>${S.esc(u.email)} · ${c.plume.actif ? `auteur · ${S.esc(c.plume.nom || 'Plume')}` : u.role === 'auteur' ? 'lecteur · premier livre offert' : 'lecteur'} · membre depuis le ${S.esc(S.dateLong(u.created_at).replace(/ à .*/, ''))}</p></div>
       </div>
       ${u.email_verifie_at ? '' : `<p class="warn" style="margin-bottom:18px">${S.icon('bell')}<span><strong>Adresse e-mail à confirmer.</strong> L’envoi des e-mails n’est pas encore branché sur Sōzō : le lien de confirmation est préparé mais ne part pas. Rien ne vous est bloqué en attendant.</span></p>`}
       <div class="cp-grid">
@@ -53,11 +53,11 @@ window.SOZO_PRET.then(() => {
             <p class="note">${S.icon('shield')} Un achat « en vérification » s’ouvre dès que Sōzō a confirmé votre paiement Mobile Money. Ce que vous avez payé reste à vous, même si l’auteur modifie son livre.</p>
           </section>
           <section class="panel cp-notif" id="notifications" aria-labelledby="hNotif"><h2 id="hNotif">Notifications</h2><div id="notifIn"><p class="ash" role="status">Chargement…</p></div></section>
-          ${u.role === 'auteur' ? `<section class="panel at-plume${c.plume.actif ? ' is-on' : ''}">
-            <p class="mono">Plume · ${S.money(c.plume.prix)} pour 30 jours</p>
-            <p>${c.plume.actif ? `<strong>Active jusqu’au ${S.esc(S.dateLong(c.plume.fin))}.</strong>` : 'Corrigez vos pages publiées en nouvelle version, avec historique, et payez moins de commission.'}</p>
-            <button class="btn btn--accent" type="button" id="plume" style="margin-top:14px">${c.plume.actif ? 'Prolonger de 30 jours' : 'Passer à Plume'}</button>
-          </section>` : `<section class="panel"><h2>Écrire sur Sōzō</h2><p class="ash">Publiez vos textes page par page, gratuitement ou contre paiement. Vous restez lecteur.</p><a class="btn btn--accent" href="studio.html" style="margin-top:14px">${S.icon('feather')} Ouvrir mon atelier</a></section>`}
+          <section class="panel at-plume${c.plume.actif ? ' is-on' : ''}" id="plume-section">
+            <h2>Écrire des livres</h2>
+            <p>${c.plume.actif ? `<strong>Votre offre ${S.esc(c.plume.nom || 'Plume')} court jusqu’au ${S.esc(S.dateLong(c.plume.fin))}.</strong>` : 'Vos écrits courts sont et resteront gratuits. Votre premier livre aussi. Plume vous ouvre davantage de livres, la vente et les outils d’auteur.'}</p>
+            <button class="btn ${c.plume.actif ? 'btn--accent' : 'btn--ghost'}" type="button" id="plume" style="margin-top:14px">${S.icon('feather')} ${c.plume.actif ? 'Mon offre Plume' : 'Découvrir Plume'}</button>
+          </section>
         </div>
         <div class="cp-col">
           <section class="panel" id="apparence" aria-labelledby="hTheme">
@@ -202,7 +202,7 @@ window.SOZO_PRET.then(() => {
       const a = c.achats.find((x) => x.id === +b.dataset.reprendre);
       S.buy.reprendre(a, charger);
     }));
-    const pl = $('#plume'); if (pl) pl.addEventListener('click', () => S.buy.plume(c.plume.prix, c.plume));
+    const pl = $('#plume'); if (pl) pl.addEventListener('click', () => S.buy.plume());
 
     main.querySelectorAll('input[name=theme]').forEach((r) => r.addEventListener('change', async () => {
       const avant = SozoTheme.get() === 'dark' ? 'nocturne' : 'clair';

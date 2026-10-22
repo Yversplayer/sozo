@@ -482,7 +482,7 @@ Quand je marche dans la vallée de l’ombre de la mort (Psaume 23:4), je pense 
     const ap = e.target.closest('[data-apercu]');
     // l'aperçu montre ce que le SERVEUR a : on enregistre d'abord
     if (ap && sale(f)) { e.preventDefault(); await enregistrer(f); if (!sale(f)) open(ap.href, '_blank', 'noopener'); return; }
-    if (e.target.closest('[data-plume]')) { const r = await window.SOZO_API('GET', '/api/studio'); if (r.ok) S.buy.plume(r.d.plume.prix); else S.toast(r.d.erreur || 'Plume est indisponible pour le moment.'); return; }
+    if (e.target.closest('[data-plume]')) { const r = await window.SOZO_API('GET', '/api/studio'); if (r.ok) S.buy.plume(); else S.toast(r.d.erreur || 'Plume est indisponible pour le moment.'); return; }
     if (e.target.closest('[data-jeter]')) { jeter(f); return; }
     const mb = e.target.closest('[data-menu-page]');
     if (mb) {

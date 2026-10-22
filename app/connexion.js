@@ -51,10 +51,6 @@
           <label class="cx-field"><span>Adresse e-mail</span><input type="email" name="email" autocomplete="email" required></label>
           <label class="cx-field"><span>Mot de passe <small>8 caractères au moins</small></span><span class="cx-pw"><input type="password" name="pw" autocomplete="new-password" required minlength="8"><button type="button" class="cx-eye" aria-label="Afficher le mot de passe" aria-pressed="false">${S.icon('eye')}</button></span>
             <span class="cx-meter" aria-hidden="true"><i></i></span></label>
-          <fieldset class="cx-role"><legend>Je viens sur Sōzō pour…</legend>
-            <label><input type="radio" name="role" value="auteur" checked><span>${S.icon('feather')}<b>Écrire et publier</b><small>Mon atelier d’auteur (je peux aussi lire)</small></span></label>
-            <label><input type="radio" name="role" value="lecteur"><span>${S.icon('book')}<b>Lire seulement</b><small>Découvrir, suivre, acheter des pages</small></span></label>
-          </fieldset>
           <label class="cx-check"><input type="checkbox" name="cgu" required><span>J’accepte les <a href="cgu.html" target="_blank" rel="noopener">conditions d’utilisation</a> et la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a>.</span></label>
           <p class="cx-err" role="alert"></p>
           <button class="btn btn--accent cx-submit" type="submit">Créer mon compte ${S.icon('right')}</button>
@@ -159,7 +155,7 @@
     SozoAuth.garder(r.d.moi);
     // Nouveau compte : on accueille et on guide (19/10/2026 — une personne qui
     // a reçu le lien « ne comprenait pas ce qu'elle devait faire »)
-    if (url === '/api/comptes' && suite === 'decouvrir.html') { location.replace(r.d.moi && r.d.moi.role === 'auteur' ? 'studio.html?bienvenue=1' : 'decouvrir.html?bienvenue=1'); return; }
+    if (url === '/api/comptes' && suite === 'decouvrir.html') { location.replace('decouvrir.html?bienvenue=1'); return; }
     location.replace(suite);
   }
   $('#fIn').addEventListener('submit', (e) => {
@@ -176,7 +172,7 @@
     if (!EMAIL.test(email)) return fail(f, 'Cette adresse e-mail ne semble pas valide.', f.email);
     if (p.length < 8) return fail(f, 'Choisissez un mot de passe d’au moins 8 caractères.', f.pw);
     if (!f.cgu.checked) return fail(f, 'Merci d’accepter les conditions pour créer votre compte.', f.cgu);
-    envoyer(f, '/api/comptes', { nom, email, mot_de_passe: p, role: f.role.value, cgu: true });
+    envoyer(f, '/api/comptes', { nom, email, mot_de_passe: p, cgu: true });
   });
 
   /* liens reçus par e-mail : vérification et réinitialisation */

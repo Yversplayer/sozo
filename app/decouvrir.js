@@ -1,4 +1,7 @@
-/* Sōzō — l'Accueil, une fois connecté (refonte du 19/10/2026).
+/* Sōzō — l'Accueil, une fois connecté (refonte du 19/10/2026 ; 22/10/2026 :
+   la LECTURE d'abord, à la demande des premiers testeurs — « Que voulez-vous
+   lire ? », reprendre, à la une, nouveautés, écrits ; écrire un mot vient
+   ensuite, plus discret, et reste gratuit).
    « Quand une personne se connecte ou crée son compte, qu'elle se repère
    facilement » : une salutation, deux portes (Écrire, Lire), les premiers
    pas calculés sur SES données réelles, puis ce qu'elle lit, ce qu'elle écrit,
@@ -28,7 +31,7 @@ window.SOZO_PRET.then(() => {
     ['Explorer le catalogue', lus > 0 || D.reader.follows.length > 0, 'explorer.html'],
     ['Suivre un livre', D.reader.follows.length > 0, 'explorer.html'],
     ['Lire une première page', lus > 0, autres[0] ? `lire.html?id=${encodeURIComponent(autres[0].id)}` : 'explorer.html'],
-    ['Ouvrir votre atelier d’auteur', false, 'studio.html']
+    ['Partager votre premier écrit', false, 'ecrits.html?nouveau=pensee']
   ];
   const faits = PAS.filter((p) => p[1]).length;
   let cache = false;
@@ -49,7 +52,7 @@ window.SOZO_PRET.then(() => {
   main.innerHTML = `<div class="wrap ac vl-ac">
     <section class="vl-salut">
       <h1>${S.esc(salut)}${prenom ? `, ${S.esc(prenom)}` : ''}</h1>
-      <p>Que voulez-vous écrire, ou lire, aujourd’hui ?</p>
+      <p>Que voulez-vous lire aujourd’hui ?</p>
       <p class="vl-jour" id="versetJour" hidden></p>
       <a class="ac-cherche vl-cherche" href="explorer.html#q">${S.icon('search')}<span>Rechercher un livre, un écrit, un auteur…</span></a>
     </section>
@@ -57,24 +60,21 @@ window.SOZO_PRET.then(() => {
     <aside class="vl-installer" id="bandeauInstaller" hidden><span>${S.icon('upload')} Installez Sōzō sur votre écran d’accueil, et lisez même sans réseau.</span>
       <span class="row-acts"><button class="btn btn--accent btn--sm" type="button" id="instOui">Installer</button><button class="ec-lien" type="button" id="instNon">Plus tard</button></span></aside>
 
-    <section class="vl-plume-carte vl-velours" aria-labelledby="plumeT">
-      <div class="vl-plume-t">
-        <h2 id="plumeT">${S.PLUME_SVG.replace('cv-plume', 'vl-plume-g')}La plume</h2>
-        <p>Une pensée, une prière, un poème : écrivez-le maintenant, publiez-le quand vous voulez.</p>
-      </div>
-      <div class="vl-natures" role="list">${Object.entries(E.NATURES).map(([k, l]) => `<a role="listitem" class="vl-nature" href="ecrits.html?nouveau=${k}"><strong>${S.esc(l)}</strong><small>${S.esc(E.AIDE[k])}</small></a>`).join('')}
-        <a role="listitem" class="vl-nature vl-nature--livre" href="studio.html?action=nouveau"><strong>Un livre</strong><small>Page après page</small></a></div>
-    </section>
-
-    ${aLaUne ? `<section class="ac-sec"><a class="vl-une vl-velours" href="livre.html?id=${encodeURIComponent(aLaUne.id)}">
-        <div class="vl-une-t"><span class="vl-or">À la une</span><h2>${S.esc(aLaUne.title)}</h2><p>${S.esc(S.author(aLaUne.author).name)}</p><span class="btn btn--accent btn--sm">Découvrir</span></div>
-        <div class="vl-une-cv">${S.cover(aLaUne, { big: true, d3: false })}</div></a></section>` : ''}
-
     ${enCours.length ? `<section class="sec ac-sec">
       <div class="sec-head"><h2 class="sec-title">Reprendre la lecture</h2><a class="sec-link" href="suivis.html">Tout voir ${S.icon('right')}</a></div>
       <div class="ac-reprise">${enCours.slice(0, 3).map((b) => { const lu = D.reader.progress[b.id]; const vis = S.visiblePages(b); const pub = vis.filter((p) => S.access(b, p.n) !== 'soon'); const p = vis.find((x) => x.n === lu) ? lu : (vis[0] && vis[0].n); const pct = pub.length ? Math.round((Math.min(lu || 0, pub.length) / pub.length) * 100) : 0;
         return `<a class="ac-rep" href="lire.html?id=${encodeURIComponent(b.id)}&p=${p}"><span class="ac-rep-cv">${S.cover(b, { d3: false })}</span><span class="ac-rep-t"><small class="badge badge--free">${lu ? `Page ${lu}` : 'À commencer'}</small><strong>${S.esc(b.title)}</strong><small class="ash">${S.esc(S.author(b.author).name)}</small><span class="prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression"><i style="width:${pct}%"></i></span></span></a>`; }).join('')}</div>
     </section>` : ''}
+
+    ${aLaUne ? `<section class="ac-sec"><a class="vl-une vl-velours" href="livre.html?id=${encodeURIComponent(aLaUne.id)}">
+        <div class="vl-une-t"><span class="vl-or">À la une</span><h2>${S.esc(aLaUne.title)}</h2><p>${S.esc(S.author(aLaUne.author).name)}</p><span class="btn btn--accent btn--sm">Découvrir</span></div>
+        <div class="vl-une-cv">${S.cover(aLaUne, { big: true, d3: false })}</div></a></section>` : ''}
+
+    <nav class="vl-lire-quoi" aria-label="Que voulez-vous lire ?">
+      ${[...new Set(autres.map((b) => b.cat))].slice(0, 6).map((c) => `<a class="chip" href="explorer.html?cat=${encodeURIComponent(c)}">${S.esc(c)}</a>`).join('')}
+      <a class="chip" href="explorer.html?vue=ecrits">${S.icon('feather')} Écrits courts</a>
+      <a class="chip" href="bible.html">${S.icon('book')} La Bible</a>
+    </nav>
 
     ${nouveautes.length ? `<section class="sec ac-sec">
       <div class="sec-head"><h2 class="sec-title">Nouveautés</h2><a class="sec-link" href="explorer.html">Voir tout ${S.icon('right')}</a></div>
@@ -85,6 +85,15 @@ window.SOZO_PRET.then(() => {
       <div class="sec-head"><h2 class="sec-title" id="ecritsT">Écrits du jour</h2><a class="sec-link" href="explorer.html?vue=ecrits">Tous les écrits ${S.icon('right')}</a></div>
       <div class="ex-cats" role="group" aria-label="Quels écrits"><button class="chip chip--sm" type="button" data-fil="" aria-pressed="true">Tous</button><button class="chip chip--sm" type="button" data-fil="1" aria-pressed="false">Mes abonnements</button></div>
       <div class="vl-fil" id="fil" aria-busy="true"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement des écrits…</p></div>
+    </section>
+
+    <section class="vl-plume-carte vl-plume-carte--calme vl-velours" aria-labelledby="plumeT">
+      <div class="vl-plume-t">
+        <h2 id="plumeT">${S.PLUME_SVG.replace('cv-plume', 'vl-plume-g')}Écrire un mot</h2>
+        <p>Une pensée, une prière, un poème : écrivez-le et partagez-le. C’est gratuit, toujours.</p>
+      </div>
+      <div class="vl-natures" role="list">${Object.entries(E.NATURES).map(([k, l]) => `<a role="listitem" class="vl-nature" href="ecrits.html?nouveau=${k}"><strong>${S.esc(l)}</strong><small>${S.esc(E.AIDE[k])}</small></a>`).join('')}
+        <a role="listitem" class="vl-nature vl-nature--livre" href="studio.html?action=nouveau"><strong>Un livre</strong><small>Page après page</small></a></div>
     </section>
 
     ${pasVisibles ? `<section class="panel ac-pas" aria-labelledby="pasT">
@@ -145,10 +154,10 @@ window.SOZO_PRET.then(() => {
   /* Arrivée après la création du compte : on accueille, on propose la visite */
   if (S.q('bienvenue')) {
     history.replaceState(null, '', 'decouvrir.html');
-    S.modal({ title: `Bienvenue${prenom ? `, ${prenom}` : ''} !`, body: `<p>Sōzō est un lieu calme pour <strong>écrire</strong> — une phrase, un poème, un livre — et pour lire.</p>
-      <ul class="bv-l bv-l--court"><li><span>${S.icon('feather')}</span><div><strong>Écrire</strong><small>La plume, toujours à portée : une pensée, un poème, une prière, ou un livre entier.</small></div></li>
-      <li><span>${S.icon('grid')}</span><div><strong>Explorer</strong><small>Tous les livres, par catégorie ou par recherche.</small></div></li>
-      <li><span>${S.icon('library')}</span><div><strong>Bibliothèque</strong><small>Vos livres suivis, vos épingles, vos notifications.</small></div></li></ul>`,
+    S.modal({ title: `Bienvenue${prenom ? `, ${prenom}` : ''} !`, body: `<p>Sōzō est un lieu calme pour <strong>lire</strong> — des livres, des écrits courts, la Bible — et pour partager ce qui vous touche.</p>
+      <ul class="bv-l bv-l--court"><li><span>${S.icon('grid')}</span><div><strong>Explorer</strong><small>Tous les livres et les écrits, par catégorie ou par recherche.</small></div></li>
+      <li><span>${S.icon('library')}</span><div><strong>Bibliothèque</strong><small>Vos livres suivis, vos passages gardés, vos notifications.</small></div></li>
+      <li><span>${S.icon('feather')}</span><div><strong>Écrire un mot</strong><small>Une pensée, une prière, un poème : gratuit, toujours. Et votre premier livre vous est offert.</small></div></li></ul>`,
       actions: [{ label: 'Plus tard' }, { label: 'Faire la visite (30 s)', primary: true, onClick: (close) => { close(); S.visite(); } }] });
   }
 }).catch(window.SOZO_ERREUR);
