@@ -117,7 +117,9 @@ window.SOZO_PRET.then(() => {
       locked: `<span class="badge badge--locked">${S.icon('lock')} Payante</span>`,
       soon: `<span class="badge badge--soon">${S.icon('clock')} À venir</span>`
     }[st] || '';
-    return `<p class="rd-chap">${ch ? S.esc(ch.t) : ''}</p><div class="rd-page-h"><h1>Page ${p.n}</h1>${badge}</div>`;
+    // 22/10/2026 : le grand numéro (« 01 ») de la lecture continue, à la manière
+    // du « Secret Project » envoyé par le propriétaire ; décoratif, le titre reste « Page n »
+    return `<span class="rd-num" aria-hidden="true">${String(p.n).padStart(2, '0')}</span><p class="rd-chap">${ch ? S.esc(ch.t) : ''}</p><div class="rd-page-h"><h1>Page ${p.n}</h1>${badge}</div>`;
   }
   function corps(p) {
     const st = S.access(b, p.n);
@@ -184,6 +186,16 @@ window.SOZO_PRET.then(() => {
     }
     liste();
   });
+  /* Les paragraphes montent doucement en entrant dans l'écran (lecture continue,
+     mouvement autorisé). Sans script ou en mouvement réduit, tout est en place :
+     l'état caché n'existe que sous body.rd-anim, posé ici. */
+  const anim = !S.reduced && 'IntersectionObserver' in window;
+  if (anim) body.classList.add('rd-anim');
+  const vu = anim ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('is-vu'); vu.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' }) : null;
+  function reveler(zone) {
+    if (!vu) return;
+    zone.querySelectorAll('.rd-text > *').forEach((el, i) => { el.style.setProperty('--rd-i', String(i % 6)); vu.observe(el); });
+  }
   const charges = new Set();
   async function chargerTexte(zone) {
     const k = +zone.dataset.texte;
@@ -194,6 +206,7 @@ window.SOZO_PRET.then(() => {
     zone.removeAttribute('aria-busy');
     if (r.ok) {
       zone.innerHTML = rendreTexte(k, r.d);
+      reveler(zone);
       if (r.d.filigrane) protegerCopie(zone);
       surlignerEpingles(zone);
       if (r.d.etat !== 'auteur' && k === n) progression(k);

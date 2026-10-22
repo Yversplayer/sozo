@@ -24,6 +24,9 @@ import validation as v
 from app import connectee
 
 _BIBLE = None
+# 22/10/2026 : un verset gardé se surligne de la couleur qu'on choisit (image
+# « S.O.A.P. » du propriétaire). Liste FERMÉE : l'écran n'envoie qu'un nom.
+COULEURS = {"or", "rose", "ciel", "menthe", "lavande", "peche"}
 _verrou = threading.Lock()
 
 
@@ -110,7 +113,7 @@ def enregistrer(app):
     def versets_lire():
         cx = db.connecter()
         try:
-            lignes = cx.tous("SELECT id, b, c, v1, v2, created_at FROM versets WHERE user_id = ? ORDER BY id DESC LIMIT 1000", (g.user["id"],))
+            lignes = cx.tous("SELECT id, b, c, v1, v2, couleur, created_at FROM versets WHERE user_id = ? ORDER BY id DESC LIMIT 1000", (g.user["id"],))
             index = {(b, c, n): t for (b, c, n, t) in _bible()}
             return jsonify(versets=[{**x, "t": " ".join(index.get((x["b"], x["c"], n), "") for n in range(x["v1"], x["v2"] + 1)).strip()} for x in lignes])
         finally:
@@ -124,6 +127,7 @@ def enregistrer(app):
         c = v.entier(d, "c", mini=1, maxi=150)
         v1 = v.entier(d, "v1", mini=1, maxi=176)
         v2 = v.entier(d, "v2", mini=v1, maxi=176, requis=False) or v1
+        couleur = v.choix(d, "couleur", COULEURS, requis=False) or "or"
         # le passage doit EXISTER : on ne garde pas une référence inventée
         if not any((bb, cc, vv) == (b, c, v1) for (bb, cc, vv, _) in _bible()):
             raise v.Invalide("Ce verset n'existe pas.", "v1")
@@ -132,8 +136,10 @@ def enregistrer(app):
             if cx.un("SELECT COUNT(*) AS n FROM versets WHERE user_id = ?", (g.user["id"],))["n"] >= 1000:
                 raise v.Invalide("Vous gardez déjà 1 000 versets : retirez-en quelques-uns.")
             ex = cx.un("SELECT id FROM versets WHERE user_id = ? AND b = ? AND c = ? AND v1 = ? AND v2 = ?", (g.user["id"], b, c, v1, v2))
-            vid = ex["id"] if ex else cx.inserer("INSERT INTO versets (user_id, b, c, v1, v2, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                                                 (g.user["id"], b, c, v1, v2, acces.maintenant()))
+            if ex:      # garder de nouveau un verset gardé : changer sa couleur
+                cx.execute("UPDATE versets SET couleur = ? WHERE id = ? AND user_id = ?", (couleur, ex["id"], g.user["id"]))
+            vid = ex["id"] if ex else cx.inserer("INSERT INTO versets (user_id, b, c, v1, v2, couleur, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                                 (g.user["id"], b, c, v1, v2, couleur, acces.maintenant()))
             cx.valider()
             return jsonify(ok=True, id=vid), 201
         finally:

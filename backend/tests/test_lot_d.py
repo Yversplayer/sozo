@@ -57,3 +57,18 @@ class Liseuse(TestBase):
         self.assertEqual(b.get("/api/signets").get_json()["signets"], [])
         self.assertEqual(b.delete(f"/api/signets/{sid}").status_code, 404)
         self.assertEqual(a.delete(f"/api/signets/{sid}").status_code, 200)
+
+
+class VersetsEnCouleur(TestBase):
+    """22/10/2026 : un verset gardé porte une couleur choisie sur une liste fermée ;
+    le garder de nouveau change sa couleur, sans doublon."""
+
+    def test_couleur_sur_liste_fermee(self):
+        a = Personne(self.app)
+        vid = a.post("/api/versets", {"b": 19, "c": 23, "v1": 1, "couleur": "rose"}).get_json()["id"]
+        self.assertEqual(a.post("/api/versets", {"b": 19, "c": 23, "v1": 1, "couleur": "#ff0000"}).status_code, 400)
+        self.assertEqual(a.post("/api/versets", {"b": 19, "c": 23, "v1": 1, "couleur": "ciel"}).get_json()["id"], vid)
+        l = a.get("/api/versets").get_json()["versets"]
+        self.assertEqual([(x["id"], x["couleur"]) for x in l], [(vid, "ciel")])
+        self.assertEqual(a.post("/api/versets", {"b": 43, "c": 3, "v1": 16}).status_code, 201)
+        self.assertIn("or", [x["couleur"] for x in a.get("/api/versets").get_json()["versets"]])

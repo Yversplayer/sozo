@@ -17,7 +17,7 @@ import threading
 
 import config
 
-VERSION_SCHEMA = 15   # v15 (22/10/2026) : commentaires des pages ; v14 (22/10/2026) : Plume en trois offres (pro.py) ; v13 (21/10/2026) : avis sur les livres ; v12 (21/10/2026) : charte de la communauté ; v11 (21/10/2026) : corbeille et retrait des livres, réponses, e-mail ; v10 : écrits ; v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
+VERSION_SCHEMA = 16   # v16 (22/10/2026) : couleur des versets gardés ; v15 (22/10/2026) : commentaires des pages ; v14 (22/10/2026) : Plume en trois offres (pro.py) ; v13 (21/10/2026) : avis sur les livres ; v12 (21/10/2026) : charte de la communauté ; v11 (21/10/2026) : corbeille et retrait des livres, réponses, e-mail ; v10 : écrits ; v9 (19/10/2026) : cadeaux (dons) ; v8 : apparence, couvertures, épingles, relectures IA
 _verrou = threading.Lock()
 
 
@@ -415,3 +415,5 @@ def _migrer(cx):
     _ajouter_colonne(cx, "payments", "offre", "TEXT")
     _ajouter_colonne(cx, "payments", "jours", "INTEGER")
     _ajouter_colonne(cx, "dons", "offre", "TEXT")
+    # v16 : la couleur d'un verset gardé (liste fermée, lecture_plus.COULEURS)
+    _ajouter_colonne(cx, "versets", "couleur", "TEXT")

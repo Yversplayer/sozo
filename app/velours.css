@@ -659,3 +659,43 @@ html:not([data-theme="dark"]) .av-etoiles { color: #8A6A12; }
 .mo-raccourcis small { font-size: 12px; color: rgba(248, 238, 220, .7); }
 @media (max-width: 860px) { .mo-hero { grid-template-columns: minmax(0, 1fr); min-height: 0; } }
 @media (prefers-reduced-data: reduce) { .mo-hero::before { display: none; } }
+
+/* ═══ La liseuse, lecture continue sur ordinateur (22/10/2026) ═══
+   Le grand numéro reste à gauche pendant que la page défile ; le texte à droite. */
+.rd-num { display: none; }
+@media (min-width: 1000px) {
+  .rd-flux--continu .rd-main { max-width: calc(var(--rd-w, 38em) + 260px); }
+  .rd-flux--continu .rd-feuille { display: grid; grid-template-columns: 210px minmax(0, 1fr); column-gap: 50px; }
+  .rd-flux--continu .rd-feuille > * { grid-column: 2; }
+  .rd-flux--continu .rd-num { display: block; grid-column: 1; grid-row: 1 / span 4; align-self: start; position: sticky; top: 96px;
+    font: 600 132px/.85 var(--serif); letter-spacing: -.04em; color: var(--ver); opacity: .9; font-variant-numeric: lining-nums; }
+  .rd-flux--continu .rd-num::after { content: ''; display: block; width: 64px; height: 2px; margin-top: 18px; background: #D4AF37; }
+  body.is-focus .rd-flux--continu .rd-num { opacity: .35; }
+}
+/* seul ce qui n'est pas encore vu est voilé : la concentration garde la main sur l'opacité */
+.rd-anim .rd-flux--continu .rd-text > * { transition: opacity .7s ease, transform .7s cubic-bezier(.19, 1, .22, 1); transition-delay: calc(var(--rd-i, 0) * 60ms); }
+.rd-anim .rd-flux--continu .rd-text > :not(.is-vu) { opacity: .08; transform: translateY(16px); }
+@media (prefers-reduced-motion: reduce) { .rd-anim .rd-flux--continu .rd-text > * { opacity: 1; transform: none; transition: none; } }
+
+/* ═══ La Bible (22/10/2026) : versets surlignés, « Lire seulement » ═══ */
+:root { --surl-or: rgba(226, 194, 94, .42); --surl-rose: rgba(244, 143, 177, .42); --surl-ciel: rgba(129, 190, 236, .42);
+  --surl-menthe: rgba(126, 211, 170, .42); --surl-lavande: rgba(186, 160, 230, .45); --surl-peche: rgba(250, 172, 128, .45); }
+.bb-v.is-garde { background: linear-gradient(transparent 8%, var(--surl) 8%, var(--surl) 92%, transparent 92%); border-radius: 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.bb-c-or { --surl: var(--surl-or); } .bb-c-rose { --surl: var(--surl-rose); } .bb-c-ciel { --surl: var(--surl-ciel); }
+.bb-c-menthe { --surl: var(--surl-menthe); } .bb-c-lavande { --surl: var(--surl-lavande); } .bb-c-peche { --surl: var(--surl-peche); }
+.bb-palette { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; padding: 4px 8px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); vertical-align: middle; }
+.bb-pastille { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--paper); box-shadow: 0 0 0 1px var(--line); background: var(--surl); cursor: pointer; padding: 0; }
+.bb-pastille:focus-visible { outline: 2px solid var(--ver); outline-offset: 2px; }
+.bb-top { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.bb-lire-btn { margin-left: auto; }
+.bb-chap h2 { margin: 42px 0 12px; font: 600 30px/1.1 var(--serif); }
+.bb-sortir { position: fixed; top: calc(72px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); z-index: 60; background: var(--paper); color: var(--ink); border: 1px solid var(--line); box-shadow: 0 8px 20px -12px rgba(0, 0, 0, .35); }
+/* le texte seul : tout le reste se retire */
+body.bb-lecture .bb-side, body.bb-lecture .bb-go, body.bb-lecture #goMsg, body.bb-lecture .bb-cherche, body.bb-lecture .bb-res, body.bb-lecture .bb-chaps,
+body.bb-lecture .bb-day, body.bb-lecture .bb-main > .note, body.bb-lecture .bb-nav, body.bb-lecture .bb-lire-btn, body.bb-lecture .foot { display: none !important; }
+body.bb-lecture .bb { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
+body.bb-lecture .bb-text { font-size: 22px; line-height: 1.75; }
+body.bb-lecture .bb-v { transition: opacity .35s; }
+body.bb-lecture .bb-v:not(.is-lu) { opacity: .38; }
+@media (prefers-reduced-motion: reduce) { body.bb-lecture .bb-v { transition: none; } }
+.bb-sortir[hidden] { display: none; }
