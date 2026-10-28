@@ -152,17 +152,28 @@ window.SOZO_PRET.then(() => {
     const m = pg();
     return `<div class="rd-text ${S.mise.classes(m)}${poeme ? ' is-poem' : ''}${d.filigrane ? ' is-protege' : ''}" style="${S.esc(S.mise.style(m))}" data-page="${k}">${S.mise.paragraphes(d.contenu, m)}</div>`
       + (d.filigrane ? `<p class="rd-filigrane">${S.icon('shield')} ${S.esc(d.filigrane)} · reproduction interdite</p>` : '')
-      + `<p class="rd-coms"><button type="button" class="ec-lien" data-coms="${k}">${S.icon('bulle')} Commenter la page ${k}</button></p>`;
+      + finDe(k);
+  }
+  /* 28/10/2026 — on ne commente plus chaque page (« pas des paragraphes ») :
+     un petit mot à la FIN d'un chapitre, ou à la fin du livre quand il n'a pas
+     de chapitres. Le mot reste attaché à cette dernière page côté serveur. */
+  const derniere = Math.max(0, ...b.pages.map((p) => p.n));
+  function finDe(k) {
+    const ch = b.chapters.find((c) => c.to === k);
+    if (!ch && (b.chapters.length || k !== derniere)) return '';
+    const quoi = ch ? `Fin du chapitre « ${S.esc(ch.t)} »` : 'Fin du livre';
+    return `<aside class="rd-fin" aria-label="${quoi}"><p class="kicker">${quoi}</p>
+      <button type="button" class="btn btn--sm" data-coms="${k}" data-quoi="${quoi}">${S.icon('bulle')} Un mot pour l’auteur</button></aside>`;
   }
 
-  /* 22/10/2026 — les commentaires d'une page, à la manière d'un webtoon. Le
-     serveur ne les montre que pour une page lisible ; la charte est demandée
-     au premier commentaire (SOZO_API la gère). */
+  /* Les petits mots de fin de chapitre ou de livre. Le serveur ne les montre
+     que pour une page lisible ; la charte est demandée au premier mot (SOZO_API
+     la gère). Pas de réponse, pas de « j'aime » : un mot, et ça s'arrête là. */
   document.addEventListener('click', async (ev) => {
     const bt = ev.target.closest('[data-coms]'); if (!bt) return;
     const n = +bt.dataset.coms, url = `/api/livres/${encodeURIComponent(b.id)}/pages/${n}/commentaires`;
-    const m = S.modal({ title: `Page ${n} — commentaires`, body: `<div class="rd-coms-l" id="comsL" aria-busy="true"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>
-      <label class="cx-field">Votre commentaire<textarea id="comsT" rows="3" maxlength="1000" placeholder="Ce que cette page vous inspire…"></textarea></label>
+    const m = S.modal({ title: bt.dataset.quoi || `Page ${n}`, body: `<div class="rd-coms-l" id="comsL" aria-busy="true"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>
+      <label class="cx-field">Votre mot <small>280 signes au plus</small><textarea id="comsT" rows="3" maxlength="280" placeholder="Ce que ce chapitre vous laisse…"></textarea></label>
       <p class="cx-err" id="comsE" role="alert"></p><p class="note">Restez bienveillant : chaque commentaire peut être signalé.</p>`,
       actions: [{ label: 'Fermer' }, { label: 'Publier', primary: true, onClick: async () => {
         const t = m.el.querySelector('#comsT'), err = m.el.querySelector('#comsE');
@@ -177,7 +188,7 @@ window.SOZO_PRET.then(() => {
       z.removeAttribute('aria-busy');
       if (!r.ok) { z.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'Les commentaires n’ont pas pu se charger.')}</span></p>`; return; }
       z.innerHTML = r.d.commentaires.length ? `<ul class="rd-coms-u">${r.d.commentaires.map((c) => `<li><p class="rd-coms-t"><a href="auteur.html?id=${encodeURIComponent(c.auteur.id)}">${S.esc(c.auteur.nom)}</a> <span class="ash">${S.esc(S.dateShort(c.le))}</span></p><p>${S.esc(c.texte)}</p>${c.peut_retirer ? `<button type="button" class="ec-lien" data-com-retirer="${c.id}">Retirer</button>` : ''}</li>`).join('')}</ul>`
-        : '<p class="ash">Personne n’a encore commenté cette page. Soyez le premier.</p>';
+        : '<p class="ash">Personne n’a encore laissé de mot ici. Soyez le premier.</p>';
       z.querySelectorAll('[data-com-retirer]').forEach((x) => x.addEventListener('click', async () => {
         const y = await API('DELETE', `/api/pages-commentaires/${x.dataset.comRetirer}`);
         if (!y.ok) { S.toast(y.d.erreur || 'Retrait impossible.'); return; }

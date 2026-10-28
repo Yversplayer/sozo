@@ -75,7 +75,7 @@ def enregistrer(app):
             auditer("page.commentaire", ressource=f"book:{b['id']}:{n}", apres=f"pages_commentaires:{cid}", cx=cx)
             cx.valider()
             if b["owner_id"] != g.user["id"]:
-                notifications.emettre_chez_autrui(b["owner_id"], "communaute", f"{g.user['nom']} a commenté la page {n}",
+                notifications.emettre_chez_autrui(b["owner_id"], "communaute", f"{g.user['nom']} vous a laissé un mot (page {n})",
                                                   texte[:120], f"/app/lire.html?id={livre}&p={n}", f"page-commentaire:{cid}")
                 envois.declencher()
             return jsonify(commentaire={"id": cid, "texte": texte, "le": m, "auteur": {"id": f"u{g.user['id']}", "nom": g.user["nom"]}, "peut_retirer": True}), 201
