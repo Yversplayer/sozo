@@ -139,7 +139,7 @@ def empreinte_couverture(cx, book_id):
 
 def _images_permises():
     d = os.path.join(config.RACINE_SITE, "images")
-    return {f[:-4] for f in os.listdir(d) if f.endswith(".jpg") and not f.endswith("-480.jpg")} if os.path.isdir(d) else set()
+    return {f[:-5] for f in os.listdir(d) if f.endswith(".webp") and not f.endswith("-480.webp")} if os.path.isdir(d) else set()
 
 
 def _slug(cx, titre):
