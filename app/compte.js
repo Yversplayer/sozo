@@ -112,6 +112,7 @@ window.SOZO_PRET.then(() => {
             <h2 id="hApp">Mes appareils</h2>
             <div id="appareils"><p class="ash" role="status">Chargement…</p></div>
             <button class="btn btn--ghost btn--sm" type="button" id="partout" style="margin-top:12px">${S.icon('lock')} Me déconnecter de tous les autres appareils</button>
+            <button class="btn btn--ghost btn--sm" type="button" data-sortir style="margin-top:8px">${S.icon('left')} Se déconnecter de cet appareil</button>
           </section>
           <section class="panel" aria-labelledby="hAppli" id="appli">
             <h2 id="hAppli">L’application</h2>

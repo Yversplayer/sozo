@@ -12,7 +12,8 @@ window.SOZO = (() => {
   // Mesuré au test 2G du 16/10/2026 : la première visite coûtait ~900 Ko.
   const conn = navigator.connection || {};
   const leger = !!(conn.saveData || /(^|-)2g$|^3g$/.test(conn.effectiveType || ''));
-  const img = (name, small) => `${root}images/${name || 'lib-vieux-livres'}${small || leger ? '-480' : ''}.jpg`;
+  // 28/10/2026 : WebP plafonné (≤ 120 Ko, ≤ 35 Ko en 480 px) — 10,9 Mo de JPEG devenus 4,5 Mo
+  const img = (name, small) => `${root}images/${name || 'lib-vieux-livres'}${small || leger ? '-480' : ''}.webp`;
 
   /* Tout texte venant des données passe par esc() avant d'entrer dans le
      HTML : dans le vrai logiciel, titres et descriptions sont saisis par
@@ -610,18 +611,16 @@ window.SOZO = (() => {
           </div>
         </div>
       </div>
-      <svg class="nav-courbe" viewBox="0 0 100 800" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0 Q0 400 0 800 Z"/></svg>`;
+`;
     document.body.prepend(nav);
     const head = document.createElement('header');
     head.className = 'top';
     head.innerHTML = `
       <div class="top-in">
-        <button class="icon-btn top-tiroir" type="button" id="tiroirBtn" aria-controls="sozoNav" aria-expanded="false" aria-label="Ouvrir le menu">${icon('sliders')}</button>
         <a class="top-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${window.SOZO_LOGO || 'Sōzō'}</a>
         <a class="top-cherche" href="explorer.html#q">${icon('search')}<span>Rechercher un livre, un auteur, un thème…</span></a>
         <div class="top-tools">
           <button class="top-plume${pro().actif ? ' is-pro' : ''}" type="button" data-plume-ouvrir title="${pro().actif ? `Votre offre ${esc(pro().nom)}` : 'Devenir auteur avec Plume'}">${icon('feather')}<span>${pro().actif ? esc(pro().nom) : 'Devenir auteur'}</span></button>
-          <a class="btn btn--sm top-ecrire" href="ecrits.html?nouveau=pensee">${icon('pen')} Écrire</a>
           <a class="icon-btn top-loupe" href="explorer.html#q" aria-label="Rechercher un livre">${icon('search')}</a>
           <a class="icon-btn" href="suivis.html#notifications" aria-label="Notifications${n ? ` : ${n} nouvelle${n > 1 ? 's' : ''}` : ''}">${icon('bell')}${n ? `<span class="dot dot--abs">${n}</span>` : ''}</a>
           <div class="acct">
@@ -649,14 +648,15 @@ window.SOZO = (() => {
     });
     const tabs = document.createElement('nav');
     tabs.className = 'tabs'; tabs.setAttribute('aria-label', 'Navigation');
-    /* 22/10/2026 — la barre du bas devient une barre GLISSANTE horizontale :
-       Lire à gauche, la plume fixe au milieu, Écrire et le compte à droite ;
-       chaque côté défile au doigt. Le cercle aux initiales remplace « Profil ». */
-    const onglet = ([k, h, l, ic]) => `<a href="${h}" class="tb-a${active === k || (k === 'compte' && active === 'compte') ? ' is-active' : ''}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}" aria-label="${esc(l)}">${icon(ic)}${lettres(l)}</a>`;
-    tabs.innerHTML = `<div class="tb-cote tb-g">${NAV.lire.map(onglet).join('')}</div>
+    /* 28/10/2026 — UNE seule navigation sur téléphone (conseil du 23/10, choix du
+       propriétaire « simple et légère telle une plume ») : cinq onglets fixes, rien
+       ne défile ni ne se cache. La Bible est toujours visible ; Explorer passe par la
+       loupe du haut, les notifications par la cloche, l'écriture par la plume. */
+    const onglet = ([k, h, l, ic]) => `<a href="${h}" class="tb-a${active === k ? ' is-active' : ''}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}" aria-label="${esc(l)}">${icon(ic)}${lettres(l)}</a>`;
+    tabs.innerHTML = `${[['accueil', 'decouvrir.html', 'Accueil', 'home'], ['bible', 'bible.html', 'Bible', 'book']].map(onglet).join('')}
       <button type="button" class="tabs-ecrire${['ecrits', 'atelier', 'ecrire', 'importer'].includes(active) ? ' is-active' : ''}" id="pilBtn" aria-expanded="false" aria-controls="pilule" data-nav="ecrits">${icon('feather')}<span>Écrire</span></button>
-      <div class="tb-cote tb-d">${[['ecrits', 'ecrits.html', 'Mes écrits', 'file'], ['atelier', 'studio.html', 'Mes livres', 'book'], ['notifications', 'suivis.html#notifications', 'Alertes', 'bell']].map(onglet).join('')}
-        <a href="compte.html" class="tb-a tb-moi${active === 'compte' ? ' is-active' : ''}" data-nav="compte" aria-label="Mon compte et paramètres"><span class="nav-av" aria-hidden="true">${esc(initials())}</span>${lettres('Moi')}</a></div>`;
+      ${onglet(['bibliotheque', 'suivis.html', 'Bibliothèque', 'library'])}
+      <a href="compte.html" class="tb-a tb-moi${active === 'compte' ? ' is-active' : ''}" data-nav="compte" aria-label="Mon compte et paramètres"><span class="nav-av" aria-hidden="true">${esc(initials())}</span>${lettres('Moi')}</a>`;
     document.body.appendChild(tabs);
 
     /* 22/10/2026 — la plume déplie une pilule en relief (inspirée du
@@ -743,27 +743,14 @@ window.SOZO = (() => {
       nav.querySelector('#navRecents').hidden = false;
     };
     recents();
-    /* téléphone : la même barre, mais HORIZONTALE (demande du propriétaire) : une bande
-       qui glisse depuis la gauche sous la barre du haut et défile au doigt */
-    const tb = head.querySelector('#tiroirBtn');
-    const voile = document.createElement('div'); voile.className = 'nav-voile'; document.body.appendChild(voile);
-    const tiroir = (ouvrir) => {
-      nav.style.setProperty('--haut', `${Math.round(head.getBoundingClientRect().bottom)}px`);   // la bande se pose sous la barre du haut
-      nav.classList.toggle('is-tiroir', ouvrir); voile.classList.toggle('is-on', ouvrir);
-      document.body.classList.toggle('tiroir-ouvert', ouvrir);
-      tb.setAttribute('aria-expanded', String(ouvrir)); tb.setAttribute('aria-label', ouvrir ? 'Fermer le menu' : 'Ouvrir le menu');
-      if (ouvrir) setTimeout(() => nav.querySelector('.nav-nouveau').focus(), 60); else tb.focus();
-    };
-    tb.addEventListener('click', () => tiroir(!nav.classList.contains('is-tiroir')));
-    voile.addEventListener('click', () => tiroir(false));
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && nav.classList.contains('is-tiroir')) tiroir(false); });
-
     const ab = head.querySelector('#acctBtn'), am = head.querySelector('#acctMenu');
     const closeMenu = () => { am.hidden = true; ab.setAttribute('aria-expanded', 'false'); };
     ab.addEventListener('click', (e) => { e.stopPropagation(); am.hidden = !am.hidden; ab.setAttribute('aria-expanded', String(!am.hidden)); });
     document.addEventListener('click', (e) => { if (!e.target.closest('.acct')) closeMenu(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
     head.querySelector('#logout').addEventListener('click', () => SozoAuth.close());
+    // 28/10/2026 : sur téléphone le cercle « Moi » mène au compte ; on s'y déconnecte aussi
+    document.addEventListener('click', (e) => { if (e.target.closest('main [data-sortir]')) SozoAuth.close(); });
     document.addEventListener('click', (e) => { if (e.target.closest('[data-visite]')) { closeMenu(); visite(); } });
     majCloche(); synchroAppareil();
     const onScroll = () => head.classList.toggle('is-scrolled', scrollY > 8);

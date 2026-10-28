@@ -519,9 +519,11 @@ html:not([data-theme="dark"]) .av-etoiles { color: #8A6A12; }
 .rd-bulle-partager { background: var(--paper); color: var(--ink); border: 1px solid rgba(184, 144, 42, .55); }
 
 /* commentaires d'une page (22/10/2026) */
-.rd-coms { margin: 18px 0 0; text-align: center; }
-.rd-coms .ec-lien { display: inline-flex; align-items: center; gap: 6px; }
-.rd-coms .ec-lien svg { width: 15px; height: 15px; }
+/* 28/10/2026 : un mot à la fin d'un chapitre ou du livre, plus sous chaque page */
+.rd-fin { display: grid; justify-items: center; gap: 10px; margin: 34px auto 6px; padding: 22px 16px 4px; border-top: 1px solid var(--line); text-align: center; max-width: 34em; }
+.rd-fin .kicker { margin: 0; color: var(--gold-text); }
+.rd-fin .btn { display: inline-flex; align-items: center; gap: 8px; }
+.rd-fin .btn svg { width: 15px; height: 15px; }
 .rd-coms-l { max-height: 46vh; overflow-y: auto; }
 .rd-coms-u { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .rd-coms-u li { border-bottom: 1px solid var(--line); padding-bottom: 10px; }
@@ -798,30 +800,15 @@ body.bb-lecture .bb-v:not(.is-lu) { opacity: .38; }
 .nav-moi-menu a:hover, .nav-moi-menu button:hover { background: rgba(var(--ink-rgb), .06); }
 .nav-moi-menu .ic { width: 17px; height: 17px; color: var(--ash); }
 .nav-moi-menu .acct-mail { padding: 4px 10px 8px; margin: 0; border-bottom: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; }
-.nav-courbe, .nav-voile, .top-tiroir { display: none; }
 @media (min-width: 900px) {
   .a-nav .top .acct { display: none; }           /* le cercle vit maintenant en bas de la barre */
   .nav:not(.is-survol):not(.is-epinglee) .nav-recents, .nav:not(.is-survol):not(.is-epinglee) .nav-moi-t { opacity: 0; pointer-events: none; }
   .nav-moi-t { transition: opacity .18s; }
 }
-@media (max-width: 899px) {
-  .a-nav .top-tiroir { display: grid; margin-right: 4px; }
-  .a-nav .nav { display: block; position: fixed; z-index: 95; left: 0; top: 0; bottom: 0; width: min(86vw, 320px); overflow: visible; border-right: 0;
-    transform: translateX(calc(-100% - 110px)); transition: transform .8s cubic-bezier(.76, 0, .24, 1); visibility: hidden; }
-  .a-nav .nav.is-tiroir { transform: none; visibility: visible; }
-  .a-nav .nav:not(.is-tiroir) { transition: transform .8s cubic-bezier(.76, 0, .24, 1), visibility 0s .8s; }
-  .a-nav .nav .nav-in { width: 100%; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
-  .a-nav .nav .nav-l, .a-nav .nav .nav-logo, .a-nav .nav .nav-sec span { opacity: 1; }
-  .a-nav .nav .nav-sec::before, .a-nav .nav .nav-menu { display: none; }
-  .nav-courbe { display: block; position: absolute; top: 0; left: calc(100% - 1px); width: 100px; height: 100%; fill: var(--bone); pointer-events: none; }
-  .nav-courbe path { d: path("M0 0 Q100 400 0 800 Z"); transition: d 1s cubic-bezier(.76, 0, .24, 1); }
-  .nav.is-tiroir .nav-courbe path { d: path("M0 0 Q0 400 0 800 Z"); }
-  .nav-voile { display: block; position: fixed; inset: 0; z-index: 94; background: rgba(20, 4, 8, .45); opacity: 0; pointer-events: none; transition: opacity .5s; }
-  .nav-voile.is-on { opacity: 1; pointer-events: auto; }
-  body.tiroir-ouvert { overflow: hidden; }
-}
+/* 28/10/2026 : sur téléphone, une seule navigation — la barre du bas ; le cercle « Moi » y vit */
+@media (max-width: 899px) { .a-nav .top .acct { display: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .nav-l > span, .nav-a .ic, .nav-a::after, .a-nav .nav, .nav-courbe path, .nav-voile { transition: none !important; }
+  .nav-l > span, .nav-a .ic, .nav-a::after { transition: none !important; }
   .nav-a:hover .nav-l > span, .nav-a:hover > .ic { transform: none; }
 }
 .nav-a.nav-nouveau .ic { box-sizing: border-box; padding: 0; margin: 0; background: none; border-radius: 0; }
@@ -832,42 +819,12 @@ body.bb-lecture .bb-v:not(.is-lu) { opacity: .38; }
 .nav-a { min-height: 40px; }
 .nav-sec { margin-top: 8px; }
 
-/* 22/10/2026 — sur téléphone la barre est HORIZONTALE (rappel du propriétaire) :
-   le menu devient une bande qui glisse depuis la gauche sous la barre du haut,
-   défile au doigt, avec le cercle du compte au bout. Remplace le tiroir vertical. */
+/* 28/10/2026 — barre du bas : cinq onglets fixes, Accueil · Bible · plume · Bibliothèque · Moi.
+   Rien ne défile ni ne se cache. Au toucher et au survol : l'icône se soulève,
+   les lettres ondulent l'une après l'autre, un trait doré se déploie. */
 @media (max-width: 899px) {
-  .a-nav .nav { top: var(--haut, 60px); bottom: auto; width: 100%; height: auto; overflow: visible;
-    border-bottom: 1px solid var(--line); box-shadow: 0 18px 40px -24px rgba(0, 0, 0, .55);
-    transform: translateX(-104%); }
-  .a-nav .nav .nav-in { flex-direction: row; align-items: center; gap: 6px; height: auto; padding: 10px 16px 12px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
-  .a-nav .nav .nav-tete, .a-nav .nav .nav-sec, .nav-courbe { display: none !important; }
-  .a-nav .nav .nav-a { flex: 0 0 auto; width: auto; min-height: 40px; padding: 0 14px; gap: 8px; border-radius: 999px; background: rgba(var(--ink-rgb), .05); scroll-snap-align: start; font-size: 14px; }
-  .a-nav .nav .nav-a.is-active::before { display: none; }
-  .a-nav .nav .nav-a::after { left: 14px; right: 14px; bottom: 4px; }
-  .a-nav .nav .nav-nouveau { margin: 0; }
-  .a-nav .nav .nav-recents, .a-nav .nav .nav-rec-l, .a-nav .nav .nav-bas { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; overflow: visible; }
-  .a-nav .nav .nav-recents[hidden] { display: none; }
-  .a-nav .nav .nav-recents { padding-left: 8px; margin-left: 2px; border-left: 1px solid var(--line); }
-  .a-nav .nav .nav-rec { flex: 0 0 auto; max-width: 180px; min-height: 40px; border-radius: 999px; border: 1px solid var(--line); padding: 0 12px; scroll-snap-align: start; }
-  .a-nav .nav .nav-bas { padding-left: 8px; border-left: 1px solid var(--line); }
-  .a-nav .nav .nav-moi { margin: 0; padding: 0; border: 0; position: static; }
-  .a-nav .nav .nav-moi-b { background: none; padding: 0 4px; min-height: 40px; }
-  .a-nav .nav .nav-moi-t { display: none; }
-  .a-nav .nav .nav-moi-menu { position: fixed; left: 12px; right: 12px; top: calc(var(--haut, 60px) + 70px); bottom: auto; }
-  .nav-voile { top: var(--haut, 60px); }
-  body.tiroir-ouvert { overflow: auto; }
-}
-
-/* 22/10/2026 — barre du bas GLISSANTE : Lire | plume | Écrire + compte.
-   Effet au toucher et au survol : l'icône se soulève, les lettres ondulent
-   l'une après l'autre, un trait doré se déploie. */
-@media (max-width: 899px) {
-  .a-nav .tabs { grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr); padding-left: 0; padding-right: 0; }
-  .tb-cote { display: flex; align-items: end; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-  .tb-cote::-webkit-scrollbar { display: none; }
-  .tb-g { -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent); mask-image: linear-gradient(90deg, #000 82%, transparent); }
-  .tb-d { -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent); mask-image: linear-gradient(90deg, #000 82%, transparent); }
-  .a-nav .tabs .tb-a { position: relative; flex: 0 0 66px; display: grid; justify-items: center; gap: 3px; padding: 6px 0 4px; scroll-snap-align: start; color: var(--ash); font: 500 11px/1.2 var(--sans); white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+  .a-nav .tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .a-nav .tabs .tb-a { position: relative; display: grid; justify-items: center; gap: 3px; padding: 6px 0 4px; color: var(--ash); font: 500 11px/1.2 var(--sans); white-space: nowrap; -webkit-tap-highlight-color: transparent; }
   .a-nav .tabs .tb-a .ic { width: 22px; height: 22px; transition: transform .4s cubic-bezier(.34, 1.56, .64, 1); }
   .a-nav .tabs .tb-a .nav-l { opacity: 1; }
   .a-nav .tabs .tb-a .nav-l > span { display: inline-block; transition: transform .4s cubic-bezier(.34, 1.56, .64, 1); transition-delay: calc(var(--j) * 22ms); }
@@ -880,7 +837,6 @@ body.bb-lecture .bb-v:not(.is-lu) { opacity: .38; }
   html[data-theme="dark"] .a-nav .tabs .tb-a.is-active .ic { color: var(--gold-text); }
   .a-nav .tabs .tb-moi .nav-av { width: 26px; height: 26px; flex-basis: 26px; font-size: 10.5px; transition: transform .4s cubic-bezier(.34, 1.56, .64, 1); }
   .a-nav .tabs .tb-moi:hover .nav-av, .a-nav .tabs .tb-moi:active .nav-av { transform: translateY(-3px) scale(1.08); }
-  .a-nav .tabs .tabs-ecrire { align-self: end; }
 }
 @media (max-width: 899px) and (prefers-reduced-motion: reduce) {
   .a-nav .tabs .tb-a .ic, .a-nav .tabs .tb-a .nav-l > span, .a-nav .tabs .tb-a::after, .a-nav .tabs .tb-moi .nav-av { transition: none !important; }
