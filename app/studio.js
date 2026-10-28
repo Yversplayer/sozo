@@ -52,11 +52,35 @@ window.SOZO_PRET.then(() => {
     if (k === 'couverture') { dessinerCouverture(); return; }
     if (k === 'brouillons') { onglet = 'pages'; vue = 'notes'; filtre = 'all'; rendre(true); $('#livre').scrollIntoView({ behavior: S.reduced ? 'auto' : 'smooth', block: 'start' }); return; }
     if (k === 'mise') { miseEnPage(); return; }
-    if (k === 'importer' || k === 'publier') {
-      onglet = k === 'importer' ? 'import' : 'pages'; if (k === 'publier') filtre = 'draft';
+    if (k === 'publier') { publierTout(); return; }
+    if (k === 'importer') {
+      onglet = 'import';
       rendre(true); $('#livre').scrollIntoView({ behavior: S.reduced ? 'auto' : 'smooth', block: 'start' });
-      if (k === 'publier') S.toast('Cochez des brouillons (vue « Tableau ») ou cliquez « Publier » sous une page.');
     }
+  }
+  /* 28/10/2026 — « Publier » publie VRAIMENT (conseil du 23/10 : le bouton ne
+     faisait qu'afficher « cochez des brouillons »). Tous les brouillons écrits
+     paraissent d'un geste ; le serveur vérifie tout avant la première écriture
+     (lot en entier ou rien) et refuse une page vide. */
+  function publierTout() {
+    const ecrites = livre.pages.filter((p) => p.statut === 'draft' && p.mots > 0).map((p) => p.n).sort((x, y) => x - y);
+    const vides = livre.pages.filter((p) => p.statut === 'draft' && !(p.mots > 0)).length;
+    if (!ecrites.length) { S.toast(vides ? 'Vos brouillons sont encore vides : écrivez au moins une page.' : 'Tout est déjà publié.'); return; }
+    const m = S.modal({ title: `Publier « ${livre.titre} »`, body: `
+      <p><strong>${ecrites.length} page${ecrites.length > 1 ? 's' : ''}</strong> ${ecrites.length > 1 ? 'vont paraître' : 'va paraître'} maintenant : ${S.esc(S.pagesRange(ecrites))}. Vos lecteurs pourront ${ecrites.length > 1 ? 'les' : 'la'} lire tout de suite.</p>
+      ${vides ? `<p class="ash">${vides} brouillon${vides > 1 ? 's' : ''} encore vide${vides > 1 ? 's' : ''} ${vides > 1 ? 'restent' : 'reste'} de côté.</p>` : ''}
+      <p class="note">${S.icon('shield')} Une page parue garde sa version, pour respecter ceux qui l’ont lue. Pour la retoucher ensuite, il faut Plume.</p>`,
+      actions: [{ label: 'Pas encore' }, { label: 'Publier tout le livre', primary: true, onClick: async () => {
+        const btn = m.el.querySelector('.md-actions .btn--accent');
+        attente(btn, true);
+        const r = await API('POST', `/api/studio/livres/${enc(livre.id)}/pages/lot`, { pages: ecrites, action: 'publier' });
+        attente(btn, false);
+        if (!r.ok) { erreur(r); return; }
+        m.close();
+        await relireLivre();
+        S.modal({ title: 'Votre livre est en ligne', body: `<p>« ${S.esc(livre.titre)} » se lit maintenant dans Sōzō.</p>`,
+          actions: [{ label: 'Fermer' }, { label: 'Voir mon livre', primary: true, onClick: () => { location.href = `livre.html?id=${enc(livre.id)}`; } }] });   // l'adresse publique du livre
+      } }] });
   }
   async function charger() {
     const r = await API('GET', '/api/studio');
@@ -121,7 +145,7 @@ window.SOZO_PRET.then(() => {
       <p class="kicker">Que voulez-vous faire ?</p>
       <div class="at-actions-l">
         ${[['ecrire', 'pen', 'Écrire une page', 'Reprendre ou commencer'], ['nouveau', 'plus', 'Nouveau livre', 'Titre, catégorie, prix'], ['importer', 'upload', 'Importer', 'Word, PDF ou EPUB'],
-           ['couverture', 'edit', 'Ma couverture', 'Image, couleurs, police'], ['mise', 'type', 'Mise en page', 'Police, lettrine, ornements'], ['publier', 'send', 'Publier', 'Programmer ou publier']]
+           ['couverture', 'edit', 'Ma couverture', 'Image, couleurs, police'], ['mise', 'type', 'Mise en page', 'Police, lettrine, ornements'], ['publier', 'send', 'Publier tout le livre', 'Tous les brouillons, d’un geste']]
           .map(([k, ic, l, d]) => `<button type="button" class="at-act" data-act="${k}"${!at.livres.length && !['nouveau', 'ecrire', 'importer'].includes(k) ? ' disabled title="Créez d’abord un livre"' : ''}><span class="at-act-ic">${S.icon(ic)}</span><strong>${l}</strong><small>${d}</small></button>`).join('')}
       </div></nav></div>`}
     ${!lecteur && at.plume.actif && (new Date(at.plume.fin) - Date.now()) < 5 * 864e5 ? `<div class="wrap"><p class="warn at-rappel">${S.icon('feather')}<span><strong>Plume se termine le ${S.esc(S.dateLong(at.plume.fin))}.</strong> Ensuite, vos pages publiées redeviennent verrouillées et la commission repasse au taux normal ; vos versions et vos ventes restent acquises. <button class="btn btn--sm" type="button" data-prolonger>Prolonger de 30 jours</button></span></p></div>` : ''}`;
