@@ -207,3 +207,11 @@ cd /Users/macbookpro/sozo && backend_venv/bin/python backend/tools/pg_tests.py
 - **Aucun faux succès à l'écran** : l'interface ne change qu'après la réponse du serveur. Tout texte venant de la base passe par `S.esc()`.
 - **Commits successifs**, avec une ligne `Co-Authored-By` en fin de message. Ne pousser que si le propriétaire le demande et une fois le dépôt créé. Vérifier l'absence de secrets avant.
 - **Fin de chaque rapport** : 🔴 BLOQUANTS / 🟠 NON-BLOQUANTS / 🟢 BACKLOG / 🚦 DÉCISION.
+
+## 13. Allègement du 28/10/2026 (conseil du 23/10) — EN LIGNE le 28/10 (Render `dep-dbh2d2cipgvc73dis89g`, commit 821c843)
+
+Le propriétaire veut un logiciel « simple et léger telle une plume » avant de penser à l'application.
+- **Une seule navigation par appareil.** Téléphone : cinq onglets fixes (Accueil, Bible, plume, Bibliothèque, Moi), rien ne défile ; tiroir et bande horizontale retirés ; Explorer par la loupe, notifications par la cloche ; « Se déconnecter » ajouté au compte. Ordinateur : la barre latérale seule (le bouton « Écrire » du haut est retiré).
+- **Commentaires** : un petit mot (280 signes) à la FIN d'un chapitre, ou du livre s'il n'a pas de chapitres ; plus rien sous chaque page. Côté serveur, rien ne change (le mot reste attaché à la dernière page).
+- **« Publier tout le livre »** (atelier) : publie vraiment tous les brouillons écrits, d'un geste, via le lot (tout ou rien) ; les brouillons vides restent de côté.
+- **Photos en WebP** (≤ 120 Ko, ≤ 35 Ko en 480 px ; quelques couvertures très détaillées un peu au-dessus) : `images/` passe de 10,9 Mo de JPEG à 4,5 Mo. Les JPEG remplacés sont supprimés (hero-crepuscule.jpg reste pour la landing). La liste fermée des photos (`_photos`, `_images_permises`) lit les `.webp`.
