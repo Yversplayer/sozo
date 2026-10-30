@@ -114,6 +114,11 @@ window.SOZO_PRET.then(() => {
             <button class="btn btn--ghost btn--sm" type="button" id="partout" style="margin-top:12px">${S.icon('lock')} Me déconnecter de tous les autres appareils</button>
             <button class="btn btn--ghost btn--sm" type="button" data-sortir style="margin-top:8px">${S.icon('left')} Se déconnecter de cet appareil</button>
           </section>
+          <section class="panel" aria-labelledby="hLegal">
+            <h2 id="hLegal">Sōzō</h2>
+            <p class="ash">La charte de la communauté, les conditions d’utilisation et la confidentialité.</p>
+            <p class="row-acts" style="margin-top:10px"><a class="btn btn--ghost btn--sm" href="charte.html">Charte</a><a class="btn btn--ghost btn--sm" href="cgu.html">Conditions</a><a class="btn btn--ghost btn--sm" href="confidentialite.html">Confidentialité</a></p>
+          </section>
           <section class="panel" aria-labelledby="hAppli" id="appli">
             <h2 id="hAppli">L’application</h2>
             <p class="ash" id="appliTxt">${S.installer.installee() ? 'Sōzō est installé sur cet appareil.' : 'Installez Sōzō sur votre écran d’accueil : il s’ouvre comme une application, et les pages déjà lues restent lisibles sans réseau.'}</p>

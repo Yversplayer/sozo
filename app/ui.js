@@ -534,6 +534,7 @@ window.SOZO = (() => {
       ['accueil', 'decouvrir.html', 'Accueil', 'home'],
       ['explorer', 'explorer.html', 'Explorer', 'grid'],
       ['bibliotheque', 'suivis.html', 'Bibliothèque', 'library'],
+      ['notes', 'suivis.html?vue=notes', 'Mes notes', 'file'],
       ['bible', 'bible.html', 'La Bible', 'book']
     ],
     moi: [
@@ -578,6 +579,7 @@ window.SOZO = (() => {
 
   function shell(active) {
     active = ALIAS[active] || active;
+    if (active === 'bibliotheque' && q('vue') === 'notes') active = 'notes';     // 30/10/2026 : Notes, onglet à part
     const n = unread();
     // 22/10/2026 : au survol, les lettres glissent l'une après l'autre (inspiré du « curved menu » du propriétaire)
     const lettres = (l) => `<span class="nav-l" aria-hidden="true">${[...l].map((c, j) => `<span style="--j:${j}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('')}</span>`;
@@ -648,47 +650,18 @@ window.SOZO = (() => {
     });
     const tabs = document.createElement('nav');
     tabs.className = 'tabs'; tabs.setAttribute('aria-label', 'Navigation');
-    /* 28/10/2026 — UNE seule navigation sur téléphone (conseil du 23/10, choix du
-       propriétaire « simple et légère telle une plume ») : cinq onglets fixes, rien
-       ne défile ni ne se cache. La Bible est toujours visible ; Explorer passe par la
-       loupe du haut, les notifications par la cloche, l'écriture par la plume. */
-    const onglet = ([k, h, l, ic]) => `<a href="${h}" class="tb-a${active === k ? ' is-active' : ''}"${active === k ? ' aria-current="page"' : ''} data-nav="${k}" aria-label="${esc(l)}">${icon(ic)}${lettres(l)}</a>`;
-    tabs.innerHTML = `${[['accueil', 'decouvrir.html', 'Accueil', 'home'], ['bible', 'bible.html', 'Bible', 'book']].map(onglet).join('')}
-      <button type="button" class="tabs-ecrire${['ecrits', 'atelier', 'ecrire', 'importer'].includes(active) ? ' is-active' : ''}" id="pilBtn" aria-expanded="false" aria-controls="pilule" data-nav="ecrits">${icon('feather')}<span>Écrire</span></button>
-      ${onglet(['bibliotheque', 'suivis.html', 'Bibliothèque', 'library'])}
-      <a href="compte.html" class="tb-a tb-moi${active === 'compte' ? ' is-active' : ''}" data-nav="compte" aria-label="Mon compte et paramètres"><span class="nav-av" aria-hidden="true">${esc(initials())}</span>${lettres('Moi')}</a>`;
+    /* 30/10/2026 — l'APPLICATION (captures du propriétaire) : cinq onglets fixes,
+       Découvrir · Bibliothèque · Écrire (rond doré au centre) · Notes · Profil.
+       Une seule navigation : la barre du haut disparaît sur téléphone, chaque
+       écran porte son titre ; la Bible et la cloche vivent en tête de Découvrir. */
+    const vueNotes = active === 'notes';
+    const ici = (k) => (k === 'decouvrir' && ['accueil', 'explorer'].includes(active)) || (k === 'notes' && vueNotes)
+      || (k === 'bibliotheque' && active === 'bibliotheque' && !vueNotes) || (k === 'profil' && active === 'compte')
+      || (k === 'ecrire' && ['ecrits', 'atelier', 'ecrire', 'importer'].includes(active));
+    const onglet = ([k, h, l, ic]) => `<a href="${h}" class="tb-a${k === 'ecrire' ? ' tabs-ecrire' : ''}${ici(k) ? ' is-active' : ''}"${ici(k) ? ' aria-current="page"' : ''} data-nav="${k}" aria-label="${esc(l)}">${k === 'profil' ? `<span class="nav-av" aria-hidden="true">${esc(initials())}</span>` : icon(ic)}${lettres(l)}</a>`;
+    tabs.innerHTML = [['decouvrir', 'decouvrir.html', 'Découvrir', 'home'], ['bibliotheque', 'suivis.html', 'Bibliothèque', 'library'],
+      ['ecrire', 'studio.html', 'Écrire', 'feather'], ['notes', 'suivis.html?vue=notes', 'Notes', 'file'], ['profil', 'compte.html', 'Profil', 'user']].map(onglet).join('');
     document.body.appendChild(tabs);
-
-    /* 22/10/2026 — la plume déplie une pilule en relief (inspirée du
-       « 3D adaptive navigation bar » montré par le propriétaire, portée sans
-       React ni bibliothèque : la CSP n'en laisse entrer aucune). Elle porte
-       le contenu « Écrire » de la barre latérale. Toucher la plume, Échap ou
-       toucher ailleurs la replie ; aria-expanded dit toujours la vérité. */
-    const pil = document.createElement('div');
-    pil.className = 'pil'; pil.id = 'pilule'; pil.hidden = true;
-    pil.innerHTML = `<div class="pil-corps" role="menu" aria-label="Écrire"><i class="pil-reflet" aria-hidden="true"></i><i class="pil-reflet2" aria-hidden="true"></i>
-      ${NAV.ecrire.map(([k, h, l, ic], i) => `<a role="menuitem" href="${h}" class="pil-a${active === k ? ' is-active' : ''}" style="--i:${i}">${icon(ic)}<span>${k === 'importer' ? 'Importer' : l}</span></a>`).join('')}</div>`;
-    tabs.before(pil);
-    const pb = tabs.querySelector('#pilBtn');
-    const plier = (ouvrir, focus) => {
-      clearTimeout(pil._t);
-      pb.setAttribute('aria-expanded', String(ouvrir));
-      if (ouvrir) {
-        pil.hidden = false; void pil.offsetWidth; pil.classList.add('is-on');
-        if (focus) pil.querySelector('.pil-a').focus();
-      } else {
-        pil.classList.remove('is-on');
-        pil._t = setTimeout(() => { pil.hidden = true; }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420);
-      }
-    };
-    pb.addEventListener('click', (e) => { e.stopPropagation(); plier(pb.getAttribute('aria-expanded') !== 'true', e.detail === 0); });
-    document.addEventListener('click', (e) => { if (!pil.hidden && !e.target.closest('.pil')) plier(false); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pil.hidden) { plier(false); pb.focus(); } });
-    pil.addEventListener('keydown', (e) => {
-      if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
-      const l = [...pil.querySelectorAll('.pil-a')], i = l.indexOf(document.activeElement);
-      l[(i + (e.key === 'ArrowRight' ? 1 : l.length - 1)) % l.length].focus(); e.preventDefault();
-    });
 
     /* barre latérale : épinglée (bouton), ou dépliée le temps du survol / du clavier */
     const menu = nav.querySelector('#navMenu');

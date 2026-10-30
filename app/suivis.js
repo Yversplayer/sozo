@@ -20,9 +20,14 @@ window.SOZO_PRET.then(async () => {
   const chargerAbos = async () => { const r = await window.SOZO_API('GET', '/api/abonnements'); abonnements = r.ok ? r.d.auteurs : null; };
   await Promise.all([charger(), chargerEpingles(), chargerGardes(), chargerAbos(), chargerLot()]);
   const NOMS_B = ['Genèse', 'Exode', 'Lévitique', 'Nombres', 'Deutéronome', 'Josué', 'Juges', 'Ruth', '1 Samuel', '2 Samuel', '1 Rois', '2 Rois', '1 Chroniques', '2 Chroniques', 'Esdras', 'Néhémie', 'Esther', 'Job', 'Psaumes', 'Proverbes', 'Ecclésiaste', 'Cantique des Cantiques', 'Ésaïe', 'Jérémie', 'Lamentations', 'Ézéchiel', 'Daniel', 'Osée', 'Joël', 'Amos', 'Abdias', 'Jonas', 'Michée', 'Nahum', 'Habacuc', 'Sophonie', 'Aggée', 'Zacharie', 'Malachie', 'Matthieu', 'Marc', 'Luc', 'Jean', 'Actes des Apôtres', 'Romains', '1 Corinthiens', '2 Corinthiens', 'Galates', 'Éphésiens', 'Philippiens', 'Colossiens', '1 Thessaloniciens', '2 Thessaloniciens', '1 Timothée', '2 Timothée', 'Tite', 'Philémon', 'Hébreux', 'Jacques', '1 Pierre', '2 Pierre', '1 Jean', '2 Jean', '3 Jean', 'Jude', 'Apocalypse'];
-  const ONGLETS = [['livres', 'En cours', 'book'], ['ecrits', 'Écrits gardés', 'garder'], ['abonnements', 'Abonnements', 'user'], ['epingles', 'Épingles', 'tag'], ['notifications', 'Notifications', 'bell']];
+  /* 30/10/2026 — l'application a deux onglets distincts sur la même page :
+     Bibliothèque (livres, abonnements, notifications) et Notes (passages
+     épinglés, versets, marque-pages, écrits gardés), via ?vue=notes. */
+  const NOTES = S.q('vue') === 'notes';
+  const ONGLETS = NOTES ? [['epingles', 'Passages et versets', 'tag'], ['ecrits', 'Écrits gardés', 'garder']]
+    : [['livres', 'En cours', 'book'], ['abonnements', 'Abonnements', 'user'], ['notifications', 'Notifications', 'bell']];
   let onglet = (location.hash || '').slice(1);
-  if (!ONGLETS.some(([k]) => k === onglet)) onglet = 'livres';
+  if (!ONGLETS.some(([k]) => k === onglet)) onglet = ONGLETS[0][0];
   const main = $('#main');
 
   /* 22/10/2026 — la bibliothèque « en piles » (image « My Library » du
@@ -59,8 +64,8 @@ window.SOZO_PRET.then(async () => {
     const nonLues = notifs ? notifs.filter((x) => !x.lu_le).length : 0;
     main.innerHTML = `<div class="wrap">
       <section class="sec" style="padding-top:44px">
-        <h1 class="sec-title" style="font-size:clamp(34px,4.6vw,52px)">Ma bibliothèque</h1>
-        <div class="bi-onglets" role="tablist" aria-label="Ma bibliothèque">${ONGLETS.map(([k, l, ic]) => `<button type="button" role="tab" id="bi-${k}" aria-controls="biPanel" aria-selected="${onglet === k}" tabindex="${onglet === k ? 0 : -1}" data-bi="${k}">${S.icon(ic)} ${l}${k === 'notifications' && nonLues ? ` <span class="dot">${nonLues}</span>` : ''}${k === 'epingles' && epingles && epingles.length ? ` <span class="bi-n">${epingles.length}</span>` : ''}${k === 'ecrits' && gardes && gardes.length ? ` <span class="bi-n">${gardes.length}</span>` : ''}</button>`).join('')}</div>
+        <h1 class="sec-title" style="font-size:clamp(34px,4.6vw,52px)">${NOTES ? 'Mes notes' : 'Ma bibliothèque'}</h1>
+        <div class="bi-onglets" role="tablist" aria-label="${NOTES ? 'Mes notes' : 'Ma bibliothèque'}">${ONGLETS.map(([k, l, ic]) => `<button type="button" role="tab" id="bi-${k}" aria-controls="biPanel" aria-selected="${onglet === k}" tabindex="${onglet === k ? 0 : -1}" data-bi="${k}">${S.icon(ic)} ${l}${k === 'notifications' && nonLues ? ` <span class="dot">${nonLues}</span>` : ''}${k === 'epingles' && epingles && epingles.length ? ` <span class="bi-n">${epingles.length}</span>` : ''}${k === 'ecrits' && gardes && gardes.length ? ` <span class="bi-n">${gardes.length}</span>` : ''}</button>`).join('')}</div>
       </section>
       <div id="biPanel" role="tabpanel" aria-labelledby="bi-${onglet}">
       <section class="sec" id="ecrits" style="padding-top:28px"${onglet === 'ecrits' ? '' : ' hidden'}>
@@ -144,6 +149,7 @@ window.SOZO_PRET.then(async () => {
     // une pile mène à son onglet (écrits, versets) ou à sa liste (progression)
     document.querySelectorAll('[data-pile]').forEach((x) => x.addEventListener('click', (e) => {
       const cible = x.dataset.pile;
+      if ((cible === 'ecrits' || cible === 'epingles') && !NOTES) { e.preventDefault(); location.href = `suivis.html?vue=notes#${cible}`; return; }
       if (cible === 'ecrits' || cible === 'epingles') { e.preventDefault(); onglet = cible; history.replaceState(null, '', '#' + onglet); render(); document.getElementById('bi-' + onglet).focus(); }
     }));
     document.querySelectorAll('[data-signet], [data-verset]').forEach((x) => x.addEventListener('click', async () => {

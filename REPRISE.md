@@ -215,3 +215,14 @@ Le propriétaire veut un logiciel « simple et léger telle une plume » avant d
 - **Commentaires** : un petit mot (280 signes) à la FIN d'un chapitre, ou du livre s'il n'a pas de chapitres ; plus rien sous chaque page. Côté serveur, rien ne change (le mot reste attaché à la dernière page).
 - **« Publier tout le livre »** (atelier) : publie vraiment tous les brouillons écrits, d'un geste, via le lot (tout ou rien) ; les brouillons vides restent de côté.
 - **Photos en WebP** (≤ 120 Ko, ≤ 35 Ko en 480 px ; quelques couvertures très détaillées un peu au-dessus) : `images/` passe de 10,9 Mo de JPEG à 4,5 Mo. Les JPEG remplacés sont supprimés (hero-crepuscule.jpg reste pour la landing). La liste fermée des photos (`_photos`, `_images_permises`) lit les `.webp`.
+
+## 14. L'application, sur le Sōzō actuel (30/10/2026) — PAS ENCORE POUSSÉE
+
+La version de l'ami (monorepo NestJS) n'arrivera pas. L'application = le Sōzō actuel, même serveur et mêmes données, avec un écran téléphone refait d'après ses captures. Toujours installable (PWA) ; l'emballage pour le Play Store viendra après, avec l'accord du propriétaire (compte Google payant).
+- **`app/appli.css`** (préfixe `ap-`, téléphone ≤ 899 px seulement) : barre du haut effacée, barre d'onglets flottante, pied de page masqué.
+- **Cinq onglets** (`ui.js`) : Découvrir · Bibliothèque · **Écrire** (rond doré, mène à l'atelier) · Notes · Profil (cercle aux initiales). La pilule de la plume est retirée.
+- **Découvrir** (`decouvrir.js`, branche `tel`) : bonjour avec avatar, Bible et cloche en ronds, recherche, verset du jour, Continuer la lecture, Nouveautés, Pour vous, Explorer par catégories, Écrits aimés. L'ordinateur garde l'accueil « votre monde ».
+- **Notes** = `suivis.html?vue=notes` (passages épinglés, versets, marque-pages, écrits gardés) ; **Bibliothèque** = livres, abonnements, notifications. « Mes notes » ajouté à la barre latérale de l'ordinateur.
+- **Écrire** (`studio.js`, `accueilAppli`) : sur téléphone sans livre choisi, « Nouveau livre », un écrit court, Mes écrits, puis Mes livres en cartes (Brouillon / Publié).
+- **Liseuse** : le chapitre et le pourcentage sous le titre, un bouton « Chapitre suivant » (tous écrans).
+- **Profil** : liens Charte / Conditions / Confidentialité (le pied de page n'existe plus sur téléphone).

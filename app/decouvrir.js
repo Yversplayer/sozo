@@ -59,7 +59,39 @@ window.SOZO_PRET.then(() => {
   const lienLecture = (b) => { const lu = D.reader.progress[b.id]; const vis = S.visiblePages(b); return `lire.html?id=${encodeURIComponent(b.id)}&p=${vis.find((x) => x.n === lu) ? lu : (vis[0] ? vis[0].n : 1)}`; };
   const catsSuivies = [...new Set(enCours.map((b) => b.cat))];
   const pourVous = autres.filter((b) => catsSuivies.includes(b.cat) && !enCours.includes(b));
-  main.innerHTML = `<div class="wrap ac vl-ac">
+  /* 30/10/2026 — l'APPLICATION (captures du propriétaire) : sur téléphone,
+     Découvrir est clair et dégagé — bonjour, recherche, la Bible et la cloche,
+     reprendre la lecture, nouveautés, pour vous, catégories, écrits aimés.
+     Pas de photo plein écran : la page s'affiche vite en 3G. */
+  const tel = matchMedia('(max-width: 899px)').matches;
+  const cats = [...new Set(autres.map((b) => b.cat))].slice(0, 8);
+  const nNotifs = S.unread();
+  const initiales = (() => { const n = (moi.name || '?').trim().split(/\s+/); return ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase(); })();
+  const appli = () => `<div class="ap ap-dec">
+    <header class="ap-tete">
+      <a class="ap-moi" href="compte.html" aria-label="Mon profil"><span class="nav-av" aria-hidden="true">${S.esc(initiales)}</span></a>
+      <h1>${S.esc(salut)}${prenom ? `, ${S.esc(prenom)}` : ''}</h1>
+      <a class="ap-rond" href="bible.html" aria-label="La Bible">${S.icon('book')}</a>
+      <a class="ap-rond" href="suivis.html#notifications" aria-label="Notifications${nNotifs ? ` : ${nNotifs} nouvelle${nNotifs > 1 ? 's' : ''}` : ''}">${S.icon('bell')}${nNotifs ? `<span class="ap-pastille">${nNotifs}</span>` : ''}</a>
+    </header>
+    <a class="ap-cherche" href="explorer.html#q">${S.icon('search')}<span>Rechercher livres, auteurs…</span></a>
+    <p class="ap-verset" id="versetJour" hidden></p>
+    <aside class="vl-installer" id="bandeauInstaller" hidden><span>${S.icon('upload')} Installez Sōzō sur votre écran d’accueil, et lisez même sans réseau.</span>
+      <span class="row-acts"><button class="btn btn--accent btn--sm" type="button" id="instOui">Installer</button><button class="ec-lien" type="button" id="instNon">Plus tard</button></span></aside>
+    ${lecture ? `<a class="ap-reprise" href="${lienLecture(lecture)}"><span class="ap-reprise-cv">${S.cover(lecture, { d3: false })}</span>
+      <span class="ap-reprise-t"><small>Continuer la lecture</small><strong>${S.esc(lecture.title)}</strong><span>${S.esc(S.author(lecture.author).name)}</span>
+      <span class="prog" role="progressbar" aria-valuenow="${pctDe(lecture)}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression"><i style="width:${pctDe(lecture)}%"></i></span><em>${pctDe(lecture)} % lu</em></span></a>`
+      : `<a class="ap-reprise ap-reprise--vide" href="explorer.html"><span class="ap-reprise-t"><small>Votre première lecture</small><strong>Trouvez un livre qui vous parle</strong><span>Explorer le catalogue ${S.icon('right')}</span></span></a>`}
+    ${S.rangee('Nouveautés', nouveautes, { lien: 'explorer.html' })}
+    ${S.rangee('Pour vous', pourVous.slice(0, 12), { lien: 'explorer.html' })}
+    ${cats.length ? `<section class="ap-sec" aria-labelledby="apCats"><div class="ap-sec-h"><h2 id="apCats">Explorer par catégories</h2><a class="ec-lien" href="explorer.html">Tout voir</a></div>
+      <div class="ap-cats">${cats.map((c) => { const l = autres.filter((b) => b.cat === c); return `<a class="ap-cat" href="explorer.html?cat=${encodeURIComponent(c)}"><span class="ap-cat-cv">${S.cover(l[0], { d3: false })}</span><span><strong>${S.esc(c)}</strong><small>${l.length} livre${l.length > 1 ? 's' : ''}</small></span></a>`; }).join('')}</div></section>` : ''}
+    <section class="xp-rang" aria-label="Les écrits les plus aimés">
+      <div class="xp-rang-h"><h2>Écrits aimés</h2><a class="ec-lien" href="explorer.html?vue=ecrits">Tout voir</a></div>
+      <div class="xp-defile" id="moAimes" tabindex="0"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>
+    </section>
+  </div>`;
+  main.innerHTML = tel ? appli() : `<div class="wrap ac vl-ac">
     <section class="mo-hero" style="--mo-photo:url('${S.esc(S.img(PHOTO_HEURE))}')">
       <div class="mo-hero-t">
         <p class="mo-k">Votre Sōzō · ${S.esc(new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }))}</p>
@@ -155,7 +187,7 @@ window.SOZO_PRET.then(() => {
       : abos ? `<div class="empty"><strong>Rien de neuf chez vos abonnements</strong>Suivez les auteurs qui vous touchent : touchez leur nom, puis « Suivre ».</div>`
       : `<div class="empty"><strong>Aucun écrit pour l’instant</strong>Le premier peut être le vôtre : une phrase suffit.<br><br><a class="btn" href="ecrits.html?nouveau=pensee">${S.icon('feather')} Écrire une pensée</a></div>`;
   };
-  chargerFil(false);
+  if ($('#fil')) chargerFil(false);
   S.brancherRangees(main);
   window.SOZO_API('GET', '/api/ecrits').then((r) => {
     const l = r.ok ? [...r.d.ecrits].sort((x, y) => (y.jaime || 0) - (x.jaime || 0)).slice(0, 10) : [];
@@ -169,7 +201,7 @@ window.SOZO_PRET.then(() => {
     z.hidden = false;
   });
   $$('[data-fil]').forEach((c) => c.addEventListener('click', () => { $$('[data-fil]').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); chargerFil(!!c.dataset.fil); }));
-  E.brancher($('#fil'), (id) => ecrits.find((e) => e.id === id));
+  if ($('#fil')) E.brancher($('#fil'), (id) => ecrits.find((e) => e.id === id));
 
   const px = $('#pasX');
   if (px) px.addEventListener('click', () => { try { localStorage.setItem('sozo-pas-ferme', auteur ? 'a' : 'l'); } catch (e) {} $('.ac-pas').remove(); });

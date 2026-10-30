@@ -86,6 +86,9 @@ window.SOZO_PRET.then(() => {
     const r = await API('GET', '/api/studio');
     if (!r.ok) throw new Error('studio ' + r.status);
     at = r.d;
+    // 30/10/2026 — l'application : sur téléphone, l'onglet Écrire s'ouvre sur la liste
+    // (« Nouveau livre », puis Mes livres) ; un livre s'ouvre quand on le touche.
+    if (TEL && !S.q('id') && !S.q('action')) { livre = null; rendre(); return; }
     const id = S.q('id') || (at.livres[0] && at.livres[0].id);
     livre = null;
     if (at.role === 'auteur' && id) await ouvrirLivre(id, false);
@@ -893,8 +896,25 @@ window.SOZO_PRET.then(() => {
   }
 
   /* ═══════════ RENDU ET LIENS ═══════════ */
+  const TEL = matchMedia('(max-width: 899px)').matches;
+  /* L'écran « Écrire » de l'application : un grand bouton, puis les livres en cartes */
+  function accueilAppli() {
+    const etat = (b) => (b.sorties ? ['Publié', 'publie'] : ['Brouillon', 'brouillon']);
+    return `<div class="ap ap-ec">
+      <p class="kicker">Studio auteur</p><h1>Écrire</h1>
+      <p class="ap-ec-sous">Un livre page après page, ou un écrit court : une pensée, une prière, un poème.</p>
+      <button type="button" class="ap-ec-nouveau">${S.icon('plus')}<span>Nouveau livre</span></button>
+      <div class="ap-ec-duo"><a class="ap-ec-court" href="ecrits.html?nouveau=pensee">${S.icon('feather')}<span>Un écrit court</span></a><a class="ap-ec-court" href="ecrits.html">${S.icon('file')}<span>Mes écrits</span></a></div>
+      ${at.livres.length ? `<h2 class="ap-ec-h">Mes livres</h2><ul class="ap-ec-livres">${at.livres.map((b) => { const [l, c] = etat(b); return `<li><a class="ap-ec-livre" href="studio.html?id=${enc(b.id)}">
+        <span class="ap-ec-cv">${couv(b, { d3: false })}</span>
+        <span class="ap-ec-t"><strong>${S.esc(b.titre)}</strong><small>${b.total} page${b.total > 1 ? 's' : ''}${b.brouillons ? ` · ${b.brouillons} brouillon${b.brouillons > 1 ? 's' : ''}` : ''}</small></span>
+        <span class="ap-etat ap-etat--${c}">${l}</span></a></li>`; }).join('')}</ul>`
+        : `<p class="ash ap-ec-vide">Votre premier livre vous est offert : touchez « Nouveau livre ».</p>`}
+    </div>`;
+  }
   function rendre(garderDefilement) {
     const y = scrollY;
+    if (TEL && !livre) { main.innerHTML = accueilAppli(); main.querySelector('.ap-ec-nouveau').addEventListener('click', () => nouveauLivre()); urlEtat(); return; }
     main.innerHTML = atelier() + `<div class="wrap">${at.role === 'auteur' ? espaceLivre() + revenus() : ''}</div>`;
     lier();
     S.inkAll(main); S.tilt(main);

@@ -53,6 +53,7 @@ window.SOZO_PRET.then(() => {
   top.innerHTML = `
     <a class="icon-btn" href="livre.html?id=${encodeURIComponent(b.id)}" aria-label="Retour à la fiche du livre">${S.icon('left')}</a>
     <div class="rd-title"><strong>${S.esc(b.title)}</strong><span id="rdOu"></span></div>
+    <a class="rd-suite" id="rdSuite" href="#" hidden><span class="rd-suite-l">Chapitre suivant</span><span class="rd-suite-c">Suivant</span> ${S.icon('right')}</a>
     <button class="icon-btn" type="button" id="chercheBtn" aria-expanded="false" aria-controls="chercheL" aria-label="Chercher dans ce livre" title="Chercher dans ce livre">${S.icon('search')}</button>
     <button class="icon-btn" type="button" id="signetBtn" aria-pressed="false" aria-label="Marque-page sur cette page" title="Marque-page">${S.icon('garder')}</button>
     <button class="icon-btn" type="button" id="voixBtn" aria-pressed="false" aria-label="Écouter la page" title="Écouter la page">${S.icon('bulle')}</button>
@@ -313,7 +314,12 @@ window.SOZO_PRET.then(() => {
   /* où l'on en est : titre, barre de progression, adresse (sans recharger) */
   function ou() {
     const idx = visible.findIndex((p) => p.n === n);
-    $('#rdOu').textContent = `${idx >= 0 ? `Page ${n} sur ${visible.length}` : 'Page introuvable'} · ${a.name}`;
+    // 30/10/2026 — l'application (captures) : le chapitre, le pourcentage lu, le chapitre suivant
+    const ch = S.chapterOf(b, n), pct = idx >= 0 ? Math.round(((idx + 1) / visible.length) * 100) : 0;
+    $('#rdOu').textContent = idx >= 0 ? `${ch ? `${ch.t} · ` : ''}${pct} % · page ${n} sur ${visible.length}` : 'Page introuvable';
+    const suiv = b.chapters.find((c) => c.from > n && visible.some((p) => p.n === c.from)), su = $('#rdSuite');
+    su.hidden = !suiv;
+    if (suiv) { su.href = `lire.html?id=${encodeURIComponent(b.id)}&p=${suiv.from}`; su.dataset.aller = suiv.from; su.setAttribute('aria-label', `Chapitre suivant : ${suiv.t}`); }
     $('#rdProg').style.width = idx >= 0 ? `${((idx + 1) / visible.length) * 100}%` : '0';
     document.title = `${b.title}, page ${n} — Sōzō`;
     history.replaceState(null, '', `lire.html?id=${encodeURIComponent(b.id)}&p=${n}`);
