@@ -100,11 +100,28 @@ function exigerHttps(requete, url) {
   return Response.json({ erreur: "Sōzō n'accepte que HTTPS." }, { status: 403 });
 }
 
+// 30/10/2026 — l'application Android (paquet PWABuilder, Trusted Web Activity).
+// Android lit ce fichier pour vérifier que l'application et le site ont le même
+// propriétaire ; sans lui, l'application s'ouvre avec une barre d'adresse.
+// Ce n'est que l'empreinte PUBLIQUE de la clé de signature : rien de secret.
+// Une nouvelle clé (Play Store, autre identifiant) = une entrée de plus ici.
+const ASSETLINKS = [{
+  relation: ["delegate_permission/common.handle_all_urls"],
+  target: {
+    namespace: "android_app",
+    package_name: "dev.workers.mudeyimusimwa.sozo.twa",
+    sha256_cert_fingerprints: ["2B:49:AE:06:2B:EC:88:09:0D:F1:CC:6E:F7:E9:79:A7:CA:5A:87:CA:2B:76:48:4F:FE:31:0D:54:F4:48:4C:FB"],
+  },
+}];
+
 export default {
   async fetch(requete, env) {
     const url = new URL(requete.url);
     const refus = exigerHttps(requete, url);
     if (refus) return refus;
+    if (url.pathname === "/.well-known/assetlinks.json") {
+      return Response.json(ASSETLINKS, { headers: { ...ENTETES_SECURITE, "Cache-Control": "public, max-age=3600" } });
+    }
     if (url.pathname === "/api" || url.pathname.startsWith("/api/")) return relayerApi(requete, env, url);
     return servirFichier(requete, env, url);
   },
