@@ -216,7 +216,7 @@ Le propriétaire veut un logiciel « simple et léger telle une plume » avant d
 - **« Publier tout le livre »** (atelier) : publie vraiment tous les brouillons écrits, d'un geste, via le lot (tout ou rien) ; les brouillons vides restent de côté.
 - **Photos en WebP** (≤ 120 Ko, ≤ 35 Ko en 480 px ; quelques couvertures très détaillées un peu au-dessus) : `images/` passe de 10,9 Mo de JPEG à 4,5 Mo. Les JPEG remplacés sont supprimés (hero-crepuscule.jpg reste pour la landing). La liste fermée des photos (`_photos`, `_images_permises`) lit les `.webp`.
 
-## 14. L'application, sur le Sōzō actuel (30/10/2026) — PAS ENCORE POUSSÉE
+## 14. L'application, sur le Sōzō actuel (30/10/2026) — EN LIGNE le 30/10
 
 La version de l'ami (monorepo NestJS) n'arrivera pas. L'application = le Sōzō actuel, même serveur et mêmes données, avec un écran téléphone refait d'après ses captures. Toujours installable (PWA) ; l'emballage pour le Play Store viendra après, avec l'accord du propriétaire (compte Google payant).
 - **`app/appli.css`** (préfixe `ap-`, téléphone ≤ 899 px seulement) : barre du haut effacée, barre d'onglets flottante, pied de page masqué.
@@ -226,3 +226,6 @@ La version de l'ami (monorepo NestJS) n'arrivera pas. L'application = le Sōzō 
 - **Écrire** (`studio.js`, `accueilAppli`) : sur téléphone sans livre choisi, « Nouveau livre », un écrit court, Mes écrits, puis Mes livres en cartes (Brouillon / Publié).
 - **Liseuse** : le chapitre et le pourcentage sous le titre, un bouton « Chapitre suivant » (tous écrans).
 - **Profil** : liens Charte / Conditions / Confidentialité (le pied de page n'existe plus sur téléphone).
+- **D'après les images du dossier Téléchargements** : « À la une » et catégories en ronds (Stoody, Modern Book Reading App) ; compteurs sur les pastilles de Bibliothèque et Notes (My Library) ; Notes en liste avec la petite couverture (Apple Notes) ; fiche du livre centrée, chiffres en carte, bouton court « Commencer la lecture » (Epicplot, Tsundoku). Écartés : l'étagère en bois et ses objets (trop lourde en 3G), notes et étoiles (n'existent pas dans Sōzō).
+- **iPhone** : `viewport-fit=cover` ; s'installe par Safari → Partager → « Sur l'écran d'accueil ».
+- Corrigé au passage : la fiche du livre débordait de 100 % en largeur sur ordinateur (bandeau `-100vw`), `overflow-x: clip`.

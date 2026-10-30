@@ -62,10 +62,14 @@ window.SOZO_PRET.then(async () => {
     const ago = (iso) => { const d = -S.relDays(iso); return d <= 0 ? "aujourd'hui" : d === 1 ? 'hier' : `il y a ${d} jours`; };
 
     const nonLues = notifs ? notifs.filter((x) => !x.lu_le).length : 0;
+    // 30/10/2026 — un compteur sur chaque pastille (image « My Library » du propriétaire)
+    const COMPTES = { livres: fol.length, abonnements: (abonnements || []).length, epingles: (epingles || []).length + versets.length + signets.length, ecrits: (gardes || []).length };
+    const nNotes = COMPTES.epingles + COMPTES.ecrits;
     main.innerHTML = `<div class="wrap">
       <section class="sec" style="padding-top:44px">
         <h1 class="sec-title" style="font-size:clamp(34px,4.6vw,52px)">${NOTES ? 'Mes notes' : 'Ma bibliothèque'}</h1>
-        <div class="bi-onglets" role="tablist" aria-label="${NOTES ? 'Mes notes' : 'Ma bibliothèque'}">${ONGLETS.map(([k, l, ic]) => `<button type="button" role="tab" id="bi-${k}" aria-controls="biPanel" aria-selected="${onglet === k}" tabindex="${onglet === k ? 0 : -1}" data-bi="${k}">${S.icon(ic)} ${l}${k === 'notifications' && nonLues ? ` <span class="dot">${nonLues}</span>` : ''}${k === 'epingles' && epingles && epingles.length ? ` <span class="bi-n">${epingles.length}</span>` : ''}${k === 'ecrits' && gardes && gardes.length ? ` <span class="bi-n">${gardes.length}</span>` : ''}</button>`).join('')}</div>
+        <p class="bi-compte">${NOTES ? `${nNotes} note${nNotes > 1 ? 's' : ''} gardée${nNotes > 1 ? 's' : ''}` : `${fol.length} livre${fol.length > 1 ? 's' : ''} suivi${fol.length > 1 ? 's' : ''}`}</p>
+        <div class="bi-onglets" role="tablist" aria-label="${NOTES ? 'Mes notes' : 'Ma bibliothèque'}">${ONGLETS.map(([k, l, ic]) => `<button type="button" role="tab" id="bi-${k}" aria-controls="biPanel" aria-selected="${onglet === k}" tabindex="${onglet === k ? 0 : -1}" data-bi="${k}">${S.icon(ic)} ${l}${k === 'notifications' && nonLues ? ` <span class="dot">${nonLues}</span>` : ''}${k !== 'notifications' && COMPTES[k] ? ` <span class="bi-n">${COMPTES[k]}</span>` : ''}</button>`).join('')}</div>
       </section>
       <div id="biPanel" role="tabpanel" aria-labelledby="bi-${onglet}">
       <section class="sec" id="ecrits" style="padding-top:28px"${onglet === 'ecrits' ? '' : ' hidden'}>
@@ -86,7 +90,7 @@ window.SOZO_PRET.then(async () => {
           <div class="row-acts"><a class="btn btn--ghost btn--sm" href="bible.html?b=${x.b}&c=${x.c}&v=${x.v1}${x.v2 !== x.v1 ? '-' + x.v2 : ''}">${S.esc(NOMS_B[x.b - 1])} ${x.c}:${x.v1}${x.v2 !== x.v1 ? '–' + x.v2 : ''} ${S.icon('right')}</a><button class="btn btn--ghost btn--sm" type="button" data-verset="${x.id}">Retirer</button></div></div>`).join('')}</div>` : ''}
         ${epingles === null ? `<p class="warn">${S.icon('x')}<span>Épingles indisponibles pour le moment.</span></p>`
           : epingles.length ? (() => { const par = {}; epingles.forEach((e) => (par[e.livre] = par[e.livre] || { titre: e.titre, l: [] }).l.push(e)); return Object.entries(par).map(([slug, g]) => `<div class="panel bi-pins">
-              <h2>${S.esc(g.titre)}</h2>
+              <h2>${S.book(slug) ? `<span class="bi-cv">${S.cover(S.book(slug), { d3: false })}</span>` : ''}${S.esc(g.titre)}</h2>
               ${g.l.map((e) => `<div class="bi-pin" data-pin="${e.id}"><blockquote>« ${S.esc(e.extrait)} »</blockquote>
                 ${e.note ? `<p class="bi-note">${S.icon('edit')} ${S.esc(e.note)}</p>` : ''}
                 <div class="row-acts"><a class="btn btn--ghost btn--sm" href="lire.html?id=${encodeURIComponent(slug)}&p=${e.n}">Page ${e.n} ${S.icon('right')}</a>

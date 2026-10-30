@@ -58,7 +58,7 @@ window.SOZO_PRET.then(() => {
         <div>${S.icon(st.next ? 'clock' : 'check')}<dt>${st.next ? 'Prochaine page' : 'Parution'}</dt><dd>${st.next ? S.esc(S.dateShort(st.next.date)) : b.mode === 'progressive' ? 'à jour' : 'complet'}</dd></div>
       </dl>
       <div class="lv-actions">
-        <a class="btn btn--accent lv-lire" href="${pagesLues}">${S.icon('book')} ${firstReadable ? (prog ? `Reprendre « ${S.esc(b.title)} », page ${prog}` : `Lire « ${S.esc(b.title)} »`) : 'Voir la première page'}</a>
+        <a class="btn btn--accent lv-lire" href="${pagesLues}">${S.icon('book')} <span class="lv-lire-l">${firstReadable ? (prog ? `Reprendre « ${S.esc(b.title)} », page ${prog}` : `Lire « ${S.esc(b.title)} »`) : 'Voir la première page'}</span><span class="lv-lire-c">${firstReadable ? (prog ? `Reprendre · page ${prog}` : 'Commencer la lecture') : 'Première page'}</span></a>
         <button class="btn lv-plus" type="button" id="follow"></button>
         <button class="btn btn--ghost lv-plus" type="button" id="partagerLivre" aria-label="Partager ce livre" title="Partager">${S.icon('partager')}</button>
       </div>

@@ -621,6 +621,7 @@ html:not([data-theme="dark"]) .av-etoiles { color: #8A6A12; }
   .lv--web .lv-cv { grid-column: 1; grid-row: 1 / span 9; width: 280px; margin: 0; transform: perspective(900px) rotateY(8deg); transform-origin: left center; }
   .lv--web .lv-cv .cv-face { box-shadow: 18px 26px 44px -20px rgba(20, 3, 7, .65); }
   .lv--web .lv-tete .lv-cv::before { display: none; }
+  .lv--web { overflow-x: clip; }        /* 30/10/2026 : le bandeau plein écran (-100vw) ne doit pas créer de défilement horizontal */
   .lv--web .lv-tete::before { content: ''; position: absolute; z-index: -1; inset: 0 -100vw auto; height: 210px; background: linear-gradient(180deg, rgba(36, 6, 12, .55), rgba(36, 6, 12, .1)), var(--lv-photo) center 35% / cover; opacity: .9; }
   .lv--web .lv-tete::after { content: ''; position: absolute; z-index: -1; inset: 210px -100vw auto; height: 60px; background: linear-gradient(180deg, rgba(var(--ink-rgb), .04), transparent); }
   .lv--web .lv-titre { padding-top: 160px; }
@@ -799,3 +800,8 @@ body.bb-lecture .bb-v:not(.is-lu) { opacity: .38; }
 @media (max-width: 899px) and (prefers-reduced-motion: reduce) {
   .a-nav .tabs .tb-a .ic, .a-nav .tabs .tb-a .nav-l > span, .a-nav .tabs .tb-a::after, .a-nav .tabs .tb-moi .nav-av { transition: none !important; }
 }
+
+/* 30/10/2026 : la petite couverture d'un livre épinglé (Notes) */
+.bi-cv { flex: 0 0 30px; display: inline-block; width: 30px; vertical-align: middle; margin-right: 8px; }
+.bi-cv .cv { width: 30px; }
+.bi-compte { margin: 4px 0 0; color: var(--ash); }

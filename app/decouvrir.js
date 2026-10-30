@@ -82,10 +82,11 @@ window.SOZO_PRET.then(() => {
       <span class="ap-reprise-t"><small>Continuer la lecture</small><strong>${S.esc(lecture.title)}</strong><span>${S.esc(S.author(lecture.author).name)}</span>
       <span class="prog" role="progressbar" aria-valuenow="${pctDe(lecture)}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression"><i style="width:${pctDe(lecture)}%"></i></span><em>${pctDe(lecture)} % lu</em></span></a>`
       : `<a class="ap-reprise ap-reprise--vide" href="explorer.html"><span class="ap-reprise-t"><small>Votre première lecture</small><strong>Trouvez un livre qui vous parle</strong><span>Explorer le catalogue ${S.icon('right')}</span></span></a>`}
-    ${S.rangee('Nouveautés', nouveautes, { lien: 'explorer.html' })}
+    ${aLaUne ? `<a class="ap-une" href="livre.html?id=${encodeURIComponent(aLaUne.id)}"><span class="ap-une-t"><span class="ap-une-k">${S.icon('star')} À la une</span><strong>${S.esc(aLaUne.title)}</strong><span>${S.esc(S.author(aLaUne.author).name)}</span><em>Découvrir ${S.icon('right')}</em></span><span class="ap-une-cv">${S.cover(aLaUne, { d3: false })}</span></a>` : ''}
+    ${cats.length ? `<nav class="ap-ronds" aria-label="Catégories">${cats.map((c) => { const l = autres.filter((b) => b.cat === c); return `<a class="ap-rond-cat" href="explorer.html?cat=${encodeURIComponent(c)}"><span class="ap-rond-img" style="background-image:url('${S.esc(S.img(l[0].cover.img, true))}')"></span><span>${S.esc(c)}</span></a>`; }).join('')}
+      <a class="ap-rond-cat" href="explorer.html?vue=ecrits"><span class="ap-rond-img ap-rond-img--ic">${S.icon('feather')}</span><span>Écrits</span></a></nav>` : ''}
+    ${S.rangee('Nouveautés', nouveautes.slice(1), { lien: 'explorer.html' })}
     ${S.rangee('Pour vous', pourVous.slice(0, 12), { lien: 'explorer.html' })}
-    ${cats.length ? `<section class="ap-sec" aria-labelledby="apCats"><div class="ap-sec-h"><h2 id="apCats">Explorer par catégories</h2><a class="ec-lien" href="explorer.html">Tout voir</a></div>
-      <div class="ap-cats">${cats.map((c) => { const l = autres.filter((b) => b.cat === c); return `<a class="ap-cat" href="explorer.html?cat=${encodeURIComponent(c)}"><span class="ap-cat-cv">${S.cover(l[0], { d3: false })}</span><span><strong>${S.esc(c)}</strong><small>${l.length} livre${l.length > 1 ? 's' : ''}</small></span></a>`; }).join('')}</div></section>` : ''}
     <section class="xp-rang" aria-label="Les écrits les plus aimés">
       <div class="xp-rang-h"><h2>Écrits aimés</h2><a class="ec-lien" href="explorer.html?vue=ecrits">Tout voir</a></div>
       <div class="xp-defile" id="moAimes" tabindex="0"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>

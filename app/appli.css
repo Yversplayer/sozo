@@ -102,6 +102,49 @@
   .a-nav .bi-onglets [role="tab"][aria-selected="true"] { background: var(--velours); color: #fbeee6; border-color: transparent; }
   .a-nav .bi-onglets [role="tab"]::after { display: none; }
 
+  /* Découvrir : « À la une » et les catégories en ronds (images Stoody et Modern Book Reading App) */
+  .ap-une { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 22px; background: var(--velours); color: #fbeee6; text-decoration: none; box-shadow: 0 18px 34px -22px rgba(58, 8, 17, .9); }
+  .ap-une-t { flex: 1; min-width: 0; display: grid; gap: 4px; }
+  .ap-une-k { display: inline-flex; align-items: center; gap: 6px; justify-self: start; padding: 4px 10px; border-radius: 999px; background: rgba(255, 255, 255, .14); font: 600 12px/1 var(--sans); }
+  .ap-une-k .ic { width: 13px; height: 13px; color: var(--gold); }
+  .ap-une-t strong { font: 700 20px/1.2 var(--sans); }
+  .ap-une-t > span:not(.ap-une-k) { opacity: .8; font-size: 14px; }
+  .ap-une-t em { font-style: normal; font-weight: 600; font-size: 14px; color: var(--gold); display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; }
+  .ap-une-t em .ic { width: 14px; height: 14px; }
+  .ap-une-cv { flex: 0 0 92px; }
+  .ap-une-cv .cv { width: 92px; }
+  .ap-ronds { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 4px; }
+  .ap-ronds::-webkit-scrollbar { display: none; }
+  .ap-rond-cat { flex: 0 0 64px; display: grid; justify-items: center; gap: 6px; color: var(--ink); text-decoration: none; font: 500 12px/1.2 var(--sans); text-align: center; }
+  .ap-rond-cat > span:last-child { max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ap-rond-img { width: 60px; height: 60px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; border: 2px solid var(--paper); box-shadow: 0 6px 16px -10px rgba(30, 10, 14, .6); background: var(--bone) center / cover no-repeat; }
+  .ap-rond-img--ic { background: var(--velours); color: var(--gold); }
+  .ap-rond-img--ic .ic { width: 22px; height: 22px; }
+
+  /* Bibliothèque : le compte sous le titre, un nombre sur chaque pastille (image « My Library ») */
+  .bi-compte { margin: 4px 0 0; color: var(--ash); font-size: 15px; }
+  .a-nav .bi-onglets .bi-n { margin-left: 4px; font-weight: 500; opacity: .75; }
+  .a-nav .bi-onglets [role="tab"] .ic { display: none; }
+
+  /* Notes : une liste simple, façon Apple Notes */
+  .a-nav .bi-pins { padding: 6px 0; border-radius: 18px; overflow: hidden; }
+  .a-nav .bi-pins h2 { display: flex; align-items: center; gap: 10px; margin: 0; padding: 10px 16px; font: 700 15px/1.3 var(--sans); }
+  .a-nav .bi-pin { padding: 12px 16px; border-top: 1px solid var(--line); }
+  .a-nav .bi-pin blockquote { margin: 0; font: 600 15.5px/1.4 var(--sans); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .a-nav .bi-pin .row-acts { margin-top: 8px; gap: 6px; }
+  .a-nav .bi-pin .btn--sm { padding: 6px 10px; font-size: 13px; }
+
+  /* Fiche du livre : centrée, chiffres en carte, gros bouton (images Epicplot et Tsundoku) */
+  .lv--web .lv-tete { text-align: center; justify-items: center; }
+  .lv--web .lv-cv { width: 180px; margin: 0 auto; }
+  .lv--web .lv-pastilles { justify-content: center; }
+  .lv--web .lv-chiffres { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; padding: 12px 6px; border-radius: 18px; background: var(--paper); border: 1px solid var(--line); }
+  .lv--web .lv-actions { display: flex; width: 100%; gap: 8px; }
+  .lv--web .lv-lire { flex: 1; justify-content: center; min-height: 52px; border-radius: 16px; }
+  .lv--web .lv-onglets { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+  .lv--web .lv-lire .lv-lire-l { display: none; }
+  .lv--web .lv-lire .lv-lire-c { display: inline; }
+
   /* Liseuse : l'en-tête tient sur deux lignes, le chapitre suivant à portée de pouce */
   .rd-top { flex-wrap: wrap; row-gap: 2px; gap: 2px; }
   .rd-top .rd-title { flex: 1 1 calc(100% - 50px); min-width: 0; }
@@ -116,3 +159,5 @@
 .rd-suite-c { display: none; }
 .rd-suite .ic { width: 14px; height: 14px; }
 @media (prefers-reduced-motion: reduce) { .a-nav .tabs .tb-a .ic { transition: none; } }
+
+.lv-lire-c { display: none; }
