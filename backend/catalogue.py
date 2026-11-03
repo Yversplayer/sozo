@@ -182,7 +182,10 @@ def enregistrer(app):
     def _etat_lecteur(cx, uid, livres):
         par_id = {b["id"]: b["slug"] for b in livres}
         follows = [par_id[r["book_id"]] for r in cx.tous("SELECT book_id FROM follows WHERE user_id = ?", (uid,)) if r["book_id"] in par_id]
-        progress = {par_id[r["book_id"]]: r["page_n"] for r in cx.tous("SELECT book_id, page_n FROM progress WHERE user_id = ?", (uid,)) if r["book_id"] in par_id}
+        prog = [r for r in cx.tous("SELECT book_id, page_n, updated_at FROM progress WHERE user_id = ?", (uid,)) if r["book_id"] in par_id]
+        progress = {par_id[r["book_id"]]: r["page_n"] for r in prog}
+        # 03/11/2026 : « Lu il y a 15 jours » dans le profil (image Webtoon du propriétaire)
+        lu_le = {par_id[r["book_id"]]: r["updated_at"] for r in prog}
         purchases = {}
         for r in cx.tous("""SELECT e.book_id, e.page_de, e.page_a, e.created_at FROM entitlements e WHERE e.user_id = ? AND e.revoque_le IS NULL ORDER BY e.created_at""", (uid,)):
             if r["book_id"] not in par_id:
@@ -196,7 +199,7 @@ def enregistrer(app):
             if r["book_id"] in par_id:
                 p = purchases.setdefault(par_id[r["book_id"]], {"pages": [], "date": r["created_at"][:10]})
                 p["pages"] = sorted(set(p["pages"]) | set(range(1, g.dernieres_pages.get(r["book_id"], 0) + 1)))
-        return {"follows": follows, "progress": progress, "purchases": purchases}
+        return {"follows": follows, "progress": progress, "lu_le": lu_le, "purchases": purchases}
 
     @app.get("/api/livres/<livre>/pages/<int:n>")
     @connectee

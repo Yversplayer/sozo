@@ -154,6 +154,15 @@ window.SOZO_PRET.then(() => {
 
   /* ─── recherche + filtres, côté client ─── */
   const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  /* 03/11/2026 — l'onglet « Rechercher » de l'application : la recherche en
+     haut, sous le titre (comme Netflix et Webtoon) ; « À la une » est déjà sur
+     l'accueil. Sur ordinateur, rien ne change. */
+  if (matchMedia('(max-width: 899px)').matches) {
+    const tete = main.querySelector('.ex-tete'), tout = $('#tout'), rech = $('#recherche');
+    tete.querySelector('.ex-titre').textContent = 'Rechercher';
+    if (tout) { tete.after(tout); if (rech) tout.after(rech); }
+    document.title = 'Rechercher — Sōzō';
+  }
   const state = { q: S.q('q') || '', access: '', run: '', cat: S.q('cat') || '', sort: 'new' };
   const lastDate = (b) => Math.max(...b.pages.filter((p) => S.status(p) === 'published' && p.date).map((p) => +S.parse(p.date)), 0);
   function render() {

@@ -73,7 +73,7 @@ self.addEventListener('push', (e) => {
   try { d = e.data ? e.data.json() : {}; } catch (x) { d = {}; }
   e.waitUntil(self.registration.showNotification(d.titre || 'Sōzō', {
     body: d.corps || '', lang: 'fr', tag: d.id ? 'sozo-' + d.id : undefined,
-    icon: '/assets/icone-192.png', badge: '/assets/icone-192.png', data: { lien: d.lien || '/app/decouvrir.html' }
+    icon: '/assets/plume-192.png', badge: '/assets/plume-192.png', data: { lien: d.lien || '/app/decouvrir.html' }
   }));
 });
 

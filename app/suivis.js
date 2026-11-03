@@ -1,7 +1,8 @@
-/* Sōzō — ma bibliothèque (19/10/2026, ex-« Mes suivis ») : trois onglets.
-   En cours (livres suivis, progression, prochaines parutions), Épingles
-   (passages gardés, sur tous les appareils), Notifications (venues du serveur :
-   parutions, paiements, ventes, sécurité…). */
+/* Sōzō — ma bibliothèque (19/10/2026, ex-« Mes suivis ») : En cours (livres
+   suivis, progression, prochaines parutions), Abonnements ; et Mes notes
+   (?vue=notes) : passages gardés, versets, marque-pages, écrits gardés.
+   Les notifications vivent sous la cloche depuis le 03/11/2026
+   (notifications.js) ; sur téléphone, la bibliothèque devient le Profil. */
 window.SOZO_PRET.then(async () => {
   const S = window.SOZO, D = S.D, $ = (s, c = document) => c.querySelector(s);
   S.shell('suivis');
@@ -24,8 +25,11 @@ window.SOZO_PRET.then(async () => {
      Bibliothèque (livres, abonnements, notifications) et Notes (passages
      épinglés, versets, marque-pages, écrits gardés), via ?vue=notes. */
   const NOTES = S.q('vue') === 'notes';
+  if (NOTES) document.title = 'Mes notes — Sōzō';
+  // 03/11/2026 : les notifications ont quitté la bibliothèque pour la cloche (notifications.html)
+  if (location.hash === '#notifications') { location.replace('notifications.html'); return; }
   const ONGLETS = NOTES ? [['epingles', 'Passages et versets', 'tag'], ['ecrits', 'Écrits gardés', 'garder']]
-    : [['livres', 'En cours', 'book'], ['abonnements', 'Abonnements', 'user'], ['notifications', 'Notifications', 'bell']];
+    : [['livres', 'En cours', 'book'], ['abonnements', 'Abonnements', 'user']];
   let onglet = (location.hash || '').slice(1);
   if (!ONGLETS.some(([k]) => k === onglet)) onglet = ONGLETS[0][0];
   const main = $('#main');
@@ -54,18 +58,43 @@ window.SOZO_PRET.then(async () => {
       ${eventail(l)}<span class="bp-t"><strong>${S.esc(t)}</strong><small>${l.length}</small></span></a>`).join('')}</div>`;
   }
 
+  /* 03/11/2026 — NOTES, sur téléphone : un CARNET. Le propriétaire trouvait
+     Bibliothèque, Écrire et Notes « beaucoup trop semblables, ennuyeux ».
+     Ici, pas d'onglets ni de cartes : les passages gardés se lisent comme
+     surlignés au feutre (la couleur choisie pour un verset), rangés par livre,
+     puis les marque-pages et les écrits gardés. Mêmes gestes qu'avant
+     (page, note, retirer), mêmes réponses du serveur. */
+  const TEL = matchMedia('(max-width: 899px)').matches;
+  function carnet() {
+    const nP = (epingles || []).length, nV = versets.length, nM = signets.length, nE = (gardes || []).length, total = nP + nV + nM + nE;
+    const saut = [['passages', 'Passages', nP], ['versets', 'Versets', nV], ['marque-pages', 'Marque-pages', nM], ['ecrits-gardes', 'Écrits', nE]].filter((x) => x[2]);
+    const acts = (h) => `<div class="cn-acts">${h}</div>`;
+    const par = {}; (epingles || []).forEach((e) => (par[e.livre] = par[e.livre] || { titre: e.titre, l: [] }).l.push(e));
+    return `<div class="cn">
+      <header class="cn-tete"><h1>Mes notes</h1><p>${total ? `${total} note${total > 1 ? 's' : ''} gardée${total > 1 ? 's' : ''}` : 'Votre carnet est encore vierge'}</p></header>
+      ${saut.length > 1 ? `<nav class="cn-saut" aria-label="Aller à">${saut.map(([k, l, n]) => `<a href="#${k}">${l} <span>${n}</span></a>`).join('')}</nav>` : ''}
+      ${epingles === null ? `<p class="warn">${S.icon('x')}<span>Épingles indisponibles pour le moment.</span></p>` : ''}
+      ${nP ? `<section class="cn-sec" id="passages" aria-labelledby="ntP"><h2 id="ntP">Passages</h2>${Object.entries(par).map(([slug, g]) => `
+        <h3 class="cn-livre">${S.book(slug) ? `<span class="bi-cv">${S.cover(S.book(slug), { d3: false })}</span>` : ''}<span>${S.esc(g.titre)}</span></h3>
+        ${g.l.map((e) => `<article class="cn-note-l" data-pin="${e.id}"><p class="cn-surl bb-c-or"><mark>${S.esc(e.extrait)}</mark></p>
+          ${e.note ? `<p class="cn-perso">${S.esc(e.note)}</p>` : ''}
+          ${acts(`<a href="lire.html?id=${encodeURIComponent(slug)}&p=${e.n}">Page ${e.n} ${S.icon('right')}</a><button type="button" data-note="${e.id}">${e.note ? 'Modifier ma note' : 'Ajouter une note'}</button><button type="button" data-desep="${e.id}">Retirer</button>`)}</article>`).join('')}`).join('')}</section>` : ''}
+      ${nV ? `<section class="cn-sec" id="versets" aria-labelledby="ntV"><h2 id="ntV">Versets</h2>${versets.map((x) => `<article class="cn-note-l"><p class="cn-surl bb-c-${S.esc(x.couleur || 'or')}"><mark>${S.esc(x.t)}</mark></p>
+        ${acts(`<a href="bible.html?b=${x.b}&c=${x.c}&v=${x.v1}${x.v2 !== x.v1 ? '-' + x.v2 : ''}">${S.esc(NOMS_B[x.b - 1])} ${x.c}:${x.v1}${x.v2 !== x.v1 ? '–' + x.v2 : ''} ${S.icon('right')}</a><button type="button" data-verset="${x.id}">Retirer</button>`)}</article>`).join('')}</section>` : ''}
+      ${nM ? `<section class="cn-sec" id="marque-pages" aria-labelledby="ntM"><h2 id="ntM">Marque-pages</h2><ul class="cn-signets">${signets.map((x) => `<li>${S.icon('garder')}<a href="lire.html?id=${encodeURIComponent(x.livre)}&p=${x.n}"><strong>${S.esc(x.titre)}</strong><span>page ${x.n}</span></a><button type="button" data-signet="${x.id}" aria-label="Retirer le marque-page de « ${S.esc(x.titre)} »">${S.icon('x')}</button></li>`).join('')}</ul></section>` : ''}
+      ${nE ? `<section class="cn-sec" id="ecrits-gardes" aria-labelledby="ntE"><h2 id="ntE">Écrits gardés</h2>${gardes.map((e) => `<article class="cn-ecrit"><p>${S.esc(String(e.texte || '').replace(/[#>*•]/g, '').trim().slice(0, 220))}${String(e.texte || '').length > 220 ? '…' : ''}</p>
+        <p class="cn-de">— ${S.esc(e.auteur.nom)} · ${S.esc(E.NATURES[e.nature] || '')}</p>${acts(`<a href="ecrit.html?id=${e.id}">Lire ${S.icon('right')}</a>`)}</article>`).join('')}</section>` : ''}
+      ${total ? '' : `<div class="pf-vide"><strong>Rien de gardé pour l’instant</strong><p>Dans la liseuse, sélectionnez une phrase et touchez « Épingler » ; dans la Bible, colorez un verset ; sous un écrit, touchez « Garder ». Tout se retrouve ici.</p><a class="ap-b ap-b--voile" href="bible.html">Ouvrir la Bible</a></div>`}
+    </div>`;
+  }
   function render() {
     const fol = S.follows().map((id) => S.book(id)).filter(Boolean);
-    const upcoming = [];
-    fol.forEach((b) => { const st = S.stats(b); if (st.next) upcoming.push({ b, st }); });
-    upcoming.sort((x, y) => S.parse(x.st.next.date) - S.parse(y.st.next.date));
-    const ago = (iso) => { const d = -S.relDays(iso); return d <= 0 ? "aujourd'hui" : d === 1 ? 'hier' : `il y a ${d} jours`; };
 
     const nonLues = notifs ? notifs.filter((x) => !x.lu_le).length : 0;
     // 30/10/2026 — un compteur sur chaque pastille (image « My Library » du propriétaire)
     const COMPTES = { livres: fol.length, abonnements: (abonnements || []).length, epingles: (epingles || []).length + versets.length + signets.length, ecrits: (gardes || []).length };
     const nNotes = COMPTES.epingles + COMPTES.ecrits;
-    main.innerHTML = `<div class="wrap">
+    main.innerHTML = NOTES && TEL ? carnet() : `<div class="wrap">
       <section class="sec" style="padding-top:44px">
         <h1 class="sec-title" style="font-size:clamp(34px,4.6vw,52px)">${NOTES ? 'Mes notes' : 'Ma bibliothèque'}</h1>
         <p class="bi-compte">${NOTES ? `${nNotes} note${nNotes > 1 ? 's' : ''} gardée${nNotes > 1 ? 's' : ''}` : `${fol.length} livre${fol.length > 1 ? 's' : ''} suivi${fol.length > 1 ? 's' : ''}`}</p>
@@ -98,27 +127,6 @@ window.SOZO_PRET.then(async () => {
                 <button class="btn btn--ghost btn--sm" type="button" data-desep="${e.id}">Retirer</button></div></div>`).join('')}
             </div>`).join(''); })()
           : `<div class="empty"><strong>Aucune épingle pour l’instant</strong>Dans la liseuse, sélectionnez une phrase qui vous parle, puis touchez « Épingler ». Elle vous attendra ici, sur tous vos appareils.</div>`}
-      </section>
-      <section class="sec" id="notifications" style="padding-top:28px"${onglet === 'notifications' ? '' : ' hidden'}>
-        <div class="cols">
-          <div class="panel">
-            <div class="sec-head" style="margin-bottom:10px"><h2 style="margin:0">Notifications</h2>
-              ${notifs && notifs.some((x) => !x.lu_le) ? `<button class="btn btn--ghost btn--sm" type="button" id="markAll">Tout marquer comme lu</button>` : ''}</div>
-            ${notifs === null ? `<p class="warn">${S.icon('x')}<span>Notifications indisponibles pour le moment.</span></p>`
-              : notifs.length ? `<div class="notifs">${notifs.map((x) => `<div class="nt-l"><a class="nt${x.lu_le ? '' : ' is-new'}" href="${S.esc(x.lien || '#')}" data-nid="${x.id}">
-                <span class="nt-ic">${S.icon(ICONES[x.type] || 'bell')}</span>
-                <span><strong>${S.esc(x.titre)}</strong><p>${S.esc(x.corps)}</p></span>
-                <time datetime="${S.esc(x.created_at)}">${x.lu_le ? '' : '<span class="dot">Nouveau</span> '}${ago(x.created_at)}</time>
-                </a><button class="icon-btn nt-x" type="button" data-suppr-notif="${x.id}" aria-label="Supprimer cette notification" title="Supprimer">${S.icon('x')}</button></div>`).join('')}</div>`
-            : `<div class="empty"><strong>Rien de nouveau</strong>Parutions des livres suivis, paiements, ventes et alertes de sécurité apparaîtront ici.</div>`}
-            <p class="note">${S.icon('bell')} Recevez-les aussi sur votre téléphone ou par e-mail : <a href="compte.html#notifications">régler mes notifications</a>.</p>
-          </div>
-          <div class="panel">
-            <h2 data-ink-text="À [[venir]]"></h2>
-            ${upcoming.length ? `<div class="cal">${upcoming.map(({ b, st }) => { const dt = S.parse(st.next.date); return `<a class="cal-row" href="livre.html?id=${b.id}"><div class="cal-day"><b>${dt.getDate()}</b><span>${['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'][dt.getMonth()]}</span></div><div>${S.esc(b.title)}<small>${S.esc(S.pagesRange(st.next.pages))} · ${dt.getHours()} h</small></div></a>`; }).join('')}</div>`
-              : `<p class="ash">Aucune parution programmée dans vos livres suivis.</p>`}
-          </div>
-        </div>
       </section>
       <section class="sec" id="livres" style="padding-top:28px"${onglet === 'livres' ? '' : ' hidden'}>
         ${piles(fol)}

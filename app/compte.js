@@ -25,10 +25,14 @@ window.SOZO_PRET.then(() => {
     rendre();
   }
 
+  /* 03/11/2026 : sur téléphone, le thème est celui du téléphone (assets/theme.js) */
+  const TEL = !!(window.SozoTheme && SozoTheme.telephone);
   function rendre() {
     const u = c.compte;
+    const themeIci = TEL ? (SozoTheme.get() === 'dark' ? 'nocturne' : 'clair') : (u.theme === 'nocturne' ? 'nocturne' : 'clair');
     const ini = ((u.nom || '?').trim().split(/\s+/).map((x) => x[0]).join('').slice(0, 2) || '?').toUpperCase();
     main.innerHTML = `<div class="wrap">
+      ${TEL ? `<a class="cp-retour" href="profil.html">${S.icon('left')} Mon profil</a>` : ''}
       <div class="cp-head">
         <span class="cp-av" aria-hidden="true">${S.esc(ini)}</span>
         <div><p class="kicker">Mon compte</p><h1>${S.esc(u.nom)}</h1>
@@ -63,13 +67,13 @@ window.SOZO_PRET.then(() => {
           <section class="panel" id="apparence" aria-labelledby="hTheme">
             <h2 id="hTheme">Apparence</h2>
             <div class="cp-theme" role="radiogroup" aria-labelledby="hTheme">
-              ${[['clair', 'Clair', 'par défaut'], ['nocturne', 'Nocturne', 'fond sombre']].map(([v, l, s]) => `<label class="cp-theme-opt">
-                <input type="radio" name="theme" value="${v}"${(u.theme === 'nocturne' ? 'nocturne' : 'clair') === v ? ' checked' : ''}>
+              ${[['clair', 'Clair', TEL ? 'fond ivoire' : 'par défaut'], ['nocturne', 'Nocturne', TEL ? 'par défaut sur téléphone' : 'fond sombre']].map(([v, l, s]) => `<label class="cp-theme-opt">
+                <input type="radio" name="theme" value="${v}"${themeIci === v ? ' checked' : ''}>
                 <span class="cp-theme-sw cp-theme-sw--${v}" aria-hidden="true"><i></i><i></i></span>
                 <span><strong>${l}</strong><small>${s}</small></span></label>`).join('')}
             </div>
             <p class="cx-err" id="eTheme" role="alert"></p>
-            <p class="note">${S.icon('eye')} Ce choix vous suit sur tous vos appareils, que vous lisiez ou que vous écriviez.</p>
+            <p class="note">${S.icon('eye')} ${TEL ? 'Ce choix vaut pour ce téléphone.' : 'Ce choix vous suit sur tous vos ordinateurs, que vous lisiez ou que vous écriviez.'}</p>
           </section>
           <form class="panel at-form" id="fProfil" novalidate>
             <h2>Mon profil</h2>
@@ -214,6 +218,7 @@ window.SOZO_PRET.then(() => {
       const avant = SozoTheme.get() === 'dark' ? 'nocturne' : 'clair';
       SozoTheme.set(r.value);                        // tout de suite : on voit l'effet en choisissant
       $('#eTheme').textContent = '';
+      if (TEL) { S.toast(r.value === 'clair' ? 'Thème clair sur ce téléphone.' : 'Thème nocturne sur ce téléphone.'); return; }
       const q = await API('PATCH', '/api/compte', { theme: r.value });
       if (!q.ok) {                                   // refusé : on revient au thème d'avant, sans faux succès
         SozoTheme.set(avant);

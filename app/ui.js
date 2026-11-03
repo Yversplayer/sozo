@@ -86,6 +86,12 @@ window.SOZO = (() => {
     croix: 'M12 3v18M7 8h10',
     micro: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
     send: 'M4 12l16-8-6 16-2-6z',
+    // 03/11/2026 : l'application (accueil façon Netflix, fiche façon Webtoon)
+    download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
+    info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5.5M12 7.5h.01',
+    dotsv: 'M12 5h.01M12 12h.01M12 19h.01',
+    trier: 'M7 4v16M4 17l3 3 3-3M17 20V4M14 7l3-3 3 3',
+    reglages: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.5 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.5-2-1.5c.1-.4.1-.8.1-1.2z',
     draft: 'M5 3h10l4 4v14H5zM9 13l2 2 4-5'
   };
   const icon = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${P[n] || P.dots}"/></svg>`;
@@ -100,6 +106,8 @@ window.SOZO = (() => {
   const dateShort = (iso) => { const d = parse(iso); return d ? `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}` : '—'; };
   const now = () => new Date();
   const relDays = (iso) => Math.round((parse(iso) - now()) / 864e5);
+  // « Lu il y a 15 jours » (profil, façon Webtoon)
+  const depuisJours = (iso) => { if (!iso) return ''; const j = Math.floor((now() - parse(iso)) / 864e5); return j <= 0 ? 'aujourd’hui' : j === 1 ? 'hier' : `il y a ${j} jours`; };
 
   /* ─── données ─── */
   const book = (id) => D.books.find((b) => b.id === id);
@@ -197,7 +205,13 @@ window.SOZO = (() => {
     return fetch('/api/notifications?compte=1', { credentials: 'same-origin', cache: 'no-store' }).then((r) => r.ok ? r.json() : null).then((d) => {
       if (!d) return;
       nonLues = d.non_lues;
-      const n = nonLues, cloche = document.querySelector('.top a[href="suivis.html#notifications"]'), lien = document.querySelector('.top-link[href="suivis.html"]');
+      const n = nonLues, cloche = document.querySelector('.top a[href="notifications.html"]'), lien = document.querySelector('.top-link[href="suivis.html"]');
+      // l'application : la cloche de l'accueil et du profil (data-cloche), pastille rouge façon Netflix
+      document.querySelectorAll('[data-cloche]').forEach((c) => {
+        c.querySelectorAll('.ap-pastille').forEach((x) => x.remove());
+        c.setAttribute('aria-label', `Notifications${n ? ` : ${n} nouvelle${n > 1 ? 's' : ''}` : ''}`);
+        if (n) c.insertAdjacentHTML('beforeend', `<span class="ap-pastille" aria-hidden="true">${n > 9 ? '9+' : n}</span>`);
+      });
       if (cloche) {
         cloche.querySelectorAll('.dot').forEach((x) => x.remove());
         cloche.setAttribute('aria-label', `Notifications${n ? ` : ${n} nouvelle${n > 1 ? 's' : ''}` : ''}`);
@@ -244,6 +258,56 @@ window.SOZO = (() => {
   const couvUrl = (b) => b.image && b.id ? `/api/livres/${encodeURIComponent(b.id)}/couverture?v=${encodeURIComponent(b.image)}` : null;
   /* La plume de Sōzō (logo, couvertures, bouton Écrire) */
   const PLUME_SVG = '<svg class="cv-plume" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.6 3.2c-6.8.4-12 4.9-13.8 11.6l-1.9 6.3 1.3.4 1.6-4.5c1.5.2 3.3-.2 5-1.3 3.5-2.3 6.4-6.7 7.8-12.5z"/><path fill="none" stroke="rgba(0,0,0,.35)" stroke-width=".7" stroke-linecap="round" d="M6.4 19.4C9.1 13.6 12.7 9 17.4 5.9"/></svg>';
+  /* 03/11/2026 — le logo de l'application : la plume dorée SEULE (« je n'aime
+     pas voir Sōzō sur le logo, mets juste une belle grosse plume dorée »).
+     Même dessin que la plume du logo et de l'icône (assets/plume.svg). */
+  const PLUME_OR = `<svg class="sz-plume" viewBox="-560 -560 1120 1120" aria-hidden="true"><defs><linearGradient id="szOr" x1="0" y1="0" x2="1050" y2="-150" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8E6A22"/><stop offset=".35" stop-color="#D4AF37"/><stop offset=".7" stop-color="#F2D98C"/><stop offset="1" stop-color="#D9B44A"/></linearGradient></defs><g transform="rotate(-52) translate(-525 86)"><path fill="url(#szOr)" d="M220,-8 C300,-60 400,-110 520,-150 L548,-128 C600,-170 690,-196 790,-200 L806,-176 C870,-196 960,-190 1050,-150 C990,-110 920,-70 850,-45 L838,-28 C760,-5 640,22 520,30 C420,36 320,28 220,-8 Z"/><path fill="#FBEBB5" opacity=".32" d="M220,-8 C320,28 420,36 520,30 C640,22 760,-5 838,-28 L850,-45 C920,-70 990,-110 1050,-150 C900,-110 700,-70 520,-40 C380,-20 280,-10 220,-8 Z"/><path fill="none" stroke="#A8822A" stroke-width="18" stroke-linecap="round" d="M0,12 C250,-4 600,-62 1046,-148"/></g></svg>`;
+  /* 03/11/2026 — « comme Netflix, la couleur du fond de l'accueil varie avec le
+     livre présenté ». La teinte vient de la couverture : la couleur choisie par
+     l'auteur, sinon la moyenne (pondérée par la saturation) de sa photo, lue en
+     16 × 16 sur l'appareil. Elle est ASSOMBRIE (luminosité 24 %) pour que le
+     texte ivoire posé dessus garde son contraste. Rien ne part ailleurs. */
+  const TEINTES = {};
+  const sombre = ([r, g, b]) => {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0;
+    if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h = (h * 60 + 360) % 360;
+    const sat = Math.min(0.62, Math.max(0.28, d / (1 - Math.abs(mx + mn - 1) || 1))), l = 0.24;
+    const c = (1 - Math.abs(2 * l - 1)) * sat, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2;
+    const [a, bb, cc] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+    return [a, bb, cc].map((v) => Math.round((v + m) * 255));
+  };
+  function teinte(b) {
+    if (!b) return Promise.resolve(null);
+    const k = (b.apparence && b.apparence.couv) || {};
+    const hex = (v) => [1, 3, 5].map((i) => parseInt(v.slice(i, i + 2), 16));
+    if ((k.fond === 'uni' || k.fond === 'degrade') && /^#[0-9a-f]{6}$/i.test(k.couleur1 || '')) return Promise.resolve(sombre(hex(k.couleur1)));
+    const url = couvUrl(b) || (b.cover && b.cover.img ? img(b.cover.img, true) : null);
+    if (!url) return Promise.resolve(null);
+    if (!TEINTES[url]) TEINTES[url] = new Promise((ok) => {
+      const im = new Image();
+      im.onload = () => {
+        try {
+          const c = document.createElement('canvas'); c.width = c.height = 16;
+          const x = c.getContext('2d'); x.drawImage(im, 0, 0, 16, 16);
+          const d = x.getImageData(0, 0, 16, 16).data;
+          let r = 0, g = 0, bl = 0, w = 0;
+          for (let i = 0; i < d.length; i += 4) {
+            const mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
+            const p = 0.12 + (mx ? (mx - mn) / mx : 0) * (mx / 255);
+            r += d[i] * p; g += d[i + 1] * p; bl += d[i + 2] * p; w += p;
+          }
+          ok(sombre([r / w, g / w, bl / w]));
+        } catch (e) { ok(null); }
+      };
+      im.onerror = () => ok(null);
+      im.src = url;
+    });
+    return TEINTES[url];
+  }
+  const poserTeinte = (el, rgb) => { if (el && rgb) { el.style.setProperty('--t-r', rgb[0]); el.style.setProperty('--t-g', rgb[1]); el.style.setProperty('--t-b', rgb[2]); } };
   /* Monogramme : les initiales sur velours, à la place d'un portrait */
   const monogramme = (nom, taille) => {
     const i = String(nom || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((m) => m[0]).join('').toUpperCase() || '?';
@@ -538,7 +602,7 @@ window.SOZO = (() => {
       ['bible', 'bible.html', 'La Bible', 'book']
     ],
     moi: [
-      ['notifications', 'suivis.html#notifications', 'Notifications', 'bell'],
+      ['notifications', 'notifications.html', 'Notifications', 'bell'],
       ['compte', 'compte.html', 'Mon compte', 'user']
     ]
   };
@@ -576,6 +640,81 @@ window.SOZO = (() => {
       toast('Ce navigateur ne propose pas l’installation. Essayez avec Chrome sur Android, ou Safari sur iPhone.');
     }
   };
+
+  /* ─── l'application : cinq onglets, et le doigt qui glisse de l'un à l'autre ───
+     03/11/2026, le propriétaire : « que l'utilisateur puisse accéder aux autres
+     menus même en glissant de gauche à droite, comme sur TikTok : sur le côté,
+     le compte de la personne qui a posté, ou carrément un autre menu ».
+     · sur un onglet : glisser vers la gauche ouvre l'onglet suivant, vers la
+       droite le précédent ;
+     · sur une œuvre (livre, écrit) : vers la gauche, la page de son auteur ;
+       vers la droite, retour ;
+     · jamais depuis un champ, une rangée qui défile, une sélection de texte ;
+       jamais dans la liseuse ni l'éditeur (ils ont leurs propres gestes).
+     Le geste s'ajoute aux onglets, il ne les remplace pas : clavier, lecteur
+     d'écran et boutons restent la voie complète. Mouvement réduit : rien ne
+     glisse, la page s'ouvre. */
+  const ONGLETS_TEL = [
+    ['decouvrir', 'decouvrir.html', 'Découvrir', 'home', ['accueil']],
+    ['explorer', 'explorer.html', 'Rechercher', 'search', ['explorer']],
+    ['ecrire', 'studio.html', 'Écrire', 'feather', ['ecrits', 'atelier', 'ecrire', 'importer']],
+    ['notes', 'suivis.html?vue=notes', 'Notes', 'file', ['notes']],
+    ['profil', 'profil.html', 'Profil', 'user', ['profil', 'compte', 'bibliotheque']]
+  ];
+  const GLISSE = 'sozo-glisse';
+  function partir(url, sens) {
+    try { sessionStorage.setItem(GLISSE, JSON.stringify({ sens, t: Date.now() })); } catch (e) {}
+    if (reduced) { location.href = url; return; }
+    document.body.classList.add(sens > 0 ? 'ap-part-g' : 'ap-part-d');
+    setTimeout(() => { location.href = url; }, 140);
+  }
+  function glisser(active) {
+    if (!matchMedia('(max-width: 899px)').matches) return;
+    // l'arrivée : la page entre du côté d'où vient le doigt
+    try {
+      const g = JSON.parse(sessionStorage.getItem(GLISSE) || 'null');
+      sessionStorage.removeItem(GLISSE);
+      if (g && Date.now() - g.t < 4000 && !reduced) document.body.classList.add(g.sens > 0 ? 'ap-entre-g' : 'ap-entre-d');
+    } catch (e) {}
+    // retour arrière (page gardée en mémoire) : elle revient en place, pas à moitié partie
+    addEventListener('pageshow', (e) => { if (e.persisted) document.body.classList.remove('ap-part-g', 'ap-part-d', 'ap-glisse', 'ap-entre-g', 'ap-entre-d'); });
+    const i = ONGLETS_TEL.findIndex((o) => o[4].includes(active));
+    // toucher un onglet : la page glisse dans le bon sens
+    document.querySelectorAll('.tabs .tb-a').forEach((a, j) => a.addEventListener('click', (e) => {
+      if (i < 0 || j === i || e.metaKey || e.ctrlKey) return;
+      e.preventDefault(); partir(a.href, j > i ? 1 : -1);
+    }));
+    const page = (location.pathname.split('/').pop() || '');
+    if (/^(lire|ecrire|imprimer|recu)\.html$/.test(page)) return;
+    let x0 = null, y0 = 0, t0 = 0, suivi = false;
+    const exclu = (el) => el.closest('input, textarea, select, [contenteditable], .xp-defile, .ap-ronds, .pf-onglets, [data-sans-glisse], .md-wrap, .tabs, dialog');
+    addEventListener('touchstart', (e) => {
+      x0 = null;
+      if (e.touches.length !== 1 || exclu(e.target)) return;
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); suivi = false;
+    }, { passive: true });
+    addEventListener('touchmove', (e) => {
+      if (x0 == null || reduced) return;
+      const dx = e.touches[0].clientX - x0, dy = e.touches[0].clientY - y0;
+      if (!suivi && Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 1.4) { suivi = true; document.body.classList.add('ap-glisse'); }
+      if (suivi) document.body.style.setProperty('--ap-doigt', `${Math.max(-60, Math.min(60, dx * 0.25))}px`);
+    }, { passive: true });
+    addEventListener('touchend', (e) => {
+      if (x0 == null) return;
+      const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+      x0 = null; document.body.style.removeProperty('--ap-doigt'); document.body.classList.remove('ap-glisse');
+      if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6 || Date.now() - t0 > 900 || String(getSelection())) return;
+      // une œuvre désigne son auteur (lien [data-glisse-auteur] ou body.dataset.glisseAuteur) ; un profil, le retour
+      const lienA = document.querySelector('[data-glisse-auteur]');
+      const auteur = lienA ? lienA.getAttribute('href') : document.body.dataset.glisseAuteur;
+      const retour = auteur || document.querySelector('[data-glisse-retour]') || document.body.dataset.glisseRetour;
+      if (auteur && dx < 0) { partir(auteur, 1); return; }
+      if (retour) { if (dx > 0) { if (history.length > 1) history.back(); else partir('decouvrir.html', -1); } return; }
+      if (i < 0) return;
+      const cible = ONGLETS_TEL[i + (dx < 0 ? 1 : -1)];
+      if (cible) partir(cible[1], dx < 0 ? 1 : -1);
+    }, { passive: true });
+  }
 
   function shell(active) {
     active = ALIAS[active] || active;
@@ -624,7 +763,7 @@ window.SOZO = (() => {
         <div class="top-tools">
           <button class="top-plume${pro().actif ? ' is-pro' : ''}" type="button" data-plume-ouvrir title="${pro().actif ? `Votre offre ${esc(pro().nom)}` : 'Devenir auteur avec Plume'}">${icon('feather')}<span>${pro().actif ? esc(pro().nom) : 'Devenir auteur'}</span></button>
           <a class="icon-btn top-loupe" href="explorer.html#q" aria-label="Rechercher un livre">${icon('search')}</a>
-          <a class="icon-btn" href="suivis.html#notifications" aria-label="Notifications${n ? ` : ${n} nouvelle${n > 1 ? 's' : ''}` : ''}">${icon('bell')}${n ? `<span class="dot dot--abs">${n}</span>` : ''}</a>
+          <a class="icon-btn" href="notifications.html" aria-label="Notifications${n ? ` : ${n} nouvelle${n > 1 ? 's' : ''}` : ''}">${icon('bell')}${n ? `<span class="dot dot--abs">${n}</span>` : ''}</a>
           <div class="acct">
             <button class="avatar" type="button" id="acctBtn" aria-haspopup="true" aria-expanded="false" aria-controls="acctMenu" aria-label="Mon compte">${esc(initials())}</button>
             <div class="acct-menu" id="acctMenu" hidden>
@@ -654,14 +793,15 @@ window.SOZO = (() => {
        Découvrir · Bibliothèque · Écrire (rond doré au centre) · Notes · Profil.
        Une seule navigation : la barre du haut disparaît sur téléphone, chaque
        écran porte son titre ; la Bible et la cloche vivent en tête de Découvrir. */
-    const vueNotes = active === 'notes';
-    const ici = (k) => (k === 'decouvrir' && ['accueil', 'explorer'].includes(active)) || (k === 'notes' && vueNotes)
-      || (k === 'bibliotheque' && active === 'bibliotheque' && !vueNotes) || (k === 'profil' && active === 'compte')
-      || (k === 'ecrire' && ['ecrits', 'atelier', 'ecrire', 'importer'].includes(active));
+    /* 03/11/2026 — le propriétaire : « tu peux supprimer Bibliothèque » (son
+       contenu passe dans Profil, façon « Mes séries » de Webtoon) ; Rechercher
+       prend sa place, comme chez Netflix et Webtoon. L'onglet où l'on se trouve
+       ressort ; les autres s'estompent un peu. */
+    const ici = (k) => ONGLETS_TEL.find((o) => o[0] === k)[4].includes(active);
     const onglet = ([k, h, l, ic]) => `<a href="${h}" class="tb-a${k === 'ecrire' ? ' tabs-ecrire' : ''}${ici(k) ? ' is-active' : ''}"${ici(k) ? ' aria-current="page"' : ''} data-nav="${k}" aria-label="${esc(l)}">${k === 'profil' ? `<span class="nav-av" aria-hidden="true">${esc(initials())}</span>` : icon(ic)}${lettres(l)}</a>`;
-    tabs.innerHTML = [['decouvrir', 'decouvrir.html', 'Découvrir', 'home'], ['bibliotheque', 'suivis.html', 'Bibliothèque', 'library'],
-      ['ecrire', 'studio.html', 'Écrire', 'feather'], ['notes', 'suivis.html?vue=notes', 'Notes', 'file'], ['profil', 'compte.html', 'Profil', 'user']].map(onglet).join('');
+    tabs.innerHTML = ONGLETS_TEL.map(onglet).join('');
     document.body.appendChild(tabs);
+    glisser(active);
 
     /* barre latérale : épinglée (bouton), ou dépliée le temps du survol / du clavier */
     const menu = nav.querySelector('#navMenu');
@@ -812,5 +952,5 @@ window.SOZO = (() => {
 
   return { D, leger, esc, icon, img, money, dateLong, dateShort, dayLong, relDays, parse, now, book, author, booksBy, status, access, readable,
            visiblePages, stats, accessLabel, priceFrom, chapterOf, pagesRange, follows, isFollowed, toggleFollow, notifications, markSeen,
-           unread, majCloche, libelleAppareil, sess, cover, bookCard, visite, monogramme, PLUME_SVG, emphase, installer, POLICES, NOMS_POLICES, couvUrl, mise, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced, rangee, xpEcrit, brancherRangees };
+           unread, majCloche, libelleAppareil, sess, cover, bookCard, visite, monogramme, PLUME_SVG, PLUME_OR, teinte, poserTeinte, depuisJours, emphase, installer, POLICES, NOMS_POLICES, couvUrl, mise, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced, rangee, xpEcrit, brancherRangees };
 })();

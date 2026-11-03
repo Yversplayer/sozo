@@ -19,6 +19,8 @@ window.SOZO_PRET.then(async () => {
   let coms = r.d.commentaires;
   document.title = `${e.titre || E.NATURES[e.nature]} — ${e.auteur.nom} — Sōzō`;
 
+  // 03/11/2026 : sur téléphone, glisser vers la gauche mène à l'auteur (comme TikTok)
+  if (/^u\d+$/.test(e.auteur.id)) document.body.dataset.glisseAuteur = `auteur.html?id=${encodeURIComponent(e.auteur.id)}`;
   main.innerHTML = `<div class="wrap vl-lecture-ecrit">
     <a class="vl-retour" href="javascript:history.back()">${S.icon('left')} Retour</a>
     ${e.mien ? `<p class="note">${S.icon('feather')} C’est votre ${S.esc(E.NATURES[e.nature].toLowerCase())}. <a href="ecrits.html?id=${e.id}">Le modifier</a></p>` : ''}

@@ -67,32 +67,135 @@ window.SOZO_PRET.then(() => {
   const cats = [...new Set(autres.map((b) => b.cat))].slice(0, 8);
   const nNotifs = S.unread();
   const initiales = (() => { const n = (moi.name || '?').trim().split(/\s+/); return ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase(); })();
-  const appli = () => `<div class="ap ap-dec">
-    <header class="ap-tete">
-      <a class="ap-moi" href="compte.html" aria-label="Mon profil"><span class="nav-av" aria-hidden="true">${S.esc(initiales)}</span></a>
-      <h1>${S.esc(salut)}${prenom ? `, ${S.esc(prenom)}` : ''}</h1>
-      <a class="ap-rond" href="bible.html" aria-label="La Bible">${S.icon('book')}</a>
-      <a class="ap-rond" href="suivis.html#notifications" aria-label="Notifications${nNotifs ? ` : ${nNotifs} nouvelle${nNotifs > 1 ? 's' : ''}` : ''}">${S.icon('bell')}${nNotifs ? `<span class="ap-pastille">${nNotifs}</span>` : ''}</a>
-    </header>
-    <a class="ap-cherche" href="explorer.html#q">${S.icon('search')}<span>Rechercher livres, auteurs…</span></a>
-    <p class="ap-verset" id="versetJour" hidden></p>
-    <aside class="vl-installer" id="bandeauInstaller" hidden><span>${S.icon('upload')} Installez Sōzō sur votre écran d’accueil, et lisez même sans réseau.</span>
-      <span class="row-acts"><button class="btn btn--accent btn--sm" type="button" id="instOui">Installer</button><button class="ec-lien" type="button" id="instNon">Plus tard</button></span></aside>
-    ${lecture ? `<a class="ap-reprise" href="${lienLecture(lecture)}"><span class="ap-reprise-cv">${S.cover(lecture, { d3: false })}</span>
-      <span class="ap-reprise-t"><small>Continuer la lecture</small><strong>${S.esc(lecture.title)}</strong><span>${S.esc(S.author(lecture.author).name)}</span>
-      <span class="prog" role="progressbar" aria-valuenow="${pctDe(lecture)}" aria-valuemin="0" aria-valuemax="100" aria-label="Progression"><i style="width:${pctDe(lecture)}%"></i></span><em>${pctDe(lecture)} % lu</em></span></a>`
-      : `<a class="ap-reprise ap-reprise--vide" href="explorer.html"><span class="ap-reprise-t"><small>Votre première lecture</small><strong>Trouvez un livre qui vous parle</strong><span>Explorer le catalogue ${S.icon('right')}</span></span></a>`}
-    ${aLaUne ? `<a class="ap-une" href="livre.html?id=${encodeURIComponent(aLaUne.id)}"><span class="ap-une-t"><span class="ap-une-k">${S.icon('star')} À la une</span><strong>${S.esc(aLaUne.title)}</strong><span>${S.esc(S.author(aLaUne.author).name)}</span><em>Découvrir ${S.icon('right')}</em></span><span class="ap-une-cv">${S.cover(aLaUne, { d3: false })}</span></a>` : ''}
-    ${cats.length ? `<nav class="ap-ronds" aria-label="Catégories">${cats.map((c) => { const l = autres.filter((b) => b.cat === c); return `<a class="ap-rond-cat" href="explorer.html?cat=${encodeURIComponent(c)}"><span class="ap-rond-img" style="background-image:url('${S.esc(S.img(l[0].cover.img, true))}')"></span><span>${S.esc(c)}</span></a>`; }).join('')}
-      <a class="ap-rond-cat" href="explorer.html?vue=ecrits"><span class="ap-rond-img ap-rond-img--ic">${S.icon('feather')}</span><span>Écrits</span></a></nav>` : ''}
-    ${S.rangee('Nouveautés', nouveautes.slice(1), { lien: 'explorer.html' })}
-    ${S.rangee('Pour vous', pourVous.slice(0, 12), { lien: 'explorer.html' })}
-    <section class="xp-rang" aria-label="Les écrits les plus aimés">
-      <div class="xp-rang-h"><h2>Écrits aimés</h2><a class="ec-lien" href="explorer.html?vue=ecrits">Tout voir</a></div>
-      <div class="xp-defile" id="moAimes" tabindex="0"><p class="ash"><span class="spin" aria-hidden="true"></span> Chargement…</p></div>
-    </section>
-  </div>`;
-  main.innerHTML = tel ? appli() : `<div class="wrap ac vl-ac">
+  /* 03/11/2026 — L'ACCUEIL DE L'APPLICATION, refait sur les captures Netflix et
+     Webtoon du propriétaire : « simple et épuré, l'accent directement sur les
+     œuvres et l'écriture ».
+     · en haut, la plume seule, mes téléchargements et la cloche (Netflix) ;
+     · une œuvre à la belle couverture, en grand au milieu, avec « Aller lire »
+       (la liseuse) et « S'abonner » (Webtoon) ;
+     · le fond prend la couleur de cette couverture (Netflix), assombrie ;
+     · des rangées de couvertures, et entre elles des MOTS : citations, pensées,
+       prières, posées sans cadre, avec trois gestes — j'aime, commenter,
+       partager — et leurs vrais nombres (« évite les cases »).
+     Rien d'inventé à l'écran : les nombres sont ceux du serveur, un écrit d'un
+     auteur inventé porte « Exemple », comme ses livres. */
+  if (tel) {
+    const photos = autres.filter((b) => (b.cover && b.cover.img) || b.image);
+    const jour = Math.floor(Date.now() / 864e5);
+    const une = photos.length ? photos[jour % photos.length] : aLaUne;
+    const premiere = (b) => { const v = S.visiblePages(b).find((p) => S.readable(S.access(b, p.n))); return v ? v.n : null; };
+    const allerLire = (b) => { const lu = D.reader.progress[b.id]; const vis = S.visiblePages(b); return vis.some((p) => p.n === lu) ? `lire.html?id=${encodeURIComponent(b.id)}&p=${lu}` : premiere(b) ? `lire.html?id=${encodeURIComponent(b.id)}&p=${premiere(b)}` : `livre.html?id=${encodeURIComponent(b.id)}`; };
+    const abo = (b) => S.isFollowed(b.id);
+    const boutonAbo = (b) => `<button class="ap-b ap-b--voile" type="button" data-abo="${S.esc(b.id)}" aria-pressed="${abo(b)}">${S.icon(abo(b) ? 'check' : 'plus')}<span>${abo(b) ? 'Abonné(e)' : 'S’abonner'}</span></button>`;
+    const rang = (titre, livres, lien) => livres.length ? `<section class="ap-rang" aria-label="${S.esc(titre)}">
+      <div class="ap-rang-h"><h2>${S.esc(titre)}</h2>${lien ? `<a href="${lien}">Tout voir</a>` : ''}</div>
+      <div class="xp-defile ap-defile" tabindex="0">${livres.map((b) => `<a class="ap-livre" href="livre.html?id=${encodeURIComponent(b.id)}">${S.cover(b, { d3: false })}<span>${S.esc(b.title)}</span></a>`).join('')}</div>
+    </section>` : '';
+    const reprise = enCours.filter((b) => D.reader.progress[b.id]);
+    const parCat = cats.map((c) => [c, autres.filter((b) => b.cat === c && b !== une)]).filter(([, l]) => l.length >= 2).slice(0, 3);
+    main.innerHTML = `<div class="ap-dec">
+      <div class="ap-fond" aria-hidden="true"></div>
+      <header class="ap-barre" id="apBarre">
+        <a class="ap-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${S.PLUME_OR}</a>
+        <span class="ap-barre-d">
+          <a class="ap-ic" href="profil.html#telechargements" aria-label="Mes téléchargements">${S.icon('download')}</a>
+          <a class="ap-ic" href="notifications.html" data-cloche aria-label="Notifications">${S.icon('bell')}</a>
+        </span>
+      </header>
+      <nav class="ap-filtres" aria-label="Que lire ?"><a href="explorer.html">Livres</a><a href="explorer.html?vue=ecrits">Écrits</a><a href="bible.html">La Bible</a></nav>
+      ${une ? `<section class="ap-une" aria-labelledby="uneT">
+        <a class="ap-une-cv" href="livre.html?id=${encodeURIComponent(une.id)}" aria-label="${S.esc(une.title)} — la fiche du livre">${S.cover(une, { big: true, d3: false })}</a>
+        <h1 class="ap-une-t" id="uneT">${S.esc(une.title)}</h1>
+        <p class="ap-une-m">${S.esc(une.cat)}<i aria-hidden="true"></i>${S.esc(S.accessLabel(une))}<i aria-hidden="true"></i>${S.esc(S.author(une.author).name)}</p>
+        <div class="ap-une-b"><a class="ap-b ap-b--plein" href="${allerLire(une)}">${S.icon('book')}<span>Aller lire</span></a>${boutonAbo(une)}</div>
+      </section>` : `<section class="ap-une ap-une--vide"><h1 class="ap-une-t">Les premiers livres arrivent</h1><p class="ap-une-m">En attendant, écrivez le vôtre.</p></section>`}
+      <aside class="ap-installer" id="bandeauInstaller" hidden><span>Installez Sōzō sur votre écran d’accueil, et lisez même sans réseau.</span>
+        <span class="ap-installer-a"><button class="ap-lien" type="button" id="instOui">Installer</button><button class="ap-lien ap-lien--doux" type="button" id="instNon">Plus tard</button></span></aside>
+      ${reprise.length ? `<section class="ap-rang" aria-label="Reprendre la lecture">
+        <div class="ap-rang-h"><h2>Reprendre la lecture</h2><a href="profil.html">Tout voir</a></div>
+        <div class="xp-defile ap-defile" tabindex="0">${reprise.map((b) => `<a class="ap-livre ap-livre--reprise" href="${lienLecture(b)}">${S.cover(b, { d3: false })}
+          <span class="ap-prog" role="progressbar" aria-valuenow="${pctDe(b)}" aria-valuemin="0" aria-valuemax="100" aria-label="${S.esc(b.title)} : ${pctDe(b)} % lu"><i style="width:${pctDe(b)}%"></i></span><span>Page ${D.reader.progress[b.id]}</span></a>`).join('')}</div>
+      </section>` : ''}
+      <div id="apMot1"></div>
+      ${rang('Nouveautés', nouveautes.filter((b) => b !== une), 'explorer.html')}
+      <figure class="ap-mot ap-mot--verset" id="versetJour" hidden></figure>
+      <div id="apMot2"></div>
+      ${rang('Pour vous', pourVous.filter((b) => b !== une).slice(0, 12), 'explorer.html')}
+      ${parCat.map(([c, l], i) => `${rang(c, l, `explorer.html?cat=${encodeURIComponent(c)}`)}<div id="apMot${i + 3}"></div>`).join('')}
+      <section class="ap-invite" aria-labelledby="inviteT">
+        ${S.PLUME_OR}
+        <h2 id="inviteT">Et vous, qu’avez-vous sur le cœur ?</h2>
+        <p>Une pensée, une prière, un poème : quelques mots suffisent. C’est gratuit, toujours.</p>
+        <a class="ap-b ap-b--or" href="ecrits.html?nouveau=pensee">${S.icon('feather')}<span>Écrire une pensée</span></a>
+      </section>
+    </div>`;
+    const dec = main.querySelector('.ap-dec');
+    if (une) S.teinte(une).then((t) => S.poserTeinte(dec, t));
+    const barre = $('#apBarre');
+    const auDefil = () => barre.classList.toggle('is-defile', scrollY > 24);
+    addEventListener('scroll', auDefil, { passive: true }); auDefil();
+
+    main.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-abo]'); if (!b) return;
+      b.disabled = true;
+      const on = await S.toggleFollow(b.dataset.abo);
+      b.disabled = false;
+      b.outerHTML = boutonAbo(S.book(b.dataset.abo));
+      S.toast(on ? 'Abonné(e) : ses nouvelles pages arriveront dans vos notifications.' : 'Vous n’êtes plus abonné(e) à ce livre.');
+    });
+
+    /* les mots : les plus aimés d'abord, courts seulement (une citation se lit d'un regard) */
+    let mots = [];
+    const sansMarques = (t) => String(t || '').split('\n').map((l) => l.replace(/^(#{1,2} |> |• )/, '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/\*(.+?)\*/g, '$1')).join('\n').trim();
+    // typographie française : pas de « : » ni de « ? » orphelin en début de ligne
+    const fr = (t) => t.replace(/ ([:;!?])/g, '\u202F$1');
+    const mot = (e) => {
+      let t = sansMarques(e.texte), source = '';
+      const m = /\n— ([^\n]+)$/.exec(t);
+      if (m) { source = m[1]; t = t.slice(0, m.index).trim(); }
+      const auteur = /^u\d+$/.test(e.auteur.id) ? `<a href="auteur.html?id=${encodeURIComponent(e.auteur.id)}">${S.esc(e.auteur.nom)}</a>` : S.esc(e.auteur.nom);
+      return `<figure class="ap-mot" data-ecrit="${e.id}">
+        <blockquote><p>${fr(S.esc(t)).replace(/\n/g, '<br>')}</p></blockquote>
+        <figcaption><span>— ${source ? S.esc(source) : auteur}</span>${source ? `<small>partagé par ${auteur}</small>` : ''}${e.exemple ? '<small class="ap-ex">Exemple</small>' : ''}</figcaption>
+        <footer class="ap-gestes">
+          <button type="button" class="ap-geste" data-geste="jaime" aria-pressed="${e.moi.jaime}" aria-label="J’aime${e.jaime ? ` (${e.jaime})` : ''}">${S.icon('heart')}<span data-n>${e.jaime || ''}</span></button>
+          <a class="ap-geste" href="ecrit.html?id=${e.id}#commentaires" aria-label="Commentaires${e.commentaires ? ` (${e.commentaires})` : ''}">${S.icon('bulle')}<span>${e.commentaires || ''}</span></a>
+          <button type="button" class="ap-geste" data-geste="partager" aria-label="Partager">${S.icon('partager')}</button>
+        </footer>
+      </figure>`;
+    };
+    window.SOZO_API('GET', '/api/ecrits').then((r) => {
+      if (!r.ok) return;
+      mots = r.d.ecrits.filter((e) => !e.long && sansMarques(e.texte).length <= 280 && e.statut === 'publie')
+        .sort((x, y) => (y.jaime || 0) - (x.jaime || 0) || (y.publie_le || '').localeCompare(x.publie_le || ''));
+      // un mot du jour qui change chaque jour, puis les plus aimés
+      if (mots.length > 1) mots.unshift(mots.splice(jour % mots.length, 1)[0]);
+      mots.slice(0, 5).forEach((e, i) => { const z = $(`#apMot${i + 1}`); if (z) z.outerHTML = mot(e); });
+    });
+    E.brancher(main, (id) => mots.find((e) => e.id === id));
+    window.SOZO_API('GET', '/api/bible/jour').then((r) => {
+      const x = r.ok && r.d.verset; if (!x) return;
+      const nom = S.bible ? S.bible.BOOKS[x.b - 1][0] : '';
+      const z = $('#versetJour');
+      z.innerHTML = `<blockquote><p>${fr(S.esc(x.t))}</p></blockquote><figcaption><span>— <a href="bible.html?b=${x.b}&c=${x.c}&v=${x.v}">${S.esc(nom)} ${x.c}:${x.v}</a></span><small>le verset du jour</small></figcaption>`;
+      z.hidden = false;
+    });
+    const bandeau = () => {
+      let plusTard = 0; try { plusTard = +localStorage.getItem('sozo-installer-plus-tard') || 0; } catch (e) {}
+      $('#bandeauInstaller').hidden = !(S.installer.possible() && Date.now() - plusTard > 30 * 864e5);
+    };
+    bandeau(); document.addEventListener('sozo:installable', bandeau);
+    $('#instOui').addEventListener('click', async () => { await S.installer.lancer(); bandeau(); });
+    $('#instNon').addEventListener('click', () => { try { localStorage.setItem('sozo-installer-plus-tard', String(Date.now())); } catch (e) {} $('#bandeauInstaller').hidden = true; });
+    if (S.q('bienvenue')) {
+      history.replaceState(null, '', 'decouvrir.html');
+      S.modal({ title: `Bienvenue${prenom ? `, ${prenom}` : ''} !`, body: `<p>Sōzō est un lieu calme pour <strong>lire</strong> — des livres, des écrits courts, la Bible — et pour <strong>écrire</strong> ce qui vous touche.</p>
+        <p class="ash">Glissez du doigt vers la gauche ou la droite pour passer d’un onglet à l’autre.</p>`,
+        actions: [{ label: 'Commencer', primary: true }] });
+    }
+    return;
+  }
+  main.innerHTML = `<div class="wrap ac vl-ac">
     <section class="mo-hero" style="--mo-photo:url('${S.esc(S.img(PHOTO_HEURE))}')">
       <div class="mo-hero-t">
         <p class="mo-k">Votre Sōzō · ${S.esc(new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }))}</p>

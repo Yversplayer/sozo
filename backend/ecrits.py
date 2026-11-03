@@ -98,7 +98,7 @@ def _apparence_lue(e):
 def _lisible(cx, eid):
     """L'écrit, s'il est visible pour la personne connectée : publié (et pas
     jeté, pas retiré, auteur actif) — ou le sien, quel que soit son état."""
-    e = cx.un("""SELECT e.*, u.nom AS auteur_nom, u.actif AS auteur_actif
+    e = cx.un("""SELECT e.*, u.nom AS auteur_nom, u.demo AS auteur_demo, u.actif AS auteur_actif
                    FROM ecrits e JOIN users u ON u.id = e.user_id WHERE e.id = ?""", (eid,))
     if not e or e["efface_le"]:
         return None
@@ -172,7 +172,8 @@ def _servir(cx, lignes, *, entier=False):
             "long": long, "apparence": _apparence_lue(e), "themes": _themes_lus(e), "statut": e["statut"], "publie_le": e["publie_le"],
             "maj": e["updated_at"], "corbeille_le": e["corbeille_le"], "retire": bool(e["retire_le"]),
             "programme": bool(e["statut"] == "publie" and e["publie_le"] and e["publie_le"] > acces.maintenant()),
-            "auteur": {"id": f"u{e['user_id']}", "nom": e["auteur_nom"]}, "mien": e["user_id"] == g.user["id"],
+            # 03/11/2026 : un écrit d'un auteur INVENTÉ (catalogue d'exemple) le dit, comme ses livres
+            "auteur": {"id": f"u{e['user_id']}", "nom": e["auteur_nom"]}, "exemple": bool(e["auteur_demo"]), "mien": e["user_id"] == g.user["id"],
             "jaime": jaime.get(e["id"], 0), "commentaires": coms.get(e["id"], 0),
             "moi": {"jaime": e["id"] in j_moi, "garde": e["id"] in g_moi},
         })
@@ -232,7 +233,7 @@ def enregistrer(app):
             params.append(int(avant))
         cx = db.connecter()
         try:
-            lignes = cx.tous(f"""SELECT e.*, u.nom AS auteur_nom FROM ecrits e JOIN users u ON u.id = e.user_id
+            lignes = cx.tous(f"""SELECT e.*, u.nom AS auteur_nom, u.demo AS auteur_demo FROM ecrits e JOIN users u ON u.id = e.user_id
                                   WHERE {' AND '.join(conditions)} ORDER BY e.id DESC LIMIT {PAR_PAGE + 1}""", params)
             suite = len(lignes) > PAR_PAGE
             lignes = lignes[:PAR_PAGE]
@@ -245,7 +246,7 @@ def enregistrer(app):
     def mes_ecrits():
         cx = db.connecter()
         try:
-            lignes = cx.tous("""SELECT e.*, u.nom AS auteur_nom FROM ecrits e JOIN users u ON u.id = e.user_id
+            lignes = cx.tous("""SELECT e.*, u.nom AS auteur_nom, u.demo AS auteur_demo FROM ecrits e JOIN users u ON u.id = e.user_id
                                  WHERE e.user_id = ? AND e.efface_le IS NULL ORDER BY e.updated_at DESC, e.id DESC LIMIT 500""", (g.user["id"],))
             return jsonify(ecrits=_servir(cx, lignes), natures=NATURES)
         finally:
@@ -256,7 +257,7 @@ def enregistrer(app):
     def ecrits_gardes():
         cx = db.connecter()
         try:
-            lignes = cx.tous("""SELECT e.*, u.nom AS auteur_nom FROM ecrits_gestes x
+            lignes = cx.tous("""SELECT e.*, u.nom AS auteur_nom, u.demo AS auteur_demo FROM ecrits_gestes x
                                   JOIN ecrits e ON e.id = x.ecrit_id JOIN users u ON u.id = e.user_id
                                  WHERE x.user_id = ? AND x.nature = 'garde' AND e.corbeille_le IS NULL AND e.retire_le IS NULL AND e.efface_le IS NULL
                                    AND (e.statut = 'publie' AND u.actif = 1 AND e.publie_le <= ? OR e.user_id = ?)
@@ -310,7 +311,7 @@ def enregistrer(app):
                               "publie" if publier else "brouillon", m if publier else None, m, m))
             auditer("ecrit.creation", ressource=f"ecrit:{eid}", apres="publie" if publier else "brouillon", cx=cx)
             cx.valider()
-            e = cx.un("SELECT e.*, u.nom AS auteur_nom FROM ecrits e JOIN users u ON u.id = e.user_id WHERE e.id = ?", (eid,))
+            e = cx.un("SELECT e.*, u.nom AS auteur_nom, u.demo AS auteur_demo FROM ecrits e JOIN users u ON u.id = e.user_id WHERE e.id = ?", (eid,))
             if publier and _annoncer(e):
                 envois.declencher()
             return jsonify(ecrit=_servir(cx, [e], entier=True)[0]), 201
@@ -346,7 +347,7 @@ def enregistrer(app):
             for k, val in champs.items():     # colonnes : liste fermée ci-dessus, jamais le client
                 cx.execute(f"UPDATE ecrits SET {k} = ? WHERE id = ? AND user_id = ?", (val, eid, g.user["id"]))
             cx.valider()
-            e = cx.un("SELECT e.*, u.nom AS auteur_nom FROM ecrits e JOIN users u ON u.id = e.user_id WHERE e.id = ?", (eid,))
+            e = cx.un("SELECT e.*, u.nom AS auteur_nom, u.demo AS auteur_demo FROM ecrits e JOIN users u ON u.id = e.user_id WHERE e.id = ?", (eid,))
             return jsonify(ecrit=_servir(cx, [e], entier=True)[0])
         finally:
             cx.fermer()
@@ -390,7 +391,7 @@ def enregistrer(app):
                 pub = cx.un("SELECT * FROM ecrits WHERE id = ?", (eid,))
                 if _annoncer(pub):        # paru maintenant (un écrit programmé sera annoncé par les tâches)
                     envois.declencher()
-            e = cx.un("SELECT e.*, u.nom AS auteur_nom FROM ecrits e JOIN users u ON u.id = e.user_id WHERE e.id = ?", (eid,))
+            e = cx.un("SELECT e.*, u.nom AS auteur_nom, u.demo AS auteur_demo FROM ecrits e JOIN users u ON u.id = e.user_id WHERE e.id = ?", (eid,))
             return jsonify(ecrit=_servir(cx, [e], entier=True)[0])
         finally:
             cx.fermer()

@@ -35,6 +35,33 @@ def _page(cx, slug, n):
 
 def enregistrer(app):
 
+    @app.get("/api/moi/commentaires")
+    @connectee
+    def mes_commentaires():
+        """03/11/2026 — l'onglet « Commentaires » du profil (image Webtoon du
+        propriétaire) : les mots que la personne a laissés sous les écrits et à
+        la fin des chapitres. Les SIENS seulement, encore en ligne, sous un écrit
+        publié ou un livre encore au catalogue. Le texte de la page commentée
+        n'est jamais renvoyé : le lien mène à la liseuse, qui décide."""
+        moi = g.user["id"]
+        cx = db.connecter()
+        try:
+            ecr = cx.tous("""SELECT c.id, c.texte, c.created_at, e.id AS ecrit_id, e.titre, e.nature, u.nom AS auteur
+                               FROM ecrits_commentaires c JOIN ecrits e ON e.id = c.ecrit_id JOIN users u ON u.id = e.user_id
+                              WHERE c.user_id = ? AND c.retire_le IS NULL AND e.statut = 'publie' AND e.corbeille_le IS NULL AND e.retire_le IS NULL
+                              ORDER BY c.id DESC LIMIT 100""", (moi,))
+            pag = cx.tous("""SELECT c.id, c.texte, c.created_at, c.n, b.slug, b.titre FROM pages_commentaires c JOIN books b ON b.id = c.book_id
+                              WHERE c.user_id = ? AND c.retire_le IS NULL AND b.statut = 'actif'
+                              ORDER BY c.id DESC LIMIT 100""", (moi,))
+            out = [{"id": f"e{x['id']}", "texte": x["texte"], "le": x["created_at"], "sur": x["titre"] or f"Écrit de {x['auteur']}",
+                    "lien": f"ecrit.html?id={x['ecrit_id']}#commentaires"} for x in ecr]
+            out += [{"id": f"p{x['id']}", "texte": x["texte"], "le": x["created_at"], "sur": x["titre"], "page": x["n"],
+                     "lien": f"lire.html?id={x['slug']}&p={x['n']}"} for x in pag]
+            out.sort(key=lambda x: x["le"], reverse=True)
+            return jsonify(commentaires=out[:100])
+        finally:
+            cx.fermer()
+
     @app.get("/api/livres/<livre>/pages/<int:n>/commentaires")
     @connectee
     def page_commentaires(livre, n):

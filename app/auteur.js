@@ -29,6 +29,7 @@ window.SOZO_PRET.then(async () => {
   up.sort((x, y) => S.parse(x.d) - S.parse(y.d));
   const depuis = S.dateLong(p.depuis).replace(/ à .*/, '').replace(/^\d+ /, '');
 
+  document.body.dataset.glisseRetour = '1';       // 03/11/2026 : glisser vers la droite ramène à l'œuvre
   main.innerHTML = `
   <div class="au-hero vl-velours" aria-hidden="true"></div>
   <div class="wrap">

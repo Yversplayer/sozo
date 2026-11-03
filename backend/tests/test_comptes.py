@@ -228,6 +228,69 @@ class Sessions(Base):
         self.assertEqual(c.get("/api/moi").status_code, 401)
 
 
+class SessionGlissante(Base):
+    """03/11/2026 — « qu'elle reste connectée, sauf si elle change de téléphone » :
+    une session qui sert repart pour un an ; rien ne ressuscite une session
+    morte ; la déconnexion reste définitive."""
+    def vieillir(self, jeton, vue, expire):
+        cx = db.connecter()
+        try:
+            cx.execute("UPDATE sessions SET last_seen = ?, expires_at = ? WHERE token_hash = ?", (vue, expire, security.empreinte(jeton)))
+            cx.valider()
+        finally:
+            cx.fermer()
+
+    def expiration(self, jeton):
+        return self.sql("SELECT expires_at FROM sessions WHERE token_hash = ?", (security.empreinte(jeton),))[0]["expires_at"]
+
+    def cookie_session(self, r):
+        return [x for x in r.headers.getlist("Set-Cookie") if x.startswith(security.COOKIE_SESSION + "=")]
+
+    def test_session_qui_sert_repart_pour_un_an(self):
+        c = self.app.test_client()
+        self.inscrire(c)
+        jeton = c.get_cookie(security.COOKIE_SESSION).value
+        m = security.maintenant()
+        self.vieillir(jeton, security._utc(m - security.timedelta(days=2)), security._utc(m + security.timedelta(days=3)))
+        r = c.get("/api/moi")
+        self.assertEqual(r.status_code, 200)
+        self.assertGreater(self.expiration(jeton), security._utc(m + security.timedelta(days=360)))
+        cookies = self.cookie_session(r)
+        self.assertEqual(len(cookies), 1)
+        self.assertIn("Max-Age=31536000", cookies[0])
+        self.assertIn("HttpOnly", cookies[0])
+        self.assertEqual(c.get("/api/moi").status_code, 200)
+
+    def test_pas_de_reecriture_le_jour_meme(self):
+        c = self.app.test_client()
+        self.inscrire(c)
+        jeton = c.get_cookie(security.COOKIE_SESSION).value
+        avant = self.expiration(jeton)
+        r = c.get("/api/moi")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self.cookie_session(r), [])
+        self.assertEqual(self.expiration(jeton), avant)
+
+    def test_session_expiree_ne_ressuscite_pas(self):
+        c = self.app.test_client()
+        self.inscrire(c)
+        jeton = c.get_cookie(security.COOKIE_SESSION).value
+        self.vieillir(jeton, "1999-01-01T00:00:00Z", "2000-01-01T00:00:00Z")
+        self.assertEqual(c.get("/api/moi").status_code, 401)
+        self.assertEqual(self.expiration(jeton), "2000-01-01T00:00:00Z")
+
+    def test_deconnexion_reste_definitive(self):
+        c = self.app.test_client()
+        self.inscrire(c)
+        jeton = c.get_cookie(security.COOKIE_SESSION).value
+        m = security.maintenant()
+        self.vieillir(jeton, security._utc(m - security.timedelta(days=2)), security._utc(m + security.timedelta(days=3)))
+        r = c.delete("/api/sessions/courante", headers=self.csrf(c))
+        self.assertIn(r.status_code, (200, 204))
+        self.assertFalse(any("Max-Age=31536000" in x for x in self.cookie_session(r)))
+        self.assertEqual(self.app.test_client().get("/api/moi", headers={"Cookie": f"{security.COOKIE_SESSION}={jeton}"}).status_code, 401)
+
+
 class Reinitialisation(Base):
     """Mot de passe oublié : un code à 6 chiffres, 15 minutes, 5 essais, une fois."""
     def demander(self, email, ip="10.9.0.1"):

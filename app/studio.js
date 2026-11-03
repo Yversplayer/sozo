@@ -898,23 +898,30 @@ window.SOZO_PRET.then(() => {
   /* ═══════════ RENDU ET LIENS ═══════════ */
   const TEL = matchMedia('(max-width: 899px)').matches;
   /* L'écran « Écrire » de l'application : un grand bouton, puis les livres en cartes */
+  /* 03/11/2026 — ÉCRIRE, sur téléphone : une page blanche qui pose UNE
+     question, puis les manières d'écrire en liste, sans cartes (le
+     propriétaire : « Bibliothèque, Écrire et Notes se ressemblent beaucoup
+     trop »). Les livres de l'auteur se rangent ensuite en étagère. */
+  const MANIERES = [['pensee', 'Une pensée', 'Une phrase, un verset qui vous habite'], ['priere', 'Une prière', 'À garder ou à partager'],
+    ['poeme', 'Un poème', 'Des vers, une louange'], ['recit', 'Un récit', 'Une histoire vraie, un témoignage'], ['conte', 'Un conte', 'Une parabole, une histoire']];
   function accueilAppli() {
-    const etat = (b) => (b.sorties ? ['Publié', 'publie'] : ['Brouillon', 'brouillon']);
-    return `<div class="ap ap-ec">
-      <p class="kicker">Studio auteur</p><h1>Écrire</h1>
-      <p class="ap-ec-sous">Un livre page après page, ou un écrit court : une pensée, une prière, un poème.</p>
-      <button type="button" class="ap-ec-nouveau">${S.icon('plus')}<span>Nouveau livre</span></button>
-      <div class="ap-ec-duo"><a class="ap-ec-court" href="ecrits.html?nouveau=pensee">${S.icon('feather')}<span>Un écrit court</span></a><a class="ap-ec-court" href="ecrits.html">${S.icon('file')}<span>Mes écrits</span></a></div>
-      ${at.livres.length ? `<h2 class="ap-ec-h">Mes livres</h2><ul class="ap-ec-livres">${at.livres.map((b) => { const [l, c] = etat(b); return `<li><a class="ap-ec-livre" href="studio.html?id=${enc(b.id)}">
-        <span class="ap-ec-cv">${couv(b, { d3: false })}</span>
-        <span class="ap-ec-t"><strong>${S.esc(b.titre)}</strong><small>${b.total} page${b.total > 1 ? 's' : ''}${b.brouillons ? ` · ${b.brouillons} brouillon${b.brouillons > 1 ? 's' : ''}` : ''}</small></span>
-        <span class="ap-etat ap-etat--${c}">${l}</span></a></li>`; }).join('')}</ul>`
-        : `<p class="ash ap-ec-vide">Votre premier livre vous est offert : touchez « Nouveau livre ».</p>`}
+    const etat = (b) => (b.sorties ? 'Publié' : 'Brouillon');
+    return `<div class="ec">
+      <header class="ec-tete"><span class="ec-plume">${S.PLUME_OR}</span><h1>Qu’allez-vous écrire aujourd’hui ?</h1></header>
+      <ul class="ec-choix">
+        ${MANIERES.map(([k, l, aide]) => `<li><a href="ecrits.html?nouveau=${k}"><span><strong>${l}</strong><small>${aide}</small></span>${S.icon('right')}</a></li>`).join('')}
+        <li><button type="button" class="ec-nouveau"><span><strong>Un livre</strong><small>Page après page${at.livres.length ? '' : ' — le premier vous est offert'}</small></span>${S.icon('plus')}</button></li>
+      </ul>
+      ${at.livres.length ? `<section class="ec-livres" aria-labelledby="ecLivresT"><div class="ap-rang-h"><h2 id="ecLivresT">Mes livres</h2><a href="studio.html?action=importer">Importer un manuscrit</a></div>
+        <div class="xp-defile ap-defile" tabindex="0">${at.livres.map((b) => `<a class="ap-livre ec-livre" href="studio.html?id=${enc(b.id)}">${couv(b, { d3: false })}
+          <span><strong>${S.esc(b.titre)}</strong><small class="ec-etat ec-etat--${b.sorties ? 'publie' : 'brouillon'}">${etat(b)} · ${b.total} page${b.total > 1 ? 's' : ''}</small></span></a>`).join('')}</div></section>`
+        : `<p class="ec-import"><a href="studio.html?action=importer">${S.icon('upload')} Vous avez déjà un manuscrit ? Importez-le (Word, PDF, EPUB)</a></p>`}
+      <p class="ec-mes"><a href="ecrits.html">${S.icon('file')} Mes écrits courts ${S.icon('right')}</a></p>
     </div>`;
   }
   function rendre(garderDefilement) {
     const y = scrollY;
-    if (TEL && !livre) { main.innerHTML = accueilAppli(); main.querySelector('.ap-ec-nouveau').addEventListener('click', () => nouveauLivre()); urlEtat(); return; }
+    if (TEL && !livre) { main.innerHTML = accueilAppli(); main.querySelector('.ec-nouveau').addEventListener('click', () => nouveauLivre()); urlEtat(); return; }
     main.innerHTML = atelier() + `<div class="wrap">${at.role === 'auteur' ? espaceLivre() + revenus() : ''}</div>`;
     lier();
     S.inkAll(main); S.tilt(main);

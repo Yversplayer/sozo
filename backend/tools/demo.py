@@ -5,6 +5,7 @@ demo = 1, affichés avec l'étiquette « Exemple » et jamais vendus).
     backend_venv/bin/python backend/tools/demo.py --en-ligne --projet <ref> [--port 6543]
     backend_venv/bin/python backend/tools/demo.py --un-seul [--en-ligne --projet <ref>]
     backend_venv/bin/python backend/tools/demo.py --remettre [--en-ligne --projet <ref>]
+    backend_venv/bin/python backend/tools/demo.py --tous                # base locale : les 14 livres, comme en ligne
 
 21/10/2026, le propriétaire : « enlève tous les livres ; dans un premier
 temps, qu'il n'y ait qu'un seul livre ». `--un-seul` RETIRE du catalogue tous
@@ -55,8 +56,9 @@ def centimes(x):
     return None if x is None else int(round(x * 100))
 
 
-def _en_ligne(args):
-    """Prépare la connexion à la base EN LIGNE (même principe que admin_en_ligne.py)."""
+def _en_ligne(args, confirmation=None):
+    """Prépare la connexion à la base EN LIGNE (même principe que admin_en_ligne.py).
+    `confirmation` : (mot à taper, phrase) pour un autre outil (demo_ecrits.py)."""
     try:
         projet = args[args.index("--projet") + 1]
     except (ValueError, IndexError):
@@ -77,6 +79,10 @@ def _en_ligne(args):
         quoi = "retirer du catalogue tous les livres d'exemple sauf « Psaumes de la terre rouge »" if "--un-seul" in args else "remettre au catalogue les livres d'exemple retirés le 21/10"
         if input(f"Vous allez {quoi}, dans la base EN LIGNE (rien n'est effacé). Tapez CONFIRMER : ").strip() != "CONFIRMER":
             sys.exit("Annulé : rien n'a changé.")
+    elif confirmation:
+        mot, phrase = confirmation
+        if input(f"{phrase} Tapez {mot} pour confirmer : ").strip() != mot:
+            sys.exit("Annulé : rien n'a été chargé.")
     elif input("Le livre d'exemple va entrer dans la base EN LIGNE. Tapez EXEMPLE pour confirmer : ").strip() != "EXEMPLE":
         sys.exit("Annulé : rien n'a été chargé.")
 
@@ -115,9 +121,13 @@ def main():
         finally:
             cx.fermer()
         return
-    # 21/10/2026 : une base neuve ne reçoit plus que le livre gardé (et son auteur)
-    D["books"] = [b for b in D["books"] if b["id"] == GARDE]
-    D["authors"] = {k: a for k, a in D["authors"].items() if any(b["author"] == k for b in D["books"])}
+    # 21/10/2026 : une base neuve ne reçoit plus que le livre gardé (et son auteur).
+    # --tous (base LOCALE seulement) : les 14 livres, comme le catalogue en ligne, pour essayer l'écran.
+    if "--tous" in args and "--en-ligne" in args:
+        sys.exit("--tous ne sert qu'en local.")
+    if "--tous" not in args:
+        D["books"] = [b for b in D["books"] if b["id"] == GARDE]
+        D["authors"] = {k: a for k, a in D["authors"].items() if any(b["author"] == k for b in D["books"])}
     cx = db.connecter()
     try:
         if cx.un("SELECT id FROM books WHERE demo = 1 LIMIT 1"):

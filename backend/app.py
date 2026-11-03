@@ -250,6 +250,10 @@ def creer_app():
             cx = db.connecter()
             try:
                 g.user = security.lire_session(cx, jeton)
+                # 03/11/2026 : la session glisse (security.DUREE_SESSION)
+                if g.user and security.prolonger_si_besoin(cx, g.user):
+                    cx.valider()
+                    g.cookies_a_reposer = jeton
             finally:
                 cx.fermer()
         if request.path.startswith("/api/") and request.method in ("POST", "PUT", "PATCH", "DELETE"):
@@ -278,6 +282,12 @@ def creer_app():
 
     @app.after_request
     def entetes(rep):
+        import security
+        # Session prolongée : ses cookies repartent pour la même durée — sauf si
+        # la réponse les pose ou les efface déjà (connexion, déconnexion).
+        jeton = getattr(g, "cookies_a_reposer", None)
+        if jeton and not any(c.startswith(security.COOKIE_SESSION + "=") for c in rep.headers.getlist("Set-Cookie")):
+            security.poser_cookies(rep, jeton, config.https_force())
         rep.headers["Content-Security-Policy"] = CSP
         rep.headers["X-Content-Type-Options"] = "nosniff"
         rep.headers["X-Frame-Options"] = "DENY"

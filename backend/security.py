@@ -20,7 +20,14 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 ITERATIONS = 310_000
-DUREE_SESSION = timedelta(days=30)
+# 03/11/2026 — « une fois connectée, qu'elle le reste, sauf si elle change de
+# téléphone » (le propriétaire). La session GLISSE : chaque jour où elle sert,
+# elle repart pour un an. Avant, elle mourait 30 jours après la connexion,
+# même au milieu d'une lecture, et l'application rouvrait sur « Bon retour ».
+# Ce qui la coupe toujours : la déconnexion, un changement de mot de passe,
+# la révocation depuis Mon compte, un compte désactivé, un an sans ouvrir Sōzō.
+DUREE_SESSION = timedelta(days=365)
+RENOUVELER_APRES = timedelta(days=1)    # au plus une écriture par jour et par appareil
 COOKIE_SESSION = "sozo_session"
 COOKIE_CSRF = "sozo_csrf"
 EN_TETE_CSRF = "X-CSRF-Token"
@@ -99,10 +106,26 @@ def lire_session(cx, jeton):
     if not jeton or len(jeton) > 100:
         return None
     return cx.un(
-        """SELECT u.id, u.email, u.nom, u.role, u.email_verifie_at, u.theme, u.charte_version, s.id AS session_id
+        """SELECT u.id, u.email, u.nom, u.role, u.email_verifie_at, u.theme, u.charte_version, s.id AS session_id,
+                  COALESCE(s.last_seen, s.created_at) AS session_vue
              FROM sessions s JOIN users u ON u.id = s.user_id
             WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND u.actif = 1""",
         (empreinte(jeton), _utc(maintenant())))
+
+
+def prolonger_si_besoin(cx, user):
+    """Fait glisser la session lue par `lire_session` : si elle n'a pas servi
+    depuis un jour, elle repart pour DUREE_SESSION. Rend True quand il faut
+    reposer les cookies (leur durée de vie suit celle de la session : sans
+    cela, le navigateur les jetterait à leur ancienne date).
+    Une session révoquée ou expirée n'arrive jamais ici : lire_session l'a déjà
+    refusée, rien ne la ressuscite."""
+    m = maintenant()
+    if (user.get("session_vue") or "") > _utc(m - RENOUVELER_APRES):
+        return False
+    cx.execute("UPDATE sessions SET expires_at = ?, last_seen = ? WHERE id = ? AND revoked_at IS NULL",
+               (_utc(m + DUREE_SESSION), _utc(m), user["session_id"]))
+    return True
 
 
 def revoquer_session(cx, session_id):

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-560 -560 1120 1120" role="img" aria-label="Sōzō">
+  <defs>
+    <radialGradient id="fond" cx="30%" cy="18%" r="95%">
+      <stop offset="0" stop-color="#5A1220"/><stop offset=".55" stop-color="#2A0B12"/><stop offset="1" stop-color="#14090C"/>
+    </radialGradient>
+    <linearGradient id="or" x1="0" y1="0" x2="1050" y2="-150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8E6A22"/><stop offset=".35" stop-color="#D4AF37"/><stop offset=".7" stop-color="#F2D98C"/><stop offset="1" stop-color="#D9B44A"/>
+    </linearGradient>
+  </defs>
+  
+  <g transform="rotate(-52) translate(-525 86)">
+    <defs><clipPath id="vane"><path d="M220,-8 C300,-60 400,-110 520,-150 L548,-128 C600,-170 690,-196 790,-200 L806,-176 C870,-196 960,-190 1050,-150 C990,-110 920,-70 850,-45 L838,-28 C760,-5 640,22 520,30 C420,36 320,28 220,-8 Z"/></clipPath></defs>
+    <path fill="url(#or)" d="M220,-8 C300,-60 400,-110 520,-150 L548,-128 C600,-170 690,-196 790,-200 L806,-176 C870,-196 960,-190 1050,-150 C990,-110 920,-70 850,-45 L838,-28 C760,-5 640,22 520,30 C420,36 320,28 220,-8 Z"/>
+    <g clip-path="url(#vane)" fill="none" stroke="#7A5A1A" stroke-opacity=".32" stroke-width="3.2" stroke-linecap="round"><path d="M300,-22 L420,-172 M320,-25 L430,45 M334,-27 L454,-177 M354,-31 L464,39 M368,-33 L488,-183 M388,-36 L498,34 M402,-39 L522,-189 M422,-42 L532,28 M436,-45 L556,-195 M456,-48 L566,22 M470,-50 L590,-200 M490,-54 L600,16 M504,-56 L624,-206 M524,-60 L634,10 M538,-62 L658,-212 M558,-65 L668,5 M572,-68 L692,-218 M592,-71 L702,-1 M606,-73 L726,-223 M626,-77 L736,-7 M640,-79 L760,-229 M660,-83 L770,-13 M674,-85 L794,-235 M694,-88 L804,-18 M708,-91 L828,-241 M728,-94 L838,-24 M742,-96 L862,-246 M762,-100 L872,-30 M776,-102 L896,-252 M796,-106 L906,-36 M810,-108 L930,-258 M830,-111 L940,-41 M844,-114 L964,-264 M864,-117 L974,-47 M878,-120 L998,-270 M898,-123 L1008,-53 M912,-125 L1032,-275 M932,-129 L1042,-59 M946,-131 L1066,-281 M966,-134 L1076,-64 M980,-137 L1100,-287 M1000,-140 L1110,-70"/></g>
+    <path fill="#FBEBB5" opacity=".30" d="M220,-8 C320,28 420,36 520,30 C640,22 760,-5 838,-28 L850,-45 C920,-70 990,-110 1050,-150 C900,-110 700,-70 520,-40 C380,-20 280,-10 220,-8 Z"/>
+    <path fill="none" stroke="#A8822A" stroke-width="10" stroke-linecap="round" d="M0,12 C250,-4 600,-62 1046,-148"/>
+  </g>
+</svg>
