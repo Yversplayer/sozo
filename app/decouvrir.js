@@ -96,7 +96,7 @@ window.SOZO_PRET.then(() => {
     main.innerHTML = `<div class="ap-dec">
       <div class="ap-fond" aria-hidden="true"></div>
       <header class="ap-barre" id="apBarre">
-        <a class="ap-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${S.PLUME_OR}</a>
+        <a class="ap-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${S.PLUME_OR}<span class="ap-logo-t" aria-hidden="true">Sōzō</span></a>
         <span class="ap-barre-d">
           <a class="ap-ic" href="profil.html#telechargements" aria-label="Mes téléchargements">${S.icon('download')}</a>
           <a class="ap-ic" href="notifications.html" data-cloche aria-label="Notifications">${S.icon('bell')}</a>

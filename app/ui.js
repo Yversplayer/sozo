@@ -716,6 +716,22 @@ window.SOZO = (() => {
     }, { passive: true });
   }
 
+  /* 08/11/2026 — « Retour » ne faisait rien : c'était un lien
+     `javascript:history.back()`, que la CSP (script-src 'self') bloque. C'est
+     désormais un vrai lien vers l'accueil, marqué [data-retour] : quand on
+     arrive d'une page de Sōzō, il revient en arrière, comme le bouton d'une
+     application ; sinon (lien partagé, ouverture directe) il mène à l'accueil.
+     « Arrive de Sōzō » ne se lit pas dans document.referrer : il est toujours
+     vide (Referrer-Policy: no-referrer, voulu). On note donc, pour l'onglet,
+     qu'une page de Sōzō a déjà été ouverte AVANT celle-ci. */
+  let dejaDansSozo = false;
+  try { dejaDansSozo = sessionStorage.getItem('sozo-vu') === '1'; sessionStorage.setItem('sozo-vu', '1'); } catch (e) {}
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[data-retour]');
+    if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    if (dejaDansSozo && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+
   function shell(active) {
     active = ALIAS[active] || active;
     if (active === 'bibliotheque' && q('vue') === 'notes') active = 'notes';     // 30/10/2026 : Notes, onglet à part

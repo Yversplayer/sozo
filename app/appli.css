@@ -14,6 +14,10 @@
 @property --t-b { syntax: '<number>'; inherits: true; initial-value: 24; }
 
 @media (max-width: 899px) {
+  /* 08/11/2026 — le BLANC par défaut, comme une application (Instagram,
+     TikTok) : sur téléphone, le papier ivoire devient blanc pur ; seul
+     l'accueil prend la teinte du livre présenté. Le nocturne reste au choix. */
+  html:not([data-theme="dark"]) { --bone: #FFFFFF; --paper: #FFFFFF; --surface: #F3F0EB; --surface-2: #E9E4DC; --logo-bg: #FFFFFF; }
   ::selection { background: rgba(212, 175, 55, .35); color: inherit; }
 
   /* ─── la coquille : une seule navigation, la barre d'onglets flotte ─── */
@@ -68,7 +72,15 @@
     padding: max(8px, env(safe-area-inset-top, 0px)) 10px 6px 16px; transition: background .3s, box-shadow .3s; }
   .ap-barre.is-defile { background: rgb(var(--t-r) var(--t-g) var(--t-b) / .78); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: 0 10px 24px -18px rgba(0, 0, 0, .8); }
   html:not([data-theme="dark"]) .ap-barre.is-defile { background: color-mix(in srgb, var(--bone) 86%, transparent); }
-  .ap-logo { display: block; width: 44px; height: 44px; margin-left: -4px; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .45)); }
+  /* 08/11/2026 : « un petit Sōzō en gras à côté de la plume » (le propriétaire) */
+  .ap-logo { display: inline-flex; align-items: center; gap: 2px; height: 44px; margin-left: -4px; color: var(--ink); text-decoration: none; }
+  .ap-logo .sz-plume { width: 40px; height: 40px; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .3)); }
+  .ap-logo-t { font: 600 23px/1 var(--sans); letter-spacing: -0.025em; }
+  /* 08/11/2026 : on arrive souvent sur un écrit par ses commentaires (#commentaires) :
+     « Retour » restait tout en haut, hors de vue. Il flotte désormais, comme dans une application. */
+  .vl-lecture-ecrit .vl-retour { position: sticky; top: max(8px, env(safe-area-inset-top, 0px)); z-index: 5; width: max-content; padding: 9px 15px 9px 11px; margin-left: -6px;
+    border-radius: 999px; color: var(--ink); font-weight: 500; text-decoration: none; background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 6px 18px -10px rgba(0, 0, 0, .35); }
   .ap-barre-d { display: flex; gap: 2px; }
   .ap-filtres { display: flex; gap: 8px; margin-top: -22px; padding: 0 16px; overflow-x: auto; scrollbar-width: none; }
   .ap-filtres::-webkit-scrollbar { display: none; }

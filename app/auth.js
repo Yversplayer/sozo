@@ -57,6 +57,26 @@
 
   // Sans profil connu, on n'affiche rien avant la réponse du serveur.
   if (!moi) document.documentElement.style.visibility = 'hidden';
+  /* 08/11/2026 — « ça ne s'ouvrait pas ». Le serveur gratuit (Render) s'endort
+     après 15 min ; à son réveil il ne renvoie PAS d'erreur : il garde la
+     demande ~50 s. La page restant cachée, l'application paraissait morte, et
+     le message de donnees.js, caché lui aussi, ne se voyait pas. Après 3 s
+     d'attente, on montre donc « Sōzō se réveille… », seul élément visible de
+     la page cachée ; il reste jusqu'au rechargement ou à la page de connexion. */
+  var reveil = null, reveilFini = false, reveilMinuterie = null;
+  function montrerReveil() {
+    if (reveil || reveilFini) return;
+    if (!document.body) { document.addEventListener('DOMContentLoaded', montrerReveil); return; }
+    reveil = document.createElement('div');
+    reveil.className = 'sz-reveil-ecran';
+    reveil.setAttribute('role', 'status');
+    reveil.innerHTML = '<span class="spin" aria-hidden="true"></span><strong>Sōzō se réveille…</strong>' +
+      '<span>Encore quelques secondes : l’application s’ouvre toute seule dès que le serveur répond.</span>';
+    document.body.appendChild(reveil);
+  }
+  // la réponse est là : l'écran ne doit plus apparaître (celui déjà montré reste jusqu'à la navigation)
+  function reveilInutile() { reveilFini = true; clearTimeout(reveilMinuterie); }
+  if (!moi) reveilMinuterie = setTimeout(montrerReveil, 3000);
   // Serveur en veille (offre gratuite) : 502/503/504 ou coupure → on réessaie
   // ~70 s au lieu d'envoyer la personne, connectée, vers la page de connexion.
   function demander(essai) {
@@ -72,6 +92,7 @@
   }
   demander(0)
     .then(function (r) {
+      reveilInutile();
       if (r.status === 401) { garder(null); oublierCaches().then(versConnexion); return null; }
       if (!r.ok) throw new Error('serveur');
       return r.json();
@@ -85,5 +106,5 @@
       if (window.SozoTheme && d.moi && d.moi.theme) SozoTheme.set(d.moi.theme, { serveur: true });
       if (!avant) location.reload();          // première visite de l'onglet : on affiche avec le profil
     })
-    .catch(function () { if (!moi) versConnexion(); });
+    .catch(function () { reveilInutile(); if (!moi) versConnexion(); });
 })();

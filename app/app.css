@@ -56,7 +56,9 @@ html[data-theme="dark"] {
   --shadow: 0 22px 50px -26px rgba(0, 0, 0, .8);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { -webkit-text-size-adjust: 100%; }
+/* 08/11/2026 : toucher un bouton ne l'entoure plus du reflet bleu d'Android
+   (« ça fait site web ») ; l'anneau du clavier (:focus-visible) reste. */
+html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
 body { background: var(--bone); color: var(--ink); font-family: var(--sans); font-size: 17px; line-height: 1.45; letter-spacing: -0.005em; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 img { display: block; max-width: 100%; }
 a { color: inherit; text-decoration: none; }
@@ -758,6 +760,16 @@ html[data-theme="dark"] .plume-card { background: #4A0B14; }
 .ed-status { display: flex; align-items: center; gap: 10px; font-size: 14px; padding: 14px 16px; }
 .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--ver); animation: spin .8s linear infinite; flex: 0 0 auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* 08/11/2026 — l'écran « Sōzō se réveille… » (auth.js). Pendant le premier
+   « qui suis-je ? », la page est cachée (visibility: hidden sur <html>) ; lui
+   seul est rendu visible par-dessus, sur son propre fond. Il ne simule rien :
+   il dit qu'on attend le serveur, et part avec sa réponse. */
+.sz-reveil-ecran { visibility: visible; position: fixed; inset: 0; z-index: 2147483000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  padding: 24px; text-align: center; background: var(--bone); color: var(--ash); font: 400 16px/1.5 var(--sans); }
+.sz-reveil-ecran strong { color: var(--ink); font: 600 21px/1.3 var(--sans); }
+.sz-reveil-ecran .spin { width: 30px; height: 30px; margin-bottom: 10px; border-width: 3px; border-top-color: var(--gold); }
+.sz-reveil-ecran span:not(.spin) { max-width: 300px; }
+@media (prefers-reduced-motion: reduce) { .sz-reveil-ecran .spin { animation-duration: 2.4s; } }
 .ed-sum { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .ed-chip { display: grid; gap: 2px; justify-items: center; padding: 10px 4px; border-radius: var(--r); border: 1px solid var(--line); background: var(--paper); cursor: pointer; font-size: 11.5px; }
 .ed-chip b { font-family: var(--serif); font-size: 24px; font-weight: 600; line-height: 1; }

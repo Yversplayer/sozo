@@ -2,19 +2,29 @@
    si la personne l'a choisi dans Mon compte. Le choix vit sur le serveur (il
    suit la personne d'un appareil à l'autre) et en copie locale, lue ici dans
    <head> avant le premier rendu pour éviter un éclair de la mauvaise couleur.
-   03/11/2026 — L'APPLICATION (téléphone, ≤ 899 px) s'ouvre en NOCTURNE : le
-   bordeaux presque noir « à la Netflix » demandé par le propriétaire. Son choix
-   est propre au téléphone (`sozo-theme-tel`) : le thème enregistré sur le
-   serveur, choisi le plus souvent sur ordinateur, ne l'écrase pas.
+   03/11/2026 — L'APPLICATION (téléphone, ≤ 899 px) s'ouvrait en NOCTURNE (le
+   bordeaux presque noir « à la Netflix »).
+   08/11/2026 — Le propriétaire : « la couleur par défaut du logiciel, blanc,
+   pas rouge ; seul l'accueil prend la couleur du livre affiché au milieu ».
+   Le téléphone s'ouvre donc en CLAIR, lui aussi (blanc pur : appli.css) ; le
+   nocturne reste un choix, dans Paramètres. Ce choix reste propre au téléphone
+   (`sozo-theme-tel`) : le thème enregistré sur le serveur, choisi le plus
+   souvent sur ordinateur, ne l'écrase pas.
+   La couleur des barres du système (meta theme-color) suit le thème : une
+   barre bordeaux au-dessus d'un écran blanc faisait « site web ».
    Le stockage peut être bloqué (navigation privée) : tout est sous try. */
 (function () {
   var tel = false;
   try { tel = window.matchMedia('(max-width: 899px)').matches; } catch (e) {}
   var cle = tel ? 'sozo-theme-tel' : 'sozo-theme';
-  // 19/10/2026 : le propriétaire veut le BLANC comme base sur ordinateur (« pas le noir »)
-  var t = tel ? 'nocturne' : 'clair';
+  var t = 'clair';
   try { var v = localStorage.getItem(cle); if (v === 'clair' || v === 'nocturne') t = v; } catch (e) {}
+  function barres(sombre) {
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', sombre ? '#14090C' : '#FFFFFF');
+  }
   if (t === 'nocturne') document.documentElement.setAttribute('data-theme', 'dark');
+  barres(t === 'nocturne');
   window.SozoTheme = {
     telephone: tel,
     get: function () { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; },
@@ -24,6 +34,7 @@
       var clair = v === 'clair';
       if (clair) document.documentElement.removeAttribute('data-theme');
       else document.documentElement.setAttribute('data-theme', 'dark');
+      barres(!clair);
       try { localStorage.setItem(cle, clair ? 'clair' : 'nocturne'); } catch (e) {}
       document.dispatchEvent(new CustomEvent('sozo:theme', { detail: clair ? 'light' : 'dark' }));
     }

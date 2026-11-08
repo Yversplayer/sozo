@@ -57,7 +57,15 @@
   var page = location.pathname.split('/').pop();
   /* Le serveur gratuit s'endort après 15 min : sa première réponse peut
      tarder ou échouer (502/503/504, coupure). On réessaie pendant ~70 s en
-     le DISANT (« Sōzō se réveille… »), au lieu d'afficher une panne. */
+     le DISANT (« Sōzō se réveille… »), au lieu d'afficher une panne.
+     08/11/2026 : le plus souvent, au réveil, Render ne renvoie AUCUNE erreur ;
+     il garde la demande ~50 s. Le message n'apparaissait donc jamais : il est
+     aussi montré après 3 s d'attente, et retiré dès la réponse. */
+  function reveil() {
+    var m = document.getElementById('main');
+    if (m && !m.querySelector('.sz-reveil')) m.innerHTML = '<div class="wrap sec"><div class="empty sz-reveil" role="status"><strong>Sōzō se réveille…</strong>' +
+      'Encore quelques secondes : la page s’ouvre toute seule dès que le serveur répond.</div></div>';
+  }
   function catalogue(essai) {
     return fetch('/api/catalogue', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) {
       if (r.status === 401) { return new Promise(function () {}); }   // auth.js part vers la connexion
@@ -66,14 +74,22 @@
       return r.json();
     }).catch(function (e) {
       if (!(e && (e.reveil || e instanceof TypeError)) || essai >= 7) throw e;
-      var m = document.getElementById('main');
-      if (m && !m.querySelector('.sz-reveil')) m.innerHTML = '<div class="wrap sec"><div class="empty sz-reveil" role="status"><strong>Sōzō se réveille…</strong>' +
-        'Le serveur était en veille. Encore quelques secondes, la page se charge toute seule.</div></div>';
+      reveil();
       return new Promise(function (ok) { setTimeout(ok, 10000); }).then(function () { return catalogue(essai + 1); });
     });
   }
+  var minuterie = page === 'connexion.html' ? null : setTimeout(function () {
+    var m = document.getElementById('main');
+    if (m && !m.firstElementChild) reveil();             // jamais par-dessus un écran déjà construit
+  }, 3000);
+  function sansReveil() {
+    clearTimeout(minuterie);
+    var r = document.querySelector('#main .sz-reveil');
+    if (r) (r.closest('.wrap') || r).remove();
+  }
   window.SOZO_PRET = page === 'connexion.html' ? Promise.resolve() :
     catalogue(0).then(function (d) {
+      sansReveil();
       D.authors = d.authors; D.books = d.books; D.reader = d.reader;
-    });
+    }, function (e) { clearTimeout(minuterie); throw e; });
 })();

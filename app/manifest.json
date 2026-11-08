@@ -6,8 +6,8 @@
   "start_url": "/app/decouvrir.html",
   "scope": "/app/",
   "display": "standalone",
-  "background_color": "#14090C",
-  "theme_color": "#14090C",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFFFFF",
   "icons": [
     {
       "src": "/assets/plume-192.png",
