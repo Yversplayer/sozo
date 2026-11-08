@@ -17,29 +17,46 @@ window.SOZO_PRET.then(async () => {
   const ago = (iso) => { const d = -S.relDays(iso); return d <= 0 ? "aujourd'hui" : d === 1 ? 'hier' : `il y a ${d} jours`; };
   const MO = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
+  /* 08/11/2026 — d'après les maquettes Stitch : le nombre de non lues, des
+     pastilles pour trier (Lectures, Communauté, Paiements, Compte), les
+     notifications rangées par jour, un point doré sur les nouvelles. */
+  const FAMILLES = [['', 'Toutes'], ['lectures', 'Lectures'], ['communaute', 'Communauté'], ['argent', 'Paiements'], ['compte', 'Compte']];
+  const famille = (t) => (['parution', 'abonnements'].includes(t) ? 'lectures' : t === 'communaute' ? 'communaute' : ['paiement', 'vente', 'reversement', 'plume'].includes(t) ? 'argent' : 'compte');
+  let filtre = '';
+  const groupe = (iso) => { const d = -S.relDays(iso); return d <= 0 ? "Aujourd’hui" : d < 7 ? 'Cette semaine' : 'Plus tôt'; };
   function rendre() {
     const avenir = S.follows().map((id) => S.book(id)).filter(Boolean).map((b) => ({ b, st: S.stats(b) })).filter((x) => x.st.next)
       .sort((x, y) => S.parse(x.st.next.date) - S.parse(y.st.next.date));
     const nonLues = notifs ? notifs.filter((x) => !x.lu_le).length : 0;
-    main.innerHTML = `<div class="nf wrap" data-glisse-retour>
-      <header class="nf-tete">
-        <button class="ap-ic nf-retour" type="button" id="nfRetour" aria-label="Retour">${S.icon('left')}</button>
-        <h1>Notifications</h1>
-        ${nonLues ? `<button class="ap-lien" type="button" id="markAll">Tout marquer comme lu</button>` : ''}
+    const liste = notifs ? notifs.filter((x) => !filtre || famille(x.type) === filtre) : [];
+    const groupes = []; liste.forEach((x) => { const g = groupe(x.created_at); let z = groupes.find((y) => y[0] === g); if (!z) groupes.push(z = [g, []]); z[1].push(x); });
+    const presentes = new Set((notifs || []).map((x) => famille(x.type)));
+    main.innerHTML = `<div class="nf sx-page" data-glisse-retour>
+      <header class="sx-barre" id="nfBarre">
+        <a class="sx-retour" href="decouvrir.html" data-retour aria-label="Retour">${S.icon('left')}</a>
+        <span class="sx-barre-t">Notifications</span>
+        ${nonLues ? `<button class="sx-lien" type="button" id="markAll">Tout lire</button>` : '<span class="sx-ic" aria-hidden="true"></span>'}
       </header>
-      ${notifs === null ? `<p class="warn">${S.icon('x')}<span>Notifications indisponibles pour le moment.</span></p>`
-        : notifs.length ? `<ul class="nf-liste">${notifs.map((x) => `<li class="nf-l${x.lu_le ? '' : ' is-new'}">
-            <a class="nf-a" href="${S.esc(x.lien || '#')}" data-nid="${x.id}">
-              <span class="nf-ic">${S.icon(ICONES[x.type] || 'bell')}</span>
-              <span class="nf-t"><strong>${S.esc(x.titre)}</strong><span>${S.esc(x.corps)}</span><time datetime="${S.esc(x.created_at)}">${x.lu_le ? '' : '<b>Nouveau · </b>'}${ago(x.created_at)}</time></span>
-            </a>
-            <button class="ap-ic nf-x" type="button" data-suppr-notif="${x.id}" aria-label="Supprimer cette notification">${S.icon('x')}</button></li>`).join('')}</ul>`
-        : `<div class="pf-vide"><strong>Rien de nouveau</strong><p>Parutions des livres suivis, paiements, ventes et alertes de sécurité apparaîtront ici.</p></div>`}
-      ${avenir.length ? `<h2 class="pf-h">À venir dans vos abonnements</h2><ul class="nf-avenir">${avenir.map(({ b, st }) => { const dt = S.parse(st.next.date); return `<li><a href="livre.html?id=${encodeURIComponent(b.id)}">
-          <span class="nf-jour"><b>${dt.getDate()}</b>${MO[dt.getMonth()]}</span><span><strong>${S.esc(b.title)}</strong><small>${S.esc(S.pagesRange(st.next.pages))} · ${dt.getHours()} h</small></span></a></li>`; }).join('')}</ul>` : ''}
-      <p class="nf-regler"><a href="compte.html#notifications">${S.icon('bell')} Les recevoir aussi sur ce téléphone ou par e-mail</a></p>
+      <div class="sx-ecran">
+        <h1 class="sr">Notifications</h1>
+        ${nonLues ? `<p class="sx-chapeau"><span class="sx-chip sx-chip--bord">${nonLues} non lue${nonLues > 1 ? 's' : ''}</span></p>` : ''}
+        ${notifs && notifs.length ? `<nav class="sx-pilules" aria-label="Trier" data-sans-glisse>${FAMILLES.filter(([k]) => !k || presentes.has(k)).map(([k, l]) => `<button type="button" class="sx-pilule${filtre === k ? ' is-on' : ''}" data-famille="${k}">${l}</button>`).join('')}</nav>` : ''}
+        ${notifs === null ? `<p class="warn">${S.icon('x')}<span>Notifications indisponibles pour le moment.</span></p>`
+          : liste.length ? groupes.map(([g, l]) => `<section class="sx-nf-g"><span class="sx-sur">${g}</span><ul class="sx-nf">${l.map((x) => `<li class="sx-carte sx-nf-l${x.lu_le ? '' : ' is-new'}">
+              <a class="sx-nf-a" href="${S.esc(x.lien || '#')}" data-nid="${x.id}">
+                <span class="sx-nf-ic sx-nf-ic--${famille(x.type)}">${S.icon(ICONES[x.type] || 'bell')}</span>
+                <span class="sx-nf-t"><b>${S.esc(x.titre)}</b><span>${S.esc(x.corps)}</span><time datetime="${S.esc(x.created_at)}">${ago(x.created_at)}</time></span>
+                ${x.lu_le ? '' : '<i class="sx-nf-point" aria-label="Nouvelle"></i>'}
+              </a>
+              <button class="sx-ic sx-nf-x" type="button" data-suppr-notif="${x.id}" aria-label="Supprimer cette notification">${S.icon('x')}</button></li>`).join('')}</ul></section>`).join('')
+          : `<div class="sx-vide">${S.icon('bell')}<strong>Rien de nouveau</strong><span>Parutions des livres suivis, commentaires, paiements et alertes de sécurité apparaîtront ici.</span></div>`}
+        ${avenir.length ? `<section class="sx-carte sx-carte--douce"><div class="sx-h"><h2>À venir</h2></div><ul class="nf-avenir">${avenir.map(({ b, st }) => { const dt = S.parse(st.next.date); return `<li><a href="livre.html?id=${encodeURIComponent(b.id)}">
+            <span class="nf-jour"><b>${dt.getDate()}</b>${MO[dt.getMonth()]}</span><span><strong>${S.esc(b.title)}</strong><small>${S.esc(S.pagesRange(st.next.pages))} · ${dt.getHours()} h</small></span></a></li>`; }).join('')}</ul></section>` : ''}
+        <a class="sx-carte sx-ligne" href="compte.html#notifications"><span class="sx-ligne-ic">${S.icon('bell')}</span><span class="sx-ligne-t"><b>Les recevoir aussi ailleurs</b><small>Sur ce téléphone ou par e-mail</small></span>${S.icon('chevron')}</a>
+      </div>
     </div>`;
-    $('#nfRetour').addEventListener('click', () => { if (history.length > 1 && document.referrer.startsWith(location.origin)) history.back(); else location.href = 'decouvrir.html'; });
+    main.querySelectorAll('[data-famille]').forEach((b) => b.addEventListener('click', () => { filtre = b.dataset.famille; rendre(); }));
+    const nb = $('#nfBarre'); addEventListener('scroll', () => nb.classList.toggle('is-defile', scrollY > 12), { passive: true });
     const m = $('#markAll');
     if (m) m.addEventListener('click', async () => { m.disabled = true; const r = await window.SOZO_API('POST', '/api/notifications/lues', {}); if (!r.ok) { m.disabled = false; S.toast(r.d.erreur || 'Action impossible.'); return; } await charger(); rendre(); S.majCloche(); });
     main.querySelectorAll('[data-nid]').forEach((a) => a.addEventListener('click', () => { window.SOZO_API('POST', '/api/notifications/lues', { ids: [+a.dataset.nid] }, { keepalive: true }); }));
@@ -52,5 +69,4 @@ window.SOZO_PRET.then(async () => {
   }
   await charger();
   rendre();
-  S.footer();
 }).catch(window.SOZO_ERREUR);

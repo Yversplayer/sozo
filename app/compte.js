@@ -67,7 +67,7 @@ window.SOZO_PRET.then(() => {
           <section class="panel" id="apparence" aria-labelledby="hTheme">
             <h2 id="hTheme">Apparence</h2>
             <div class="cp-theme" role="radiogroup" aria-labelledby="hTheme">
-              ${[['clair', 'Clair', TEL ? 'fond ivoire' : 'par défaut'], ['nocturne', 'Nocturne', TEL ? 'par défaut sur téléphone' : 'fond sombre']].map(([v, l, s]) => `<label class="cp-theme-opt">
+              ${[['clair', 'Clair', TEL ? 'fond blanc, par défaut' : 'par défaut'], ['nocturne', 'Nocturne', 'fond sombre']].map(([v, l, s]) => `<label class="cp-theme-opt">
                 <input type="radio" name="theme" value="${v}"${themeIci === v ? ' checked' : ''}>
                 <span class="cp-theme-sw cp-theme-sw--${v}" aria-hidden="true"><i></i><i></i></span>
                 <span><strong>${l}</strong><small>${s}</small></span></label>`).join('')}
@@ -144,6 +144,82 @@ window.SOZO_PRET.then(() => {
       </div>
     </div>`;
     lier(); lierCompte(); appareils();
+    if (TEL) reglagesTel(u);
+  }
+
+  /* 08/11/2026 — PARAMÈTRES, d'après les maquettes Stitch : la carte de la
+     personne, puis des rubriques groupées comme les réglages d'un téléphone.
+     Toucher une rubrique ouvre SA section dans une feuille plein écran qui
+     glisse depuis la droite ; « Retour », ou le bouton retour du téléphone,
+     la referme. Les formulaires sont les mêmes qu'avant — déplacés, pas
+     recopiés : leurs vérifications et leurs appels au serveur ne changent pas. */
+  function reglagesTel(u) {
+    const wrap = main.querySelector('.wrap'); if (!wrap) return;
+    const sec = (lab) => { const h = document.getElementById(lab); return h && h.closest('section, form'); };
+    const S_ = {
+      profil: $('#fProfil'), email: $('#fEmail'), mdp: $('#fMdp'), appareils: sec('hApp'), achats: sec('hAchats'),
+      apparence: $('#apparence'), notifications: $('#notifications'), plume: $('#plume-section'), appli: $('#appli'), donnees: sec('hDon'), legal: sec('hLegal'), suppr: $('#fSuppr')
+    };
+    const ini = ((u.nom || '?').trim().split(/\s+/).map((x) => x[0]).join('').slice(0, 2) || '?').toUpperCase();
+    const ligne = (k, ic, t, sous) => S_[k] ? `<button type="button" class="sx-ligne" data-ouvrir="${k}"><span class="sx-ligne-ic">${S.icon(ic)}</span><span class="sx-ligne-t"><b>${t}</b>${sous ? `<small>${sous}</small>` : ''}</span>${S.icon('chevron')}</button>` : '';
+    const groupe = (titre, lignes) => lignes.trim() ? `<section class="sx-groupe"><span class="sx-sur">${titre}</span><div class="sx-carte sx-liste">${lignes}</div></section>` : '';
+    const theme = SozoTheme.get() === 'dark' ? 'Nocturne' : 'Clair';
+    const achatsEnCours = (c.achats || []).filter((a) => a.etat === 'PENDING' || a.etat === 'UNKNOWN' || a.etat === 'CREATED').length;
+    wrap.insertAdjacentHTML('beforebegin', `<div class="sx-page sx-reglages">
+      <header class="sx-barre"><a class="sx-retour" href="profil.html" data-retour aria-label="Retour">${S.icon('left')}</a><span class="sx-barre-t">Paramètres</span><span class="sx-ic" aria-hidden="true"></span></header>
+      <div class="sx-ecran">
+        <button type="button" class="sx-carte sx-moi-c" data-ouvrir="profil">
+          <span class="sx-moi-av" aria-hidden="true">${S.esc(ini)}</span>
+          <span class="sx-ligne-t"><b>${S.esc(u.nom)}</b><small>${S.esc(u.email)}</small>${c.plume.actif ? `<span class="sx-chip sx-chip--or">${S.icon('feather')} ${S.esc(c.plume.nom || 'Plume')}</span>` : ''}</span>${S.icon('edit')}
+        </button>
+        ${u.email_verifie_at ? '' : `<p class="sx-carte sx-carte--douce sx-alerte">${S.icon('bell')}<span>Adresse e-mail à confirmer.</span></p>`}
+        ${groupe('Compte &amp; sécurité', ligne('profil', 'user', 'Identité', 'Nom, ville, présentation') + ligne('email', 'send', 'Adresse e-mail', S.esc(u.email)) + ligne('mdp', 'lock', 'Mot de passe', 'Avec un code reçu par e-mail') + ligne('appareils', 'shield', 'Mes appareils', 'Sessions ouvertes, déconnexion'))}
+        ${groupe('Lecture', ligne('apparence', 'sun', 'Apparence', theme) + ligne('notifications', 'bell', 'Notifications', 'Sur ce téléphone ou par e-mail'))}
+        ${groupe('Achats', ligne('achats', 'tag', 'Mes achats et reçus', achatsEnCours ? `${achatsEnCours} en attente de vérification` : `${(c.achats || []).length} achat${(c.achats || []).length > 1 ? 's' : ''}`))}
+        ${S_.plume ? `<section class="sx-groupe"><span class="sx-sur">Espace créateur</span><button type="button" class="sx-plume-c" data-ouvrir="plume">${S.icon('feather')}<span class="sx-ligne-t"><b>Offre ${S.esc(c.plume.nom || 'Plume')}</b><small>${c.plume.actif ? `Active jusqu’au ${S.esc(S.dateLong(c.plume.fin).replace(/ à .*/, ''))}` : 'Plus de livres, plus d’outils pour écrire'}</small></span>${S.icon('chevron')}</button></section>` : ''}
+        ${groupe('L’application', ligne('appli', 'download', 'Installer Sōzō', S.installer.installee() ? 'Installé sur cet appareil' : 'Sur votre écran d’accueil') + ligne('donnees', 'file', 'Mes données', 'Tout télécharger en un fichier'))}
+        ${groupe('Sōzō', `<a class="sx-ligne" href="charte.html"><span class="sx-ligne-ic">${S.icon('heart')}</span><span class="sx-ligne-t"><b>Charte de la communauté</b></span>${S.icon('chevron')}</a>
+          <a class="sx-ligne" href="cgu.html"><span class="sx-ligne-ic">${S.icon('file')}</span><span class="sx-ligne-t"><b>Conditions d’utilisation</b></span>${S.icon('chevron')}</a>
+          <a class="sx-ligne" href="confidentialite.html"><span class="sx-ligne-ic">${S.icon('shield')}</span><span class="sx-ligne-t"><b>Confidentialité</b></span>${S.icon('chevron')}</a>` + ligne('suppr', 'corbeille', 'Supprimer mon compte', ''))}
+        <button type="button" class="sx-btn sx-btn--doux sx-btn--bloc sx-sortir" data-sortir>${S.icon('left')}Se déconnecter</button>
+      </div>
+    </div>
+    <div class="sx-feuille" id="feuille" role="dialog" aria-modal="true" aria-labelledby="feuilleT" hidden>
+      <header class="sx-barre"><button type="button" class="sx-retour" id="feuilleX" aria-label="Retour">${S.icon('left')}</button><span class="sx-barre-t" id="feuilleT"></span><span class="sx-ic" aria-hidden="true"></span></header>
+      <div class="sx-feuille-corps" id="feuilleCorps"></div>
+    </div>`);
+    wrap.hidden = true;
+    const TITRES = { profil: 'Identité', email: 'Adresse e-mail', mdp: 'Mot de passe', appareils: 'Mes appareils', achats: 'Mes achats', apparence: 'Apparence', notifications: 'Notifications', plume: 'Espace créateur', appli: 'L’application', donnees: 'Mes données', legal: 'Sōzō', suppr: 'Supprimer mon compte' };
+    const f = $('#feuille'), corps = $('#feuilleCorps');
+    let ouvert = null, place = null;
+    function fermer(depuisHistorique) {
+      if (!ouvert) return;
+      place.parentNode.insertBefore(ouvert, place); place.remove();
+      f.classList.remove('is-ouverte'); setTimeout(() => { f.hidden = true; }, S.reduced ? 0 : 220);
+      document.documentElement.classList.remove('sx-sans-defile');
+      ouvert = null;
+      if (!depuisHistorique && history.state && history.state.sxFeuille) history.back();
+    }
+    function ouvrir(k) {
+      const el = S_[k]; if (!el) return;
+      if (ouvert) fermer(true);
+      place = document.createComment('place'); el.parentNode.insertBefore(place, el);
+      corps.appendChild(el); ouvert = el;
+      $('#feuilleT').textContent = TITRES[k] || '';
+      f.hidden = false; requestAnimationFrame(() => f.classList.add('is-ouverte'));
+      document.documentElement.classList.add('sx-sans-defile');
+      corps.scrollTop = 0;
+      if (!(history.state && history.state.sxFeuille)) history.pushState({ sxFeuille: k }, '');
+      setTimeout(() => $('#feuilleX').focus(), 60);
+    }
+    main.querySelectorAll('[data-ouvrir]').forEach((b) => b.addEventListener('click', () => ouvrir(b.dataset.ouvrir)));
+    $('#feuilleX').addEventListener('click', () => fermer(false));
+    f.addEventListener('keydown', (e) => { if (e.key === 'Escape') fermer(false); });
+    addEventListener('popstate', () => { if (ouvert) fermer(true); });
+    // une adresse qui vise une section l'ouvre directement (profil.html → « Mes paiements et reçus »)
+    const CIBLES = { '#hAchats': 'achats', '#notifications': 'notifications', '#profil': 'profil', '#plume': 'plume', '#apparence': 'apparence' };
+    if (CIBLES[location.hash]) ouvrir(CIBLES[location.hash]);
+    addEventListener('hashchange', () => { if (CIBLES[location.hash]) ouvrir(CIBLES[location.hash]); });
   }
 
   /* ─── 21/10/2026 : appareils, adresse e-mail ─── */
@@ -367,5 +443,5 @@ window.SOZO_PRET.then(() => {
     });
   }
 
-  charger().then(() => { S.footer(); notifPanneau(); if (location.hash === '#notifications') setTimeout(() => $('#notifications').scrollIntoView(), 300); }).catch(window.SOZO_ERREUR);
+  charger().then(() => { if (!TEL) S.footer(); notifPanneau(); if (location.hash === '#notifications' && !TEL) setTimeout(() => $('#notifications').scrollIntoView(), 300); }).catch(window.SOZO_ERREUR);
 }).catch(window.SOZO_ERREUR);
