@@ -31,6 +31,7 @@
     <main class="cx-main">
       <div class="cx-card">
         <a class="cx-back mono" href="../index.html">${S.icon('left')} Retour au site</a>
+        <div class="sx-cx-tete" aria-hidden="true">${S.PLUME_OR}<b>Sōzō</b><small>Heal your heart · Grown your faith · Glow your spirit</small></div>
         <h1 id="cxTitle"></h1>
         <p class="cx-lead" id="cxLead"></p>
         <div class="cx-tabs" role="tablist" aria-label="Connexion ou inscription">
