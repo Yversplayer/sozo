@@ -246,7 +246,7 @@ Sur 7 captures du propriétaire (Netflix, Webtoon, ses propres écrans). « Simp
 - **Citations** : `backend/tools/demo_ecrits.py` — 8 citations du domaine public (Augustin, Pascal, Thérèse de Lisieux, François de Sales, Jean de la Croix) publiées par le compte « Trésors de la foi » avec leur auteur réel, et 6 pensées d'auteurs INVENTÉS, marquées « Exemple » (`ecrit.exemple`). Aucun « j'aime » créé. En ligne, sur décision du propriétaire seulement : `backend_venv/bin/python backend/tools/demo_ecrits.py --en-ligne --projet dcbbvcvnpdllxjyefzln` (adresse collée au clavier, taper CITATIONS). Local : `demo.py --tous` charge les 14 livres comme en ligne.
 - Corrigé au passage : le titre des couvertures de style « c » était invisible (bandeau bordeaux sous un titre bordeaux), `velours.css`.
 
-## 16. Lot 1 des retours du 08/11/2026 — « une application, pas un site » — commit local, PAS ENCORE EN LIGNE
+## 16. Lot 1 des retours du 08/11/2026 — « une application, pas un site » — EN LIGNE le 08/11 (avec §17)
 
 Retours du propriétaire sur l'APK : écran noir entre les onglets, reflet bleu au toucher, « Retour » inerte dans les commentaires, tout rouge, ouverture qui semble ne pas marcher.
 - **Blanc par défaut sur téléphone aussi** (`assets/theme.js`) ; blanc pur, pas ivoire (`appli.css`, jetons sous `html:not([data-theme="dark"])`) ; seul l'accueil prend la teinte du livre présenté. Le nocturne reste au choix dans Paramètres. La couleur des barres (`meta theme-color`) suit le thème ; manifeste en `#FFFFFF` (l'APK doit être refabriqué pour que les barres Android changent).
@@ -257,7 +257,7 @@ Retours du propriétaire sur l'APK : écran noir entre les onglets, reflet bleu 
 
 **Lots 2 et 3 : faits le jour même (voir §17).** ~~Reste (lot 2, le gros) : les onglets rechargent encore une page entière et redemandent `/api/catalogue` (~2 s depuis Kinshasa) — c'est l'écran vide entre les onglets. À faire : un seul écran où les onglets se remplacent, données gardées en mémoire ; clavier ouvert d'office dans Rechercher ; Profil qu'on fait glisser du doigt entre ses rubriques sans changer d'onglet en bas.~~ **Lot 3** : Notes, sur les photos du propriétaire. **À voir sur capture** : la barre bleue en haut et la ligne rouge en bas (APK ou page ?). **Couvertures** : images Pinterest seulement comme modèles de style (droits d'auteur).
 
-## 17. Les écrans des maquettes Stitch (08/11/2026) — commits locaux, PAS ENCORE EN LIGNE
+## 17. Les écrans des maquettes Stitch (08/11/2026) — EN LIGNE le 08/11 (push 58142e9, Worker Cloudflare republié ; Render inchangé : il avait déjà les routes du §15)
 
 Le propriétaire a fait dessiner l'application dans Google Stitch (projet « Sozo »), puis : « tu as les écrans, apporte toi-même les modifications voulues ; un logiciel beau et complet ». Écrans revus avant d'être recopiés : AUCUNE fonction inventée par Stitch n'a été reprise (connexion Google/Apple, code SMS, écrans d'accueil après inscription, audio, dons « Encourager l'auteur », journal spirituel, code PIN, hashtags, publication anonyme, « vocation »).
 
@@ -273,4 +273,5 @@ Le propriétaire a fait dessiner l'application dans Google Stitch (projet « Soz
 
 **Vérification** : outil de capture hors fenêtre (Chrome sans tête piloté par CDP, compte d'essai local, session réutilisée — la connexion est limitée à 6 par 15 min) ; balayage sans erreur JavaScript de 15 écrans téléphone et 8 écrans ordinateur, thème clair et nocturne.
 
-**Reste** : pousser (Cloudflare republie les pages) + Manual Deploy Render (en-tête `Speculation-Rules` côté Flask ; le Worker le pose déjà) ; refabriquer l'APK (couleurs blanches du manifeste) ; captures du propriétaire pour la barre bleue en haut et la ligne rouge en bas ; couvertures (modèles Pinterest = style seulement).
+**Vérifié en ligne** : `/app/ecrans.css` servi, en-tête `Speculation-Rules` et type `application/speculationrules+json` posés par le Worker, page de connexion au nouveau dessin. Pas vérifié en ligne : les écrans connectés (aucun compte créé sur la production). Ajouts du même jour : paiement Mobile Money en trois étapes et reçu (`achat.js`), liseuse en une ligne + menu « ⋯ » + « Précédente · Page n / N · Suivante ». `recu.html` (reçu imprimable) n'a pas été redessiné.
+**Reste** : Manual Deploy Render au prochain changement du serveur (le §17 ne touche Flask que pour les pages, servies en production par le Worker) ; refabriquer l'APK (couleurs blanches du manifeste) ; captures du propriétaire pour la barre bleue en haut et la ligne rouge en bas ; couvertures (modèles Pinterest = style seulement).
