@@ -36,6 +36,50 @@ window.SOZO_PRET.then(() => {
   </div>
   <button class="btn bb-sortir" type="button" id="sortirLecture" hidden>${S.icon('x')} Quitter la lecture</button>`;
 
+  /* 08/11/2026 — sur téléphone, d'après les maquettes Stitch : une barre
+     d'application (Retour, « Ésaïe 26 ▾ », chercher) ; les livres et les
+     chapitres quittent le haut de la page pour une feuille qui monte du bas.
+     Ce sont les MÊMES listes (déplacées, pas recopiées) : leurs liens et leur
+     filtre ne changent pas. */
+  const TELB = matchMedia('(max-width: 899px)').matches;
+  if (TELB) {
+    main.querySelector('.bb').insertAdjacentHTML('beforebegin', `<header class="sx-barre sx-bb-barre" id="bbBarre">
+      <a class="sx-retour" href="decouvrir.html" data-retour aria-label="Retour">${S.icon('left')}</a>
+      <button type="button" class="sx-bb-choix" id="bbChoix" aria-haspopup="dialog"><span id="bbRef"></span>${S.icon('down')}</button>
+      <span class="sx-barre-d"><span class="sx-chip">LSG 1910</span><button type="button" class="sx-ic" id="bbCherche" aria-label="Chercher dans la Bible" aria-expanded="false">${S.icon('search')}</button></span>
+    </header>
+    <div class="sx-feuille sx-feuille--bas" id="bbFeuille" role="dialog" aria-modal="true" aria-labelledby="bbFeuilleT" hidden>
+      <div class="sx-feuille-poignee" aria-hidden="true"></div>
+      <header class="sx-bb-fh"><h2 id="bbFeuilleT">Livres &amp; chapitres</h2><button type="button" class="sx-ic" id="bbFeuilleX" aria-label="Fermer">${S.icon('x')}</button></header>
+      <div class="sx-feuille-corps" id="bbFeuilleCorps"><p class="sx-sur" id="bbChapsT"></p></div>
+    </div>`);
+    main.classList.add('sx-bb');
+    const f = $('#bbFeuille'), corps = $('#bbFeuilleCorps'), side = main.querySelector('.bb-side'), chaps = $('#chaps');
+    const marque = document.createComment('bb');
+    const ouvrir = () => {
+      side.before(marque); $('#bbChapsT').after(chaps); corps.append(side);
+      $('#bbChapsT').textContent = `Chapitres de ${B.BOOKS[b - 1][0]}`;
+      f.hidden = false; requestAnimationFrame(() => f.classList.add('is-ouverte'));
+      document.documentElement.classList.add('sx-sans-defile');
+      history.pushState({ sxFeuille: 'bible' }, '');
+      corps.scrollTop = 0;
+    };
+    const fermer = (depuisHistorique) => {
+      if (f.hidden) return;
+      marque.after(side); marque.remove(); $('#text').before(chaps);
+      f.classList.remove('is-ouverte'); setTimeout(() => { f.hidden = true; }, S.reduced ? 0 : 220);
+      document.documentElement.classList.remove('sx-sans-defile');
+      if (!depuisHistorique && history.state && history.state.sxFeuille) history.back();
+    };
+    $('#bbChoix').addEventListener('click', ouvrir);
+    $('#bbFeuilleX').addEventListener('click', () => fermer(false));
+    f.addEventListener('click', (e) => { if (e.target === f) fermer(false); });
+    addEventListener('popstate', () => fermer(true));
+    const ch = $('#bbCherche');
+    ch.addEventListener('click', () => { const on = !main.classList.contains('sx-bb-cherche'); main.classList.toggle('sx-bb-cherche', on); ch.setAttribute('aria-expanded', String(on)); if (on) $('#motB').focus(); });
+    const bb = $('#bbBarre'); addEventListener('scroll', () => bb.classList.toggle('is-defile', scrollY > 12), { passive: true });
+  }
+
   /* 22/10/2026 — versets gardés en couleur (image « S.O.A.P. » du propriétaire) :
      chacun choisit sa couleur, le verset se surligne dans le texte. */
   const COULEURS = [['or', 'Or'], ['rose', 'Rose'], ['ciel', 'Ciel'], ['menthe', 'Menthe'], ['lavande', 'Lavande'], ['peche', 'Pêche']];
@@ -62,6 +106,7 @@ window.SOZO_PRET.then(() => {
     const name = B.BOOKS[b - 1][0];
     document.title = `${name} ${c} — Bible — Sōzō`;
     S.ink($('#bTitle'), `${name} [[${c}]]`);
+    const rf = document.getElementById('bbRef'); if (rf) rf.textContent = `${name} ${c}`;
     const n = index ? index[b - 1][1].length : 0;
     $('#chaps').innerHTML = n ? Array.from({ length: n }, (_, i) => `<a href="bible.html?b=${b}&c=${i + 1}" class="${i + 1 === c ? 'is-on' : ''}"${i + 1 === c ? ' aria-current="page"' : ''}>${i + 1}</a>`).join('') : '';
     $('#text').innerHTML = `<p class="ash">Chargement de ${S.esc(name)}…</p>`;
