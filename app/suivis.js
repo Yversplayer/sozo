@@ -65,27 +65,108 @@ window.SOZO_PRET.then(async () => {
      puis les marque-pages et les écrits gardés. Mêmes gestes qu'avant
      (page, note, retirer), mêmes réponses du serveur. */
   const TEL = matchMedia('(max-width: 899px)').matches;
+  /* 08/11/2026 — « Mon carnet », d'après les maquettes Stitch et le retour du
+     propriétaire (« Notes n'est pas assez personnalisé, les graphismes sont
+     pourris ») : une recherche dans ses notes, quatre rubriques qu'on fait
+     glisser du doigt (Passages, Versets, Marque-pages, Écrits), les passages
+     surlignés au feutre et rangés par livre, la note personnelle en italique,
+     et l'invitation à écrire. Mêmes gestes qu'avant (page, note, retirer),
+     mêmes réponses du serveur ; le défilement horizontal ne touche jamais
+     l'onglet du bas ([data-sans-glisse]). */
+  const RUBRIQUES = [['passages', 'Passages'], ['versets', 'Versets'], ['marque-pages', 'Marque-pages'], ['ecrits-gardes', 'Écrits']];
+  let rubrique = RUBRIQUES.some(([k]) => k === location.hash.slice(1)) ? location.hash.slice(1) : 'passages';
   function carnet() {
     const nP = (epingles || []).length, nV = versets.length, nM = signets.length, nE = (gardes || []).length, total = nP + nV + nM + nE;
-    const saut = [['passages', 'Passages', nP], ['versets', 'Versets', nV], ['marque-pages', 'Marque-pages', nM], ['ecrits-gardes', 'Écrits', nE]].filter((x) => x[2]);
-    const acts = (h) => `<div class="cn-acts">${h}</div>`;
+    const N = { passages: nP, versets: nV, 'marque-pages': nM, 'ecrits-gardes': nE };
     const par = {}; (epingles || []).forEach((e) => (par[e.livre] = par[e.livre] || { titre: e.titre, l: [] }).l.push(e));
-    return `<div class="cn">
-      <header class="cn-tete"><h1>Mes notes</h1><p>${total ? `${total} note${total > 1 ? 's' : ''} gardée${total > 1 ? 's' : ''}` : 'Votre carnet est encore vierge'}</p></header>
-      ${saut.length > 1 ? `<nav class="cn-saut" aria-label="Aller à">${saut.map(([k, l, n]) => `<a href="#${k}">${l} <span>${n}</span></a>`).join('')}</nav>` : ''}
-      ${epingles === null ? `<p class="warn">${S.icon('x')}<span>Épingles indisponibles pour le moment.</span></p>` : ''}
-      ${nP ? `<section class="cn-sec" id="passages" aria-labelledby="ntP"><h2 id="ntP">Passages</h2>${Object.entries(par).map(([slug, g]) => `
-        <h3 class="cn-livre">${S.book(slug) ? `<span class="bi-cv">${S.cover(S.book(slug), { d3: false })}</span>` : ''}<span>${S.esc(g.titre)}</span></h3>
-        ${g.l.map((e) => `<article class="cn-note-l" data-pin="${e.id}"><p class="cn-surl bb-c-or"><mark>${S.esc(e.extrait)}</mark></p>
-          ${e.note ? `<p class="cn-perso">${S.esc(e.note)}</p>` : ''}
-          ${acts(`<a href="lire.html?id=${encodeURIComponent(slug)}&p=${e.n}">Page ${e.n} ${S.icon('right')}</a><button type="button" data-note="${e.id}">${e.note ? 'Modifier ma note' : 'Ajouter une note'}</button><button type="button" data-desep="${e.id}">Retirer</button>`)}</article>`).join('')}`).join('')}</section>` : ''}
-      ${nV ? `<section class="cn-sec" id="versets" aria-labelledby="ntV"><h2 id="ntV">Versets</h2>${versets.map((x) => `<article class="cn-note-l"><p class="cn-surl bb-c-${S.esc(x.couleur || 'or')}"><mark>${S.esc(x.t)}</mark></p>
-        ${acts(`<a href="bible.html?b=${x.b}&c=${x.c}&v=${x.v1}${x.v2 !== x.v1 ? '-' + x.v2 : ''}">${S.esc(NOMS_B[x.b - 1])} ${x.c}:${x.v1}${x.v2 !== x.v1 ? '–' + x.v2 : ''} ${S.icon('right')}</a><button type="button" data-verset="${x.id}">Retirer</button>`)}</article>`).join('')}</section>` : ''}
-      ${nM ? `<section class="cn-sec" id="marque-pages" aria-labelledby="ntM"><h2 id="ntM">Marque-pages</h2><ul class="cn-signets">${signets.map((x) => `<li>${S.icon('garder')}<a href="lire.html?id=${encodeURIComponent(x.livre)}&p=${x.n}"><strong>${S.esc(x.titre)}</strong><span>page ${x.n}</span></a><button type="button" data-signet="${x.id}" aria-label="Retirer le marque-page de « ${S.esc(x.titre)} »">${S.icon('x')}</button></li>`).join('')}</ul></section>` : ''}
-      ${nE ? `<section class="cn-sec" id="ecrits-gardes" aria-labelledby="ntE"><h2 id="ntE">Écrits gardés</h2>${gardes.map((e) => `<article class="cn-ecrit"><p>${S.esc(String(e.texte || '').replace(/[#>*•]/g, '').trim().slice(0, 220))}${String(e.texte || '').length > 220 ? '…' : ''}</p>
-        <p class="cn-de">— ${S.esc(e.auteur.nom)} · ${S.esc(E.NATURES[e.nature] || '')}</p>${acts(`<a href="ecrit.html?id=${e.id}">Lire ${S.icon('right')}</a>`)}</article>`).join('')}</section>` : ''}
-      ${total ? '' : `<div class="pf-vide"><strong>Rien de gardé pour l’instant</strong><p>Dans la liseuse, sélectionnez une phrase et touchez « Épingler » ; dans la Bible, colorez un verset ; sous un écrit, touchez « Garder ». Tout se retrouve ici.</p><a class="ap-b ap-b--voile" href="bible.html">Ouvrir la Bible</a></div>`}
+    const vide = (titre, texte, lien, libelle) => `<div class="sx-vide">${S.PLUME_OR}<strong>${titre}</strong><span>${texte}</span>${lien ? `<a class="sx-btn sx-btn--doux sx-btn--petit" href="${lien}">${libelle}</a>` : ''}</div>`;
+    const ref = (x) => `${S.esc(NOMS_B[x.b - 1])} ${x.c}:${x.v1}${x.v2 !== x.v1 ? '–' + x.v2 : ''}`;
+    const R = {
+      passages: epingles === null ? `<p class="warn">${S.icon('x')}<span>Épingles indisponibles pour le moment.</span></p>`
+        : nP ? Object.entries(par).map(([slug, g]) => { const b = S.book(slug); return `<div class="sx-cn-livre">
+            <a class="sx-cn-livre-h" href="livre.html?id=${encodeURIComponent(slug)}">${b ? S.cover(b, { d3: false }) : ''}<span><b>${S.esc(g.titre)}</b><small>${g.l.length} passage${g.l.length > 1 ? 's' : ''} gardé${g.l.length > 1 ? 's' : ''}</small></span>${S.icon('chevron')}</a>
+            ${g.l.map((e) => `<article class="sx-carte sx-note" data-pin="${e.id}" data-texte="${S.esc((e.extrait + ' ' + (e.note || '') + ' ' + g.titre).toLowerCase())}">
+              <p class="sx-surl bb-c-or"><mark>${S.esc(e.extrait)}</mark></p>
+              ${e.note ? `<p class="sx-perso">${S.icon('edit')}<span>${S.esc(e.note)}</span></p>` : ''}
+              <div class="sx-note-a"><a class="sx-lien" href="lire.html?id=${encodeURIComponent(slug)}&p=${e.n}">Page ${e.n} ${S.icon('right')}</a>
+                <span><button type="button" class="sx-ic" data-note="${e.id}" aria-label="${e.note ? 'Modifier ma note' : 'Ajouter une note'}">${S.icon('edit')}</button><button type="button" class="sx-ic" data-desep="${e.id}" aria-label="Retirer ce passage">${S.icon('corbeille')}</button></span></div>
+            </article>`).join('')}</div>`; }).join('')
+        : vide('Aucun passage gardé', 'Dans la liseuse, sélectionnez une phrase qui vous parle, puis touchez « Épingler ».', 'explorer.html', 'Trouver un livre'),
+      versets: nV ? versets.map((x) => `<article class="sx-carte sx-note sx-note--verset bb-c-${S.esc(x.couleur || 'or')}" data-texte="${S.esc((x.t + ' ' + NOMS_B[x.b - 1]).toLowerCase())}">
+          <span class="sx-sur">${ref(x)}</span>
+          <p class="sx-surl"><mark>« ${S.esc(x.t)} »</mark></p>
+          <div class="sx-note-a"><a class="sx-lien" href="bible.html?b=${x.b}&c=${x.c}&v=${x.v1}${x.v2 !== x.v1 ? '-' + x.v2 : ''}">${S.icon('book')} Méditer</a>
+            <span><button type="button" class="sx-ic" data-partager-verset="${x.id}" aria-label="Partager ce verset">${S.icon('partager')}</button><button type="button" class="sx-ic" data-verset="${x.id}" aria-label="Retirer ce verset">${S.icon('corbeille')}</button></span></div>
+        </article>`).join('')
+        : vide('Aucun verset', 'Dans la Bible, touchez un verset puis choisissez une couleur : il vient se ranger ici.', 'bible.html', 'Ouvrir la Bible'),
+      'marque-pages': nM ? `<div class="sx-liste">${signets.map((x) => { const b = S.book(x.livre); return `<div class="sx-ligne sx-ligne--livre" data-texte="${S.esc(x.titre.toLowerCase())}">${b ? S.cover(b, { d3: false }) : `<span class="sx-ligne-ic">${S.icon('garder')}</span>`}
+          <span class="sx-ligne-t"><b>${S.esc(x.titre)}</b><small>${S.icon('garder')} Marque-page à la page ${x.n}</small></span>
+          <a class="sx-btn sx-btn--plein sx-btn--petit" href="lire.html?id=${encodeURIComponent(x.livre)}&p=${x.n}">Reprendre</a>
+          <button type="button" class="sx-ic" data-signet="${x.id}" aria-label="Retirer le marque-page de « ${S.esc(x.titre)} »">${S.icon('x')}</button></div>`; }).join('')}</div>`
+        : vide('Aucun marque-page', 'Dans la liseuse, touchez le ruban pour marquer la page où vous vous arrêtez.', 'explorer.html', 'Trouver un livre'),
+      'ecrits-gardes': gardes === null ? `<p class="warn">${S.icon('x')}<span>Écrits gardés indisponibles pour le moment.</span></p>`
+        : nE ? gardes.map((e) => `<article class="sx-carte sx-note sx-note--ecrit" data-texte="${S.esc((String(e.texte || '') + ' ' + e.auteur.nom).toLowerCase())}">
+            <div class="sx-mot-tete">${S.monogramme(e.auteur.nom)}<div><b>${S.esc(e.auteur.nom)}</b><small>${S.esc(E.NATURES[e.nature] || 'Écrit')}</small></div></div>
+            <blockquote>${S.esc(String(e.texte || '').replace(/[#>*•]/g, '').trim().slice(0, 240))}${String(e.texte || '').length > 240 ? '…' : ''}</blockquote>
+            <div class="sx-note-a"><a class="sx-lien" href="ecrit.html?id=${e.id}">Lire en entier ${S.icon('right')}</a></div>
+          </article>`).join('')
+        : vide('Aucun écrit gardé', 'Sous un poème, une pensée ou une prière qui vous parle, touchez « Garder ».', 'explorer.html?vue=ecrits', 'Lire des écrits')
+    };
+    return `<div class="cn sx-page">
+      <header class="sx-barre" id="cnBarre">
+        <a class="ap-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${S.PLUME_OR}<span class="ap-logo-t" aria-hidden="true">Sōzō</span></a>
+        <span class="sx-barre-d"><a class="sx-ic" href="notifications.html" data-cloche aria-label="Notifications">${S.icon('bell')}</a>
+          <a class="sx-ic" href="profil.html" aria-label="Mon profil"><span class="sx-av" aria-hidden="true">${S.esc(S.initials ? S.initials() : '')}</span></a></span>
+      </header>
+      <div class="sx-ecran">
+        <div><h1 class="sx-titre">Mon carnet</h1><p class="sx-chapeau">${total ? `${total} note${total > 1 ? 's' : ''} gardée${total > 1 ? 's' : ''} : vos passages, versets et méditations.` : 'Votre carnet est encore vierge : il se remplit en lisant.'}</p></div>
+        ${total > 3 ? `<label class="sx-champ">${S.icon('search')}<span class="sr">Chercher dans mes notes</span><input type="search" id="cnQ" placeholder="Chercher dans mes notes…" autocomplete="off"></label>` : ''}
+        <div class="sx-onglets" data-sans-glisse><nav class="sx-pilules" role="tablist" aria-label="Mon carnet">${RUBRIQUES.map(([k, l]) => `<button type="button" class="sx-pilule" role="tab" id="cn-${k}" aria-controls="cnp-${k}" aria-selected="${rubrique === k}" tabindex="${rubrique === k ? 0 : -1}" data-cn="${k}">${l}${N[k] ? ` <small>${N[k]}</small>` : ''}</button>`).join('')}</nav></div>
+        <div class="sx-pager" id="cnPager" data-sans-glisse>${RUBRIQUES.map(([k]) => `<section id="cnp-${k}" role="tabpanel" aria-labelledby="cn-${k}"><div class="sx-cn-corps">${R[k]}</div></section>`).join('')}</div>
+        <section class="sx-invite sx-invite--clair">
+          <span class="sx-sur">${S.icon('feather')} Votre plume attend</span>
+          <h2>Une pensée vous est venue en lisant ?</h2>
+          <p>Gardez-la en écrit : pour vous seul, ou pour la partager.</p>
+          <a class="sx-btn sx-btn--or" href="ecrits.html?nouveau=pensee">${S.icon('feather')}<span>Écrire une réflexion</span></a>
+        </section>
+      </div>
     </div>`;
+  }
+  // le carnet : rubriques qu'on fait glisser, pastilles, recherche
+  function brancherCarnet() {
+    const pager = $('#cnPager'); if (!pager) return;
+    const tabs = [...main.querySelectorAll('[data-cn]')];
+    const idx = (k) => RUBRIQUES.findIndex(([x]) => x === k);
+    const ajuster = () => { const p = $(`#cnp-${rubrique}`); if (p) pager.style.height = `${p.scrollHeight}px`; };
+    const marquer = (k) => {
+      rubrique = k;
+      tabs.forEach((t) => { const on = t.dataset.cn === k; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; if (on) t.scrollIntoView({ block: 'nearest', inline: 'center', behavior: S.reduced ? 'auto' : 'smooth' }); });
+      history.replaceState(null, '', `suivis.html?vue=notes#${k}`); ajuster();
+    };
+    const aller = (k, focus) => { pager.scrollTo({ left: idx(k) * pager.clientWidth, behavior: S.reduced ? 'auto' : 'smooth' }); marquer(k); if (focus) $(`#cn-${k}`).focus(); };
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => aller(t.dataset.cn));
+      t.addEventListener('keydown', (e) => { const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!d) return; e.preventDefault(); aller(tabs[(i + d + tabs.length) % tabs.length].dataset.cn, true); });
+    });
+    let tFin;
+    pager.addEventListener('scroll', () => { clearTimeout(tFin); tFin = setTimeout(() => { const k = (RUBRIQUES[Math.round(pager.scrollLeft / pager.clientWidth)] || RUBRIQUES[0])[0]; if (k !== rubrique) marquer(k); }, 90); }, { passive: true });
+    pager.scrollLeft = idx(rubrique) * pager.clientWidth; marquer(rubrique);
+    addEventListener('hashchange', () => { const k = location.hash.slice(1); if (idx(k) >= 0 && k !== rubrique) aller(k); });
+    const q = $('#cnQ');
+    if (q) q.addEventListener('input', () => {
+      const t = q.value.trim().toLowerCase();
+      main.querySelectorAll('[data-texte]').forEach((x) => { x.hidden = !!t && !x.dataset.texte.includes(t); });
+      main.querySelectorAll('.sx-cn-livre').forEach((g) => { g.hidden = !!t && !g.querySelector('[data-texte]:not([hidden])'); });
+      ajuster();
+    });
+    const barre = $('#cnBarre');
+    addEventListener('scroll', () => barre.classList.toggle('is-defile', scrollY > 12), { passive: true });
+    main.querySelectorAll('[data-partager-verset]').forEach((b) => b.addEventListener('click', async () => {
+      const x = versets.find((y) => y.id === +b.dataset.partagerVerset); if (!x) return;
+      const texte = `« ${x.t} » — ${NOMS_B[x.b - 1]} ${x.c}:${x.v1}${x.v2 !== x.v1 ? '–' + x.v2 : ''} (Louis Segond)`;
+      if (navigator.share) { try { await navigator.share({ text: texte }); return; } catch (er) { if (er && er.name === 'AbortError') return; } }
+      try { await navigator.clipboard.writeText(texte); S.toast('Verset copié : collez-le où vous voulez.'); } catch (er) { S.toast('Le partage n’est pas possible sur cet appareil.'); }
+    }));
   }
   function render() {
     const fol = S.follows().map((id) => S.book(id)).filter(Boolean);
@@ -212,6 +293,7 @@ window.SOZO_PRET.then(async () => {
     // Lue au clic : la page suivante s'ouvre aussitôt, la requête survit grâce à keepalive
     // (sans lui, le navigateur l'annulait souvent en quittant la page : notification restée « nouvelle »).
     document.querySelectorAll('[data-nid]').forEach((a) => a.addEventListener('click', () => { window.SOZO_API('POST', '/api/notifications/lues', { ids: [+a.dataset.nid] }, { keepalive: true }); }));
+    if (NOTES && TEL) brancherCarnet();
     S.inkAll();
   }
   // La cloche ou le menu mènent à suivis.html#notifications : on change d'onglet sans recharger

@@ -985,7 +985,7 @@ window.SOZO = (() => {
 
   const q = (k) => new URLSearchParams(location.search).get(k);
 
-  return { D, leger, esc, icon, img, money, dateLong, dateShort, dayLong, relDays, parse, now, book, author, booksBy, status, access, readable,
+  return { D, leger, initials, esc, icon, img, money, dateLong, dateShort, dayLong, relDays, parse, now, book, author, booksBy, status, access, readable,
            visiblePages, stats, accessLabel, priceFrom, chapterOf, pagesRange, follows, isFollowed, toggleFollow, notifications, markSeen,
            unread, majCloche, libelleAppareil, sess, cover, bookCard, visite, monogramme, PLUME_SVG, PLUME_OR, teinte, poserTeinte, depuisJours, emphase, installer, POLICES, NOMS_POLICES, couvUrl, mise, ink, inkHTML, inkAll, prepDraw, prepAll, modal, toast, shell, footer, tilt, reveals, q, reduced, rangee, xpEcrit, brancherRangees };
 })();
