@@ -104,11 +104,17 @@ window.SOZO_PRET.then(() => {
       return `<div class="rd-verrou"><div class="rd-flou" aria-hidden="true">${flou(p.n)}</div>
         <div class="rd-cadenas"><span class="rd-cadenas-ic">${S.icon('lock')}</span><strong>Page payante d’un livre d’exemple</strong><small>Ce livre montre comment une page payante se présente. Il ne se vend pas.</small></div></div>`;
     }
+    /* 08/11/2026 — « Poursuivre la lecture » des maquettes Stitch : les VRAIES
+       options du livre (cette page, son chapitre, tout le livre) et leur prix,
+       chacune menant au récapitulatif ; le paiement reste déclaré puis
+       confirmé par Sōzō (achat.js), jamais « payé » d'un toucher. */
     const opts = S.buy.options(b, p.n);
-    const des = opts.length ? Math.min(...opts.map((o) => o.price)) : null;
     return `<div class="rd-verrou"><div class="rd-flou" aria-hidden="true">${flou(p.n)}</div>
-      <div class="rd-cadenas"><span class="rd-cadenas-ic">${S.icon('lock')}</span><strong>Page ${p.n} payante</strong>
-        ${des != null ? `<button class="btn btn--accent btn--sm" type="button" data-debloquer="${p.n}">Débloquer · dès ${S.money(des)}</button>` : '<small>Cette page n’est pas à vendre séparément.</small>'}</div></div>`;
+      <div class="rd-cadenas sx-poursuivre"><span class="rd-cadenas-ic">${S.icon('lock')}</span><span class="sx-sur">Page ${p.n} · payante</span><strong>Poursuivre la lecture</strong>
+        ${opts.length ? `<small>${S.esc(a.name)} a choisi de vendre la suite. Ce que vous débloquez reste à vous.</small>
+          <div class="sx-options">${opts.map((o, i) => `<button type="button" class="sx-option${o.k === 'all' ? ' is-conseil' : ''}" data-opt="${p.n}:${i}"><span><b>${S.esc(o.label)}</b><small>${S.esc(o.detail)}</small></span><strong>${S.money(o.price)}</strong></button>`).join('')}</div>
+          <p class="sx-integral-n">${S.icon('shield')} Mobile Money : vous déclarez votre paiement, Sōzō le confirme.</p>`
+        : '<small>Cette page n’est pas à vendre séparément.</small>'}</div></div>`;
   }
   function entete(p) {
     const st = S.access(b, p.n), ch = S.chapterOf(b, p.n);
@@ -583,6 +589,8 @@ window.SOZO_PRET.then(() => {
     }
     const db = e.target.closest('[data-debloquer]');
     if (db) { acheter(+db.dataset.debloquer); return; }
+    const op = e.target.closest('[data-opt]');
+    if (op) { const [k, i] = op.dataset.opt.split(':').map(Number); const o = S.buy.options(b, k)[i]; if (o) S.buy.recap(b, o); return; }
     const sv = e.target.closest('[data-suivre]');
     if (sv) {
       sv.disabled = true;

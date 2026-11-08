@@ -374,6 +374,20 @@
   .a-nav .tabs .tb-a.is-active:not(.tabs-ecrire) .ic { color: var(--ver-text); background: rgba(107, 15, 26, .09); box-shadow: none; transform: none; }
   html[data-theme="dark"] .a-nav .tabs .tb-a.is-active:not(.tabs-ecrire) .ic { background: rgba(212, 175, 55, .14); }
 }
+/* les fenêtres (récapitulatif d'achat, charte, confirmations…) montent du bas
+   de l'écran, comme une feuille d'application ; le bouton principal d'abord,
+   en pleine largeur, sous le pouce */
+@media (max-width: 899px) {
+  .md-wrap { place-items: end center; padding: 0; }
+  .md { width: 100%; max-height: calc(100dvh - 40px); border-radius: 26px 26px 0 0; padding: 14px 20px calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateY(100%); transition: transform .3s cubic-bezier(.2, .8, .2, 1); }
+  .md::before { content: ''; display: block; width: 40px; height: 5px; margin: 0 auto 14px; border-radius: 99px; background: rgba(var(--ink-rgb), .18); }
+  .md-wrap.is-open .md { transform: none; }
+  .md-x { top: 18px; right: 14px; }
+  .md-title { font-size: 25px; margin-right: 44px; }
+  .md-actions { flex-direction: column-reverse; align-items: stretch; gap: 10px; }
+  .md-actions .btn { width: 100%; min-height: 52px; justify-content: center; border-radius: 15px; font-size: 16px; }
+}
+@media (max-width: 899px) and (prefers-reduced-motion: reduce) { .md { transition: none; } }
 /* sur ordinateur, les écrans de l'application restent à une largeur de lecture,
    la barre latérale fait office d'en-tête */
 @media (min-width: 900px) {
@@ -480,3 +494,20 @@
 .sx-feuille-corps .btn:not(.btn--ghost):not(.btn--sm) { width: 100%; }
 html.sx-sans-defile, html.sx-sans-defile body { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .sx-feuille { transition: none; } }
+
+/* ═══ LISEUSE : « Poursuivre la lecture » (toute largeur) ═══ */
+.rd-cadenas.sx-poursuivre { width: min(380px, 92%); top: 34%; gap: 8px; padding: 22px 18px 16px; border-radius: 24px; background: var(--paper); border: 1px solid rgba(212, 175, 55, .35);
+  box-shadow: 0 30px 60px -30px rgba(40, 8, 14, .6); }
+.sx-poursuivre .rd-cadenas-ic { width: 60px; height: 60px; margin-top: -52px; box-shadow: 0 12px 26px -12px rgba(0, 0, 0, .45); }
+.sx-poursuivre .rd-cadenas-ic .ic { width: 26px; height: 26px; }
+.sx-poursuivre strong { font-size: 24px; }
+.sx-options { display: grid; gap: 8px; width: 100%; margin-top: 6px; }
+.sx-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 12px 14px; border: 1.5px solid var(--sx-trait); border-radius: 16px; background: var(--paper); text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+.sx-option span { display: grid; gap: 2px; min-width: 0; }
+.sx-option b { font: 600 15px/1.25 var(--sans); }
+.sx-option small { font-size: 12.5px !important; color: var(--ash); }
+.sx-option > strong { flex: none; font: 600 17px/1 var(--sans) !important; color: var(--ver-text); }
+.sx-option.is-conseil { border-color: rgba(212, 175, 55, .6); background: linear-gradient(150deg, rgba(212, 175, 55, .12), transparent), var(--paper); }
+.sx-option:active { transform: scale(.99); }
+.sx-poursuivre .sx-integral-n { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; font-size: 12.5px; color: var(--ash); text-align: left; }
+.sx-poursuivre .sx-integral-n .ic { flex: none; width: 14px; height: 14px; color: var(--gold-text); }

@@ -56,7 +56,10 @@
   }
   window.addEventListener('pagereveal', function (e) {
     var vt = e.viewTransition, act = window.navigation && navigation.activation;
-    if (!vt || !act || !act.from || !act.entry) return;
+    if (!vt) return;
+    // une transition interrompue (écran tourné, clavier) n'est pas une erreur de la page
+    try { vt.ready.catch(function () {}); vt.finished.catch(function () {}); vt.updateCallbackDone.catch(function () {}); } catch (x) {}
+    if (!act || !act.from || !act.entry) return;
     var de = onglet(act.from.url), vers = onglet(act.entry.url), t;
     if (act.navigationType === 'reload') { vt.skipTransition(); return; }
     if (de >= 0 && vers >= 0) t = vers > de ? 'sz-avant' : 'sz-arriere';
