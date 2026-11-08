@@ -83,14 +83,20 @@ window.SOZO_PRET.then(() => {
   const lignes = b.chapters.length ? b.chapters.map(ligneChapitre).filter(Boolean) : visible.map(lignePage);
   const chapIci = prog && b.chapters.findIndex((c) => prog >= c.from && prog <= c.to);
   const lireTexte = firstReadable ? (prog ? `Reprendre${chapIci >= 0 && b.chapters.length ? ` · chap. ${chapIci + 1}` : ''} · page ${prog}` : 'Commencer à lire') : 'Voir la première page';
-  const fiche = () => `<div class="ap-lv">
+  /* 08/11/2026 — la fiche des maquettes Stitch : la couverture sur la teinte
+     du livre, le titre, l'auteur, la note des VRAIS avis (remplie quand ils
+     arrivent), la présentation, « Commencer à lire », télécharger et
+     s'abonner ; la carte « Livre intégral » quand il reste du payant ; les
+     chapitres en lignes ; l'auteur ; du même auteur. */
+  const prixLivre = allOpt && st.locked ? allOpt.price : null;
+  const fiche = () => `<div class="ap-lv sx-page">
     <div class="ap-fond" aria-hidden="true"></div>
-    <header class="ap-lv-barre">
-      <button class="ap-ic" type="button" id="lvRetour" aria-label="Retour">${S.icon('left')}</button>
-      <span class="ap-barre-d">
-        <button class="ap-ic" type="button" id="lvInfo" aria-haspopup="dialog" aria-label="Tout savoir sur ce livre">${S.icon('info')}</button>
+    <header class="sx-barre ap-lv-barre">
+      <a class="sx-retour" href="decouvrir.html" data-retour aria-label="Retour">${S.icon('left')}</a>
+      <span class="sx-barre-d">
+        <button class="sx-ic" type="button" id="lvInfo" aria-haspopup="dialog" aria-label="Tout savoir sur ce livre">${S.icon('info')}</button>
         <span class="ap-menu-z">
-          <button class="ap-ic" type="button" id="lvPlus" aria-haspopup="true" aria-expanded="false" aria-controls="lvMenu" aria-label="Plus d’options">${S.icon('dotsv')}</button>
+          <button class="sx-ic" type="button" id="lvPlus" aria-haspopup="true" aria-expanded="false" aria-controls="lvMenu" aria-label="Plus d’options">${S.icon('dotsv')}</button>
           <span class="ap-menu" id="lvMenu" role="menu" hidden>
             <button role="menuitem" type="button" id="partagerLivre">${S.icon('partager')}<span>Partager</span></button>
             <button role="menuitem" type="button" id="lvAjouter"></button>
@@ -99,25 +105,43 @@ window.SOZO_PRET.then(() => {
         </span>
       </span>
     </header>
-    <section class="ap-lv-tete">
+    <div class="sx-ecran">
+    <section class="sx-lv-tete">
       <div class="ap-lv-cv">${S.cover(b, { big: true, d3: false })}</div>
+      ${b.demo ? '<span class="sx-chip sx-chip--or">Exemple</span>' : `<span class="sx-sur">${S.esc(b.cat)}</span>`}
       <h1>${S.esc(b.title)}</h1>
-      <a class="ap-lv-auteur" href="auteur.html?id=${encodeURIComponent(a.id)}" data-glisse-auteur>par ${S.esc(a.name)} ${S.icon('chevron')}</a>
+      <a class="sx-lv-auteur" href="auteur.html?id=${encodeURIComponent(a.id)}" data-glisse-auteur>${S.esc(a.name)}${a.city ? ` · ${S.esc(a.city)}` : ''} ${S.icon('chevron')}</a>
+      <p class="sx-lv-m">${S.esc(S.accessLabel(b))} · ${b.chapters.length ? `${b.chapters.length} chapitre${b.chapters.length > 1 ? 's' : ''} · ` : ''}${st.published} page${st.published > 1 ? 's' : ''}<span id="lvNote"></span></p>
       ${b.desc ? `<p class="ap-lv-desc" id="lvDesc">${S.esc(b.desc)}</p>` : ''}
-      <a class="ap-b ap-b--plein ap-lv-lire" href="${pagesLues}">${S.icon('book')}<span>${S.esc(lireTexte)}</span></a>
-      <p class="ap-lv-m">${S.esc(S.accessLabel(b))}<i aria-hidden="true"></i>${b.chapters.length ? `${b.chapters.length} chapitre${b.chapters.length > 1 ? 's' : ''}<i aria-hidden="true"></i>` : ''}${st.published} page${st.published > 1 ? 's' : ''}${st.next ? `<i aria-hidden="true"></i>la suite le ${S.esc(S.dateShort(st.next.date))}` : ''}${b.demo ? '<i aria-hidden="true"></i><span class="ap-ex">Exemple</span>' : ''}</p>
-      <p class="ap-lv-etat" id="lvEtat" role="status" hidden></p>
+      <a class="sx-btn sx-btn--plein sx-btn--bloc" href="${pagesLues}">${S.icon('book')}<span>${S.esc(lireTexte)}</span></a>
+      <div class="sx-lv-b">
+        <button class="sx-btn sx-btn--contour" type="button" id="lvTele2">${S.icon('download')}<span>Sans réseau</span></button>
+        <button class="sx-btn sx-btn--contour" type="button" id="lvAbo" aria-pressed="false"></button>
+      </div>
+      <p class="ap-lv-etat sx-chapeau" id="lvEtat" role="status" hidden></p>
     </section>
-    <section class="ap-chaps" aria-labelledby="chapsT">
-      <div class="ap-chaps-h"><h2 id="chapsT">${b.chapters.length ? `${lignes.length} chapitre${lignes.length > 1 ? 's' : ''}` : `${lignes.length} page${lignes.length > 1 ? 's' : ''}`}</h2>
-        ${lignes.length > 2 ? `<button class="ap-trier" type="button" id="lvTrier" aria-pressed="false">${S.icon('trier')}<span>Du début</span></button>` : ''}</div>
-      ${lignes.length ? `<ol class="ap-chaps-l" id="lvChaps">${lignes.join('')}</ol>` : '<p class="ash">L’auteur n’a encore rien publié.</p>'}
-      ${st.draft ? `<p class="ap-lv-note">L’auteur prépare d’autres pages : elles apparaîtront une fois programmées.</p>` : ''}
-    </section>
-    ${voisins.length ? `<section class="ap-rang" aria-label="${same.length ? 'Du même auteur' : 'Dans la même veine'}">
-      <div class="ap-rang-h"><h2>${same.length ? 'Du même auteur' : 'Dans la même veine'}</h2></div>
-      <div class="xp-defile ap-defile" tabindex="0">${voisins.slice(0, 10).map((x) => `<a class="ap-livre" href="livre.html?id=${encodeURIComponent(x.id)}">${S.cover(x, { d3: false })}<span>${S.esc(x.title)}</span></a>`).join('')}</div>
+    ${prixLivre != null ? `<section class="sx-carte sx-integral" aria-labelledby="integralT">
+      <span class="sx-sur">${S.icon('book')} Livre intégral</span>
+      <div class="sx-integral-l"><div><h2 id="integralT">Débloquer tout le livre</h2><p>Toutes les pages payantes, d’un coup${owned ? ', en plus de celles que vous avez déjà' : ''}.</p></div><b>${S.money(prixLivre)}</b></div>
+      <p class="sx-integral-n">${S.icon('shield')} Paiement par Mobile Money, confirmé par Sōzō.</p>
+      <button class="sx-btn sx-btn--or sx-btn--bloc" type="button" id="buyAllCarte">Acheter le livre entier</button>
     </section>` : ''}
+    ${st.next ? `<p class="sx-carte sx-carte--douce sx-suite">${S.icon('calendar')}<span>La suite paraît le <b>${S.esc(S.dateLong(st.next.date))}</b>. Abonnez-vous pour être prévenu.</span></p>` : ''}
+    <section class="ap-chaps" aria-labelledby="chapsT">
+      <div class="sx-h"><h2 id="chapsT">${b.chapters.length ? `Chapitres (${lignes.length})` : `Pages (${lignes.length})`}</h2>
+        ${lignes.length > 2 ? `<button class="ap-trier" type="button" id="lvTrier" aria-pressed="false">${S.icon('trier')}<span>Du début</span></button>` : ''}</div>
+      ${lignes.length ? `<ol class="ap-chaps-l" id="lvChaps">${lignes.join('')}</ol>` : '<p class="sx-chapeau">L’auteur n’a encore rien publié.</p>'}
+      ${st.draft ? `<p class="sx-chapeau">L’auteur prépare d’autres pages : elles apparaîtront une fois programmées.</p>` : ''}
+    </section>
+    <a class="sx-carte sx-auteur-c" href="auteur.html?id=${encodeURIComponent(a.id)}">
+      ${S.monogramme(a.name, 52)}<span class="sx-auteur-t"><span class="sx-sur">L’auteur</span><b>${S.esc(a.name)}</b>${a.city ? `<small>${S.esc(a.city)}</small>` : ''}</span>${S.icon('chevron')}
+      ${a.bio ? `<p>${S.esc(a.bio)}</p>` : ''}
+    </a>
+    ${voisins.length ? `<section aria-label="${same.length ? 'Du même auteur' : 'Dans la même veine'}">
+      <div class="sx-h"><h2>${same.length ? 'Du même auteur' : 'Dans la même veine'}</h2></div>
+      <div class="sx-rang" data-sans-glisse>${voisins.slice(0, 10).map((x) => `<a class="sx-livre" href="livre.html?id=${encodeURIComponent(x.id)}">${S.cover(x, { d3: false })}<b>${S.esc(x.title)}</b><span>${S.esc(S.author(x.author).name)}</span></a>`).join('')}</div>
+    </section>` : ''}
+    </div>
     <dialog class="ap-feuille" id="lvFiche" aria-labelledby="ficheT">
       <div class="ap-feuille-in">
         <header class="ap-feuille-h"><h2 id="ficheT">${S.esc(b.title)}</h2><button class="ap-ic" type="button" id="lvFicheX" aria-label="Fermer">${S.icon('x')}</button></header>
@@ -292,6 +316,8 @@ window.SOZO_PRET.then(() => {
     z.removeAttribute('aria-busy');
     if (!r.ok) { z.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'Les avis n’ont pas pu se charger.')}</span></p>`; return; }
     const d = r.d, res = d.resume, mien = d.mien;
+    const ln = $('#lvNote');
+    if (ln && res.nombre) ln.innerHTML = ` · <span class="sx-note">★ ${String(res.moyenne).replace('.', ',')}</span> (${res.nombre} avis)`;
     z.innerHTML = `
       <div class="av-resume">${res.nombre ? `<strong>${String(res.moyenne).replace('.', ',')}</strong>${etoiles(Math.round(res.moyenne))}<span class="ash">${res.nombre} avis</span>` : '<span class="ash">Aucun avis pour l’instant.</span>'}</div>
       ${mien && mien.retire_le ? '<p class="note">Votre avis a été retiré par la modération.</p>' : d.peut ? `<form class="av-form" id="avisForm">
@@ -326,7 +352,14 @@ window.SOZO_PRET.then(() => {
   function brancherFiche() {
     const z = main.querySelector('.ap-lv');
     S.teinte(b).then((t) => S.poserTeinte(z, t));
-    $('#lvRetour').addEventListener('click', () => { if (history.length > 1 && document.referrer.startsWith(location.origin)) history.back(); else location.href = 'decouvrir.html'; });
+    const abo = $('#lvAbo');
+    const syncAbo = () => { const on = S.isFollowed(b.id); abo.setAttribute('aria-pressed', String(on)); abo.innerHTML = `${S.icon(on ? 'check' : 'plus')}<span>${on ? 'Abonné(e)' : 'S’abonner'}</span>`; };
+    syncAbo();
+    abo.addEventListener('click', async () => {
+      abo.disabled = true; const on = await S.toggleFollow(b.id); abo.disabled = false; syncAbo(); syncAj();
+      S.toast(on ? 'Abonné(e) : ses nouvelles pages arriveront dans vos notifications.' : 'Retiré de vos abonnements.');
+    });
+    const bac = $('#buyAllCarte'); if (bac) bac.addEventListener('click', () => S.buy.recap(b, allOpt));
     const dlg = $('#lvFiche');
     const ouvrirFiche = () => { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); };
     $('#lvInfo').addEventListener('click', ouvrirFiche);
@@ -341,16 +374,17 @@ window.SOZO_PRET.then(() => {
     document.addEventListener('click', (e) => { if (!e.target.closest('.ap-menu-z')) ferme(); });
     menu.addEventListener('keydown', (e) => { if (e.key === 'Escape') { ferme(); plus.focus(); } });
     menu.addEventListener('click', (e) => { if (e.target.closest('[role=menuitem]')) ferme(); });
-    const syncAj = () => { const on = S.isFollowed(b.id); aj.innerHTML = `${S.icon(on ? 'check' : 'plus')}<span>${on ? 'Abonné(e) — se désabonner' : 'Ajouter à mes abonnements'}</span>`; };
+    function syncAj() { const on = S.isFollowed(b.id); aj.innerHTML = `${S.icon(on ? 'check' : 'plus')}<span>${on ? 'Abonné(e) — se désabonner' : 'Ajouter à mes abonnements'}</span>`; }
     syncAj();
     aj.addEventListener('click', async () => {
-      const on = await S.toggleFollow(b.id); syncAj();
+      const on = await S.toggleFollow(b.id); syncAj(); syncAbo();
       S.toast(on ? 'Ajouté à vos abonnements : ses nouvelles pages arriveront dans vos notifications.' : 'Retiré de vos abonnements.');
     });
     const etat = $('#lvEtat');
     const dire = (t) => { etat.textContent = t; etat.hidden = !t; };
     const H = window.SOZO_HORS;
     if (H) H.estTelecharge(b.id).then((oui) => { if (oui) dire('Disponible sans réseau sur cet appareil.'); });
+    $('#lvTele2').addEventListener('click', () => $('#lvTele').click());
     $('#lvTele').addEventListener('click', async () => {
       if (!H) return;
       dire('Téléchargement…');

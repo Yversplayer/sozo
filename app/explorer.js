@@ -6,6 +6,7 @@ window.SOZO_PRET.then(() => {
   S.shell('explorer');
   const main = $('#main');
   const books = D.books;
+  if (matchMedia('(max-width: 899px)').matches) { rechercherTel(); return; }
   // 21/10/2026 : plus de photo ; une tuile de velours et son signe, comme sur l'image du propriétaire
   const ICONE = { Foi: 'croix', Spiritualité: 'spark', Poésie: 'feather', Prière: 'heart', Méditation: 'sun', Louange: 'star', Témoignage: 'bulle',
     Recueil: 'library', Récit: 'book', Conte: 'moon' };
@@ -215,4 +216,143 @@ window.SOZO_PRET.then(() => {
   S.inkAll(); S.prepAll(); S.reveals(); S.footer();
   if (location.hash === '#q') setTimeout(() => $('#q').focus(), 60);
   else if (S.q('cat')) setTimeout(() => $('#tout').scrollIntoView(), 60);
+
+  /* ═══ 08/11/2026 — l'onglet « Rechercher » des maquettes Stitch (téléphone) ═══
+     La recherche en haut, prête à taper (le clavier sort dès l'arrivée) ;
+     les recherches récentes, gardées SUR CET APPAREIL seulement ; les
+     catégories en ronds, avec leur nombre réel de livres ; des livres en
+     grille ; les auteurs. Pendant la frappe : les livres (sur l'appareil),
+     les auteurs et les écrits (le serveur). Sur ordinateur, rien ne change. */
+  function rechercherTel() {
+    const E = window.SOZO_ECRITS;
+    const compte = {};
+    books.forEach((b) => { compte[b.cat] = (compte[b.cat] || 0) + 1; });
+    const cats = Object.keys(compte).sort((x, y) => compte[y] - compte[x] || x.localeCompare(y, 'fr'));
+    const ICONE = { Foi: 'croix', Spiritualité: 'spark', Poésie: 'feather', Prière: 'heart', Méditation: 'sun', Louange: 'star', Témoignage: 'bulle',
+      Recueil: 'library', Récit: 'book', Conte: 'moon', Roman: 'book', Jeunesse: 'star', Essai: 'pen', Biographie: 'user', Théologie: 'library',
+      Fantasy: 'spark', Histoire: 'calendar', Manga: 'image', Nouvelles: 'file', Polar: 'eye', 'Roman graphique': 'image', Bande: 'image' };
+    const parution = (b) => Math.max(0, ...b.pages.filter((p) => S.status(p) === 'published' && p.date).map((p) => +S.parse(p.date)));
+    const autres = books.filter((b) => !b.owner).sort((x, y) => parution(y) - parution(x));
+    const norm = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const CLE = 'sozo-recherches';
+    const recentes = () => { try { return JSON.parse(localStorage.getItem(CLE) || '[]').filter((x) => typeof x === 'string').slice(0, 8); } catch (e) { return []; } };
+    const garder = (q) => { q = q.trim(); if (q.length < 2) return; try { localStorage.setItem(CLE, JSON.stringify([q, ...recentes().filter((x) => norm(x) !== norm(q))].slice(0, 8))); } catch (e) {} };
+    const oublier = (q) => { try { localStorage.setItem(CLE, JSON.stringify(q == null ? [] : recentes().filter((x) => x !== q))); } catch (e) {} };
+    const prix = (b) => {
+      if (b.access === 'free') return '<span class="sx-chip sx-chip--or">Gratuit</span>';
+      const p = S.priceFrom(b);
+      return p != null ? `<span class="sx-chip sx-chip--bord">${b.access === 'mixed' ? 'Dès ' : ''}${S.esc(S.money(p))}</span>` : '';
+    };
+    const tuile = (b) => `<a class="sx-tuile" href="livre.html?id=${encodeURIComponent(b.id)}"><span class="sx-tuile-cv">${S.cover(b, { d3: false })}${prix(b)}</span><b>${S.esc(b.title)}</b><small>${S.esc(S.author(b.author).name)}</small><span class="sx-sur">${S.esc(b.cat)}</span></a>`;
+    const ligneLivre = (b) => `<a class="sx-ligne sx-ligne--livre" href="livre.html?id=${encodeURIComponent(b.id)}">${S.cover(b, { d3: false })}<span class="sx-ligne-t"><b>${S.esc(b.title)}</b><small>${S.esc(S.author(b.author).name)} · ${S.esc(b.cat)}</small>${prix(b)}</span>${S.icon('chevron')}</a>`;
+    const ligneAuteur = (id, nom, sous) => `<a class="sx-ligne" href="auteur.html?id=${encodeURIComponent(id)}">${S.monogramme(nom, 46)}<span class="sx-ligne-t"><b>${S.esc(nom)}</b>${sous ? `<small>${S.esc(sous)}</small>` : ''}</span>${S.icon('chevron')}</a>`;
+    const vue0 = S.q('vue') === 'ecrits' ? 'ecrits' : 'livres';
+    main.innerHTML = `<div class="sx-page sx-cherche">
+      <div class="sx-cherche-barre">
+        <label class="sx-champ">${S.icon('search')}<span class="sr">Rechercher</span>
+          <input type="search" id="q" enterkeyhint="search" placeholder="Rechercher un livre, un écrit, un auteur…" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+        <button type="button" class="sx-annuler" id="annuler">Annuler</button>
+      </div>
+      <div class="sx-ecran">
+        <nav class="sx-pilules" role="tablist" aria-label="Que chercher ?" data-sans-glisse>
+          <button type="button" class="sx-pilule" role="tab" data-vue="livres" aria-selected="${vue0 === 'livres'}">${S.icon('book')}Livres</button>
+          <button type="button" class="sx-pilule" role="tab" data-vue="ecrits" aria-selected="${vue0 === 'ecrits'}">${S.icon('feather')}Écrits</button>
+          <a class="sx-pilule" href="bible.html">${S.icon('library')}La Bible</a>
+        </nav>
+        <div id="accueilR"></div>
+        <div id="resultats" hidden aria-live="polite"></div>
+        <div id="vueEcrits" hidden>
+          <div class="sx-pilules" role="group" aria-label="Natures" data-sans-glisse><button class="sx-pilule is-on" type="button" data-nature="">Tous</button>${Object.entries(E.NATURES).map(([k, l]) => `<button class="sx-pilule" type="button" data-nature="${k}">${S.esc(l)}</button>`).join('')}</div>
+          <div class="sx-fil" id="fil"></div>
+          <button class="sx-btn sx-btn--doux sx-btn--bloc" type="button" id="plus" hidden>Voir plus d’écrits</button>
+        </div>
+      </div>
+    </div>`;
+    const q = $('#q'), accueil = $('#accueilR'), res = $('#resultats');
+    let cat = S.q('cat') || '', vue = vue0;
+
+    function peindreAccueil() {
+      const r = recentes();
+      accueil.innerHTML = `
+        ${r.length ? `<section class="sx-recentes"><div class="sx-h"><span class="sx-sur">Recherches récentes</span><button type="button" id="toutEffacer">Tout effacer</button></div>
+          <div class="sx-recentes-l">${r.map((x) => `<span class="sx-recente"><button type="button" data-recente="${S.esc(x)}">${S.icon('clock')}${S.esc(x)}</button><button type="button" class="sx-recente-x" data-oublier="${S.esc(x)}" aria-label="Retirer « ${S.esc(x)} »">${S.icon('x')}</button></span>`).join('')}</div></section>` : ''}
+        ${cats.length ? `<section><div class="sx-h"><h2>Catégories</h2></div>
+          <div class="sx-ronds">${cats.slice(0, 11).map((c) => `<button type="button" class="sx-rond" data-cat="${S.esc(c)}"><span>${S.icon(ICONE[c] || 'book')}</span><b>${S.esc(c)}</b><small>${compte[c]}</small></button>`).join('')}
+            <a class="sx-rond sx-rond--bible" href="bible.html"><span>${S.icon('library')}</span><b>Bible</b><small>LSG</small></a></div></section>` : ''}
+        ${autres.length ? `<section><div class="sx-h"><h2>À découvrir</h2><button type="button" data-tout>Tout voir</button></div>
+          <div class="sx-tuiles">${autres.slice(0, 6).map(tuile).join('')}</div></section>` : `<div class="sx-vide">${S.PLUME_OR}<strong>Aucun livre publié pour l’instant</strong>Les livres apparaîtront ici dès leur première page publiée.</div>`}
+        ${Object.keys(D.authors).length ? `<section><div class="sx-h"><h2>Les auteurs</h2></div>
+          <div class="sx-liste">${Object.entries(D.authors).slice(0, 8).map(([id, a]) => ligneAuteur(id, a.name, `${S.booksBy(id).length} livre${S.booksBy(id).length > 1 ? 's' : ''}`)).join('')}</div></section>` : ''}`;
+    }
+
+    let nR = 0, tR;
+    async function chercher() {
+      const t = q.value.trim(), n = ++nR;
+      const vide = !t && !cat;
+      accueil.hidden = !vide || vue !== 'livres'; res.hidden = vide || vue !== 'livres';
+      if (vide) { peindreAccueil(); return; }
+      const nt = norm(t);
+      const livres = books.filter((b) => (!cat || b.cat === cat) && (!nt || norm([b.title, S.author(b.author).name, b.cat, b.desc].join(' ')).includes(nt)));
+      const tete = `${cat ? `<div class="sx-filtre"><span class="sx-chip sx-chip--bord">${S.esc(cat)}</span><button type="button" class="sx-lien" id="sansCat">Toutes les catégories</button></div>` : ''}`;
+      const blocLivres = `<section><div class="sx-h"><h2>Livres</h2><span class="sx-compte">${livres.length}</span></div>${livres.length ? `<div class="sx-liste">${livres.slice(0, 30).map(ligneLivre).join('')}</div>` : '<p class="sx-chapeau">Aucun livre ne correspond.</p>'}</section>`;
+      res.innerHTML = tete + blocLivres + (t.length >= 2 ? '<div id="resServeur"><p class="sx-chapeau"><span class="spin" aria-hidden="true"></span> Auteurs et écrits…</p></div>' : '');
+      const sc = $('#sansCat'); if (sc) sc.addEventListener('click', () => { cat = ''; chercher(); });
+      if (t.length < 2) return;
+      const [re, ra] = await Promise.all([window.SOZO_API('GET', `/api/ecrits?q=${encodeURIComponent(t)}`), window.SOZO_API('GET', `/api/profils?q=${encodeURIComponent(t)}`)]);
+      if (n !== nR) return;                                 // une frappe plus récente l'emporte
+      const ecr = re.ok ? re.d.ecrits.slice(0, 8) : [], aut = ra.ok ? ra.d.auteurs : [];
+      const z = $('#resServeur'); if (!z) return;
+      z.innerHTML = `${aut.length ? `<section><div class="sx-h"><h2>Auteurs</h2><span class="sx-compte">${aut.length}</span></div><div class="sx-liste">${aut.map((a) => ligneAuteur(a.id, a.nom, a.ville)).join('')}</div></section>` : ''}
+        ${ecr.length ? `<section><div class="sx-h"><h2>Écrits</h2><span class="sx-compte">${ecr.length}</span></div><div class="sx-fil" id="filR">${ecr.map((e) => E.carte(e)).join('')}</div></section>` : ''}
+        ${!aut.length && !ecr.length ? '' : ''}`;
+      if (ecr.length) E.brancher($('#filR'), (id) => ecr.find((e) => e.id === id));
+    }
+    q.addEventListener('input', () => { clearTimeout(tR); tR = setTimeout(chercher, 220); });
+    q.addEventListener('search', () => { garder(q.value); q.blur(); });
+    q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { garder(q.value); q.blur(); } });
+    res.addEventListener('click', (e) => { if (e.target.closest('a')) garder(q.value); });
+    $('#annuler').addEventListener('click', () => { q.value = ''; cat = ''; q.blur(); montrer('livres'); chercher(); });
+    accueil.addEventListener('click', (e) => {
+      const rec = e.target.closest('[data-recente]'), ou = e.target.closest('[data-oublier]'), c = e.target.closest('[data-cat]');
+      if (ou) { oublier(ou.dataset.oublier); peindreAccueil(); return; }
+      if (rec) { q.value = rec.dataset.recente; chercher(); return; }
+      if (c) { cat = c.dataset.cat; chercher(); scrollTo(0, 0); return; }
+      if (e.target.closest('#toutEffacer')) { oublier(null); peindreAccueil(); return; }
+      if (e.target.closest('[data-tout]')) { cat = ''; q.value = ''; res.hidden = false; accueil.hidden = true; nR++; res.innerHTML = `<section><div class="sx-h"><h2>Tous les livres</h2><span class="sx-compte">${autres.length}</span></div><div class="sx-tuiles">${autres.map(tuile).join('')}</div></section>`; }
+    });
+
+    /* les écrits : du serveur, par nature, page après page */
+    let ecrits = [], suite = null, nature = '', charge = false;
+    async function chargerEcrits(neuf) {
+      if (charge) return; charge = true;
+      const fil = $('#fil');
+      if (neuf) { ecrits = []; suite = null; fil.innerHTML = '<p class="sx-chapeau"><span class="spin" aria-hidden="true"></span> Chargement des écrits…</p>'; }
+      const r = await window.SOZO_API('GET', `/api/ecrits?${new URLSearchParams({ ...(nature ? { nature } : {}), ...(suite ? { avant: suite } : {}) })}`);
+      charge = false;
+      if (!r.ok) { fil.innerHTML = `<p class="warn">${S.icon('x')}<span>${S.esc(r.d.erreur || 'Les écrits n’ont pas pu se charger.')}</span></p>`; return; }
+      ecrits = ecrits.concat(r.d.ecrits); suite = r.d.suite;
+      fil.innerHTML = ecrits.length ? ecrits.map((e) => E.carte(e)).join('') : `<div class="sx-vide">${S.PLUME_OR}<strong>Aucun écrit ici pour l’instant</strong>Le premier peut être le vôtre.<a class="sx-btn sx-btn--plein" href="ecrits.html?nouveau=${nature || 'pensee'}">${S.icon('feather')}Écrire</a></div>`;
+      $('#plus').hidden = !suite;
+    }
+    E.brancher($('#fil'), (id) => ecrits.find((e) => e.id === id));
+    $('#plus').addEventListener('click', () => chargerEcrits(false));
+    $$('[data-nature]').forEach((c) => c.addEventListener('click', () => { nature = c.dataset.nature; $$('[data-nature]').forEach((x) => x.classList.toggle('is-on', x === c)); chargerEcrits(true); }));
+    function montrer(v) {
+      vue = v;
+      $$('[data-vue]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.vue === v)));
+      $('#vueEcrits').hidden = v !== 'ecrits';
+      history.replaceState(null, '', v === 'ecrits' ? 'explorer.html?vue=ecrits' : 'explorer.html');
+      if (v === 'ecrits' && !ecrits.length) chargerEcrits(true);
+      chercher();
+    }
+    $$('[data-vue]').forEach((b) => b.addEventListener('click', () => montrer(b.dataset.vue)));
+    if (S.q('q')) q.value = S.q('q');
+    montrer(vue0);
+    document.title = 'Rechercher — Sōzō';
+    /* le clavier prêt à taper, comme si l'on avait touché le champ (pas sur
+       la vue Écrits ni une catégorie demandée : on vient y lire) */
+    const prete = () => { if (vue === 'livres' && !cat && !S.q('q')) { try { q.focus({ preventScroll: true }); } catch (e) {} } };
+    if (document.prerendering) document.addEventListener('prerenderingchange', prete, { once: true }); else setTimeout(prete, 30);
+    addEventListener('pageshow', (e) => { if (e.persisted) prete(); });
+  }
 }).catch(window.SOZO_ERREUR);
