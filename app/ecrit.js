@@ -21,22 +21,37 @@ window.SOZO_PRET.then(async () => {
 
   // 03/11/2026 : sur téléphone, glisser vers la gauche mène à l'auteur (comme TikTok)
   if (/^u\d+$/.test(e.auteur.id)) document.body.dataset.glisseAuteur = `auteur.html?id=${encodeURIComponent(e.auteur.id)}`;
-  main.innerHTML = `<div class="wrap vl-lecture-ecrit">
-    <a class="vl-retour" href="decouvrir.html" data-retour>${S.icon('left')} Retour</a>
+  /* 08/11/2026 — d'après les maquettes Stitch : une barre d'application (Retour,
+     la nature de l'écrit, partager), l'écrit en carte, puis « Réflexions &
+     échanges » : le champ du commentaire, les fils et leurs réponses. */
+  main.innerHTML = `<div class="sx-page sx-ecrit">
+    <header class="sx-barre" id="ecBarre">
+      <a class="sx-retour" href="decouvrir.html" data-retour aria-label="Retour">${S.icon('left')}</a>
+      <span class="sx-barre-t">${S.esc(E.NATURES[e.nature] || 'Écrit')}</span>
+      <button class="sx-ic" type="button" id="ecPartager" aria-label="Partager cet écrit">${S.icon('partager')}</button>
+    </header>
+    <div class="sx-ecran vl-lecture-ecrit">
     ${e.mien ? `<p class="note">${S.icon('feather')} C’est votre ${S.esc(E.NATURES[e.nature].toLowerCase())}. <a href="ecrits.html?id=${e.id}">Le modifier</a></p>` : ''}
     <div id="ecrit">${E.carte(e, { entier: true })}</div>
     <section class="vl-coms" id="commentaires" aria-labelledby="comT">
-      <h2 id="comT">Commentaires <span class="ash" id="nbCom"></span></h2>
+      <div class="sx-h"><h2 id="comT">Réflexions &amp; échanges <span class="sx-compte" id="nbCom"></span></h2></div>
       ${e.statut === 'publie' ? `<form class="vl-com-form" id="comForm" novalidate>
         <label class="sr" for="comTexte">Votre commentaire</label>
-        <textarea id="comTexte" rows="2" maxlength="1000" placeholder="Un mot pour l’auteur…"></textarea>
-        <div class="vl-com-a"><small class="ash">Restez bienveillant : chaque commentaire peut être signalé.</small><button class="btn btn--sm" type="submit">Publier</button></div>
+        <div class="sx-com-champ">${S.monogramme(S.sess().name || '?', 36)}<textarea id="comTexte" rows="1" maxlength="1000" placeholder="Un mot pour l’auteur…"></textarea><button class="sx-btn sx-btn--plein sx-btn--petit" type="submit">Publier</button></div>
+        <small class="sx-com-note">${S.icon('shield')} Restez bienveillant : chaque commentaire peut être signalé.</small>
         <p class="cx-err" id="comErr" role="alert"></p>
       </form>` : '<p class="ash">Cet écrit n’est pas publié : personne d’autre ne peut le lire ni le commenter.</p>'}
       <ol class="vl-com-l" id="comL"></ol>
       ${e.statut === 'publie' && !e.mien ? `<button class="ec-lien vl-signaler" type="button" id="signaler">${S.icon('shield')} Signaler cet écrit</button>` : ''}
     </section>
+    </div>
   </div>`;
+  $('#ecPartager').addEventListener('click', () => E.partager(e));
+  const ecB = $('#ecBarre');
+  addEventListener('scroll', () => ecB.classList.toggle('is-defile', scrollY > 12), { passive: true });
+  // le champ du commentaire grandit avec le texte, comme dans une messagerie
+  const ct = $('#comTexte');
+  if (ct) ct.addEventListener('input', () => { ct.style.height = 'auto'; ct.style.height = `${Math.min(ct.scrollHeight, 160)}px`; });
   E.brancher($('#ecrit'), () => e);
 
   /* 21/10/2026 : des fils (un commentaire et ses réponses), et la correction
@@ -46,7 +61,7 @@ window.SOZO_PRET.then(async () => {
       <p class="vl-com-t">${S.esc(c.texte).replace(/\n/g, '<br>')}</p>
       <p class="vl-com-acts">${e.statut === 'publie' ? `<button class="ec-lien" type="button" data-repondre="${c.parent || c.id}" data-a="${S.esc(c.auteur.nom)}">Répondre</button>` : ''}${c.peut_modifier ? `<button class="ec-lien" type="button" data-modifier="${c.id}">Modifier</button>` : ''}${c.peut_retirer ? `<button class="ec-lien" type="button" data-retirer="${c.id}">Retirer</button>` : ''}${c.auteur.id !== `u${S.sess().id}` ? `<button class="ec-lien" type="button" data-signaler-com="${c.id}">Signaler</button>` : ''}</p></div></li>`;
   function peindre() {
-    $('#nbCom').textContent = coms.length ? `(${coms.length})` : '';
+    $('#nbCom').textContent = coms.length ? String(coms.length) : '';
     const tetes = coms.filter((c) => !c.parent || !coms.some((x) => x.id === c.parent));
     $('#comL').innerHTML = coms.length ? tetes.map((c) => unCom(c) + coms.filter((x) => x.parent === c.id).map(unCom).join('')).join('')
       : `<li class="ash vl-com-vide">${e.statut === 'publie' ? 'Pas encore de commentaire. Le premier peut être le vôtre.' : ''}</li>`;
@@ -129,5 +144,4 @@ window.SOZO_PRET.then(async () => {
       } }] });
     setTimeout(() => m.el.querySelector('#sigMotif').focus(), 50);
   }
-  S.footer();
 }).catch(window.SOZO_ERREUR);

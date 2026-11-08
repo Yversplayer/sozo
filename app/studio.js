@@ -902,26 +902,75 @@ window.SOZO_PRET.then(() => {
      question, puis les manières d'écrire en liste, sans cartes (le
      propriétaire : « Bibliothèque, Écrire et Notes se ressemblent beaucoup
      trop »). Les livres de l'auteur se rangent ensuite en étagère. */
-  const MANIERES = [['pensee', 'Une pensée', 'Une phrase, un verset qui vous habite'], ['priere', 'Une prière', 'À garder ou à partager'],
-    ['poeme', 'Un poème', 'Des vers, une louange'], ['recit', 'Un récit', 'Une histoire vraie, un témoignage'], ['conte', 'Un conte', 'Une parabole, une histoire']];
+  /* 08/11/2026 — d'après les maquettes Stitch : « Qu'allez-vous écrire
+     aujourd'hui ? », les formats en lignes avec leur icône, le LIVRE à part
+     (page par page), l'espace auteur avec ses vrais chiffres (livres, gagné,
+     solde), mes brouillons et mes écrits publiés (le serveur), et une parole
+     sur l'écriture lue dans la Bible intégrée (Psaume 45:2, Louis Segond). */
+  const MANIERES = [['pensee', 'Une pensée', 'Une phrase, un verset qui vous habite', 'spark', 'Instantané'], ['priere', 'Une prière', 'À garder ou à partager', 'heart', ''],
+    ['poeme', 'Un poème', 'Des vers, une louange', 'feather', ''], ['recit', 'Un récit', 'Une histoire vraie, un témoignage', 'book', ''], ['conte', 'Un conte', 'Une parabole, une histoire', 'moon', '']];
   function accueilAppli() {
     const etat = (b) => (b.sorties ? 'Publié' : 'Brouillon');
-    return `<div class="ec">
-      <header class="ec-tete"><span class="ec-plume">${S.PLUME_OR}</span><h1>Qu’allez-vous écrire aujourd’hui ?</h1></header>
-      <ul class="ec-choix">
-        ${MANIERES.map(([k, l, aide]) => `<li><a href="ecrits.html?nouveau=${k}"><span><strong>${l}</strong><small>${aide}</small></span>${S.icon('right')}</a></li>`).join('')}
-        <li><button type="button" class="ec-nouveau"><span><strong>Un livre</strong><small>Page après page${at.livres.length ? '' : ' — le premier vous est offert'}</small></span>${S.icon('plus')}</button></li>
-      </ul>
-      ${at.livres.length ? `<section class="ec-livres" aria-labelledby="ecLivresT"><div class="ap-rang-h"><h2 id="ecLivresT">Mes livres</h2><a href="studio.html?action=importer">Importer un manuscrit</a></div>
-        <div class="xp-defile ap-defile" tabindex="0">${at.livres.map((b) => `<a class="ap-livre ec-livre" href="studio.html?id=${enc(b.id)}">${couv(b, { d3: false })}
-          <span><strong>${S.esc(b.titre)}</strong><small class="ec-etat ec-etat--${b.sorties ? 'publie' : 'brouillon'}">${etat(b)} · ${b.total} page${b.total > 1 ? 's' : ''}</small></span></a>`).join('')}</div></section>`
-        : `<p class="ec-import"><a href="studio.html?action=importer">${S.icon('upload')} Vous avez déjà un manuscrit ? Importez-le (Word, PDF, EPUB)</a></p>`}
-      <p class="ec-mes"><a href="ecrits.html">${S.icon('file')} Mes écrits courts ${S.icon('right')}</a></p>
+    const auteur = at.role === 'auteur';
+    return `<div class="ec sx-page">
+      <header class="sx-barre" id="ecBarre">
+        <a class="ap-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${S.PLUME_OR}<span class="ap-logo-t" aria-hidden="true">Sōzō</span></a>
+        <span class="sx-barre-d"><a class="sx-ic" href="notifications.html" data-cloche aria-label="Notifications">${S.icon('bell')}</a>
+          <a class="sx-ic" href="profil.html" aria-label="Mon profil"><span class="sx-av" aria-hidden="true">${S.esc(S.initials())}</span></a></span>
+      </header>
+      <div class="sx-ecran">
+        <div><span class="sx-sur">${S.icon('feather')} Atelier d’écriture</span>
+          <h1 class="sx-titre">Qu’allez-vous écrire aujourd’hui ?</h1>
+          <p class="sx-chapeau">Partagez votre foi, vos inspirations, ou gardez-les pour vous.</p></div>
+        <section><div class="sx-h"><h2>Choisir un format</h2></div>
+          <div class="sx-liste sx-formats">
+            ${MANIERES.map(([k, l, aide, ic, tag]) => `<a class="sx-ligne" href="ecrits.html?nouveau=${k}"><span class="sx-ligne-ic">${S.icon(ic)}</span><span class="sx-ligne-t"><b>${l}${tag ? ` <span class="sx-chip sx-chip--or">${tag}</span>` : ''}</b><small>${aide}</small></span>${S.icon('chevron')}</a>`).join('')}
+          </div>
+          <button type="button" class="sx-livre-c ec-nouveau"><span class="sx-livre-c-ic">${S.icon('book')}</span><span class="sx-ligne-t"><b>Un livre <span class="sx-chip">Page par page</span></b><small>Écrivez et publiez votre ouvrage chapitre après chapitre${at.livres.length ? '' : ' — le premier vous est offert'}.</small></span>${S.icon('right')}</button>
+        </section>
+        ${auteur || at.livres.length ? `<section class="sx-carte sx-auteur-espace">
+          <div class="sx-h"><span class="sx-sur">${S.icon('star')} Espace auteur</span><a href="studio.html?action=importer">Importer</a></div>
+          <dl class="sx-moi-n"><div><dd>${at.livres.length}</dd><dt>Livre${at.livres.length > 1 ? 's' : ''}</dt></div><div><dd>${usd(at.gagne || 0)}</dd><dt>Gagné</dt></div><div><dd>${usd(at.solde || 0)}</dd><dt>Solde</dt></div></dl>
+          ${at.livres.length ? `<div class="sx-rang" data-sans-glisse>${at.livres.map((b) => `<a class="sx-livre" href="studio.html?id=${enc(b.id)}">${couv(b, { d3: false })}<b>${S.esc(b.titre)}</b><span class="ec-etat ec-etat--${b.sorties ? 'publie' : 'brouillon'}">${etat(b)} · ${b.total} page${b.total > 1 ? 's' : ''}</span></a>`).join('')}</div>` : ''}
+          <a class="sx-btn sx-btn--doux sx-btn--bloc" href="studio.html?id=${at.livres[0] ? enc(at.livres[0].id) : ''}#revenus">${S.icon('tag')}Mes livres, ventes et retraits</a>
+        </section>` : `<a class="sx-carte sx-ligne" href="studio.html?action=importer"><span class="sx-ligne-ic">${S.icon('upload')}</span><span class="sx-ligne-t"><b>Vous avez déjà un manuscrit ?</b><small>Importez-le : Word, PDF ou EPUB.</small></span>${S.icon('chevron')}</a>`}
+        <section id="ecMesEcrits"><div class="sx-h"><h2>Mes écrits</h2><a href="ecrits.html">Tout voir</a></div><p class="sx-chapeau"><span class="spin" aria-hidden="true"></span> Chargement…</p></section>
+        <figure class="sx-carte sx-verset" id="ecParole" hidden></figure>
+      </div>
     </div>`;
+  }
+  /* mes brouillons et mes écrits publiés : le serveur ; la parole : la Bible intégrée */
+  async function remplirAccueil() {
+    const barre = $('#ecBarre');
+    if (barre) addEventListener('scroll', () => barre.classList.toggle('is-defile', scrollY > 12), { passive: true });
+    const z = $('#ecMesEcrits');
+    const r = await API('GET', '/api/mes-ecrits');
+    const NAT = { pensee: 'Pensée', poeme: 'Poème', priere: 'Prière', recit: 'Récit', conte: 'Conte' };
+    if (z && r.ok) {
+      const l = r.d.ecrits.filter((e) => !e.corbeille_le);
+      const br = l.filter((e) => e.statut !== 'publie'), pu = l.filter((e) => e.statut === 'publie');
+      const titre = (e) => S.esc((e.titre || String(e.texte || '').split('\n').find((x) => x.trim()) || 'Sans titre').replace(/^(#{1,2} |> )/, '').replace(/\*+/g, '').slice(0, 70));
+      const carte = (e) => `<a class="sx-carte sx-brouillon" href="ecrits.html?id=${e.id}"><span class="sx-chip ${e.statut === 'publie' ? 'sx-chip--or' : ''}">${S.esc(NAT[e.nature] || 'Écrit')}</span><b>${titre(e)}</b>
+        <small>${e.statut === 'publie' ? `Publié ${S.depuisJours(e.publie_le)}${e.jaime ? ` · ${e.jaime} ♥` : ''}` : `Modifié ${S.depuisJours(e.maj)}`}</small><span class="sx-brouillon-go">${e.statut === 'publie' ? 'Voir' : 'Continuer'} ${S.icon('right')}</span></a>`;
+      z.innerHTML = `<div class="sx-h"><h2>Mes écrits</h2><a href="ecrits.html">Tout voir</a></div>
+        ${l.length ? `<nav class="sx-pilules" role="tablist" data-sans-glisse><button type="button" class="sx-pilule" role="tab" aria-selected="${br.length ? 'true' : 'false'}" data-ec="br">Brouillons <small>${br.length}</small></button><button type="button" class="sx-pilule" role="tab" aria-selected="${br.length ? 'false' : 'true'}" data-ec="pu">Publiés <small>${pu.length}</small></button></nav>
+          <div class="sx-fil" data-ecl="br"${br.length ? '' : ' hidden'}>${br.slice(0, 6).map(carte).join('') || '<p class="sx-chapeau">Aucun brouillon en cours.</p>'}</div>
+          <div class="sx-fil" data-ecl="pu"${br.length ? ' hidden' : ''}>${pu.slice(0, 6).map(carte).join('') || '<p class="sx-chapeau">Rien de publié pour l’instant.</p>'}</div>`
+          : '<p class="sx-chapeau">Vos pensées, prières et poèmes se rangeront ici.</p>'}`;
+      z.querySelectorAll('[data-ec]').forEach((b) => b.addEventListener('click', () => {
+        z.querySelectorAll('[data-ec]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+        z.querySelectorAll('[data-ecl]').forEach((x) => { x.hidden = x.dataset.ecl !== b.dataset.ec; });
+      }));
+    } else if (z) z.innerHTML = '<div class="sx-h"><h2>Mes écrits</h2><a href="ecrits.html">Tout voir</a></div>';
+    try {
+      const ps = await (await fetch('bible/19.json')).json();
+      const v = ps[44] && ps[44][1], f = $('#ecParole');
+      if (v && f) { f.innerHTML = `<span class="sx-sur">${S.icon('feather')} Une parole pour écrire</span><blockquote><p>« ${S.esc(v)} »</p></blockquote><figcaption><b>Psaume 45:2</b></figcaption>`; f.hidden = false; }
+    } catch (e) {}
   }
   function rendre(garderDefilement) {
     const y = scrollY;
-    if (TEL && !livre) { main.innerHTML = accueilAppli(); main.querySelector('.ec-nouveau').addEventListener('click', () => nouveauLivre()); urlEtat(); return; }
+    if (TEL && !livre) { main.innerHTML = accueilAppli(); main.querySelector('.ec-nouveau').addEventListener('click', () => nouveauLivre()); urlEtat(); remplirAccueil(); return; }
     main.innerHTML = atelier() + `<div class="wrap">${at.role === 'auteur' ? espaceLivre() + revenus() : ''}</div>`;
     lier();
     S.inkAll(main); S.tilt(main);

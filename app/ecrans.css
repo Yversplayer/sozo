@@ -9,14 +9,16 @@
    · seulement des fonctions qui existent dans Sōzō.
    Chargé EN DERNIER par chaque écran de app/ : il ne touche pas l'ordinateur.
    ═══════════════════════════════════════════════════════════════════════ */
-@media (max-width: 899px) {
+/* Les composants sx- valent à TOUTE largeur (seul le nouveau balisage les
+   porte : Profil s'affiche aussi sur ordinateur) ; ce qui touche des pièces
+   partagées (barre d'onglets, couleurs, accueil, fiche) reste au téléphone. */
+@media all {
   :root {
     --sx-rayon: 20px;
     --sx-ombre: 0 1px 2px rgba(30, 10, 14, .04), 0 12px 32px -24px rgba(60, 14, 22, .45);
     --sx-trait: rgba(var(--ink-rgb), .09);
     --sx-voile: rgba(var(--ink-rgb), .045);
   }
-  html:not([data-theme="dark"]) { --gold-text: #7A5C17; --ash: #66595A; }
 
   /* ─── en-tête d'écran ─── */
   .sx-barre { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -82,7 +84,7 @@
   .sx-rang { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 4px 16px 6px; scroll-snap-type: x proximity; scroll-padding: 16px; }
   .sx-rang::-webkit-scrollbar { display: none; }
   .sx-livre { flex: none; width: 132px; display: grid; gap: 4px; align-content: start; color: inherit; text-decoration: none; scroll-snap-align: start; }
-  .sx-livre .cv { font-size: 10.6px; width: 132px; border-radius: 12px; box-shadow: 0 14px 26px -18px rgba(40, 8, 14, .7); margin-bottom: 6px; }
+  .sx-livre .cv { font-size: 8.8px; width: 132px; border-radius: 12px; box-shadow: 0 14px 26px -18px rgba(40, 8, 14, .7); margin-bottom: 6px; }
   .sx-livre b { font: 600 14.5px/1.25 var(--sans); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .sx-livre span { font-size: 13px; color: var(--ash); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sx-livre .sx-chip { justify-self: start; margin-top: 2px; }
@@ -128,15 +130,6 @@
   .sx-gestes .vl-geste-l { font-weight: 600; }
 
   html[data-theme="dark"] .sx-btn--plein { box-shadow: none; }
-
-  /* ─── barre d'onglets (maquettes Stitch) : l'onglet actif en bordeaux, les
-     autres en gris net — plus de flou, qui donnait une impression de défaut ─── */
-  .a-nav .tabs { border-color: var(--sx-trait); box-shadow: 0 14px 34px -18px rgba(40, 8, 14, .45); background: color-mix(in srgb, var(--paper) 94%, transparent); }
-  .a-nav .tabs .tb-a:not(.is-active):not(.tabs-ecrire) .ic, .a-nav .tabs .tb-a:not(.is-active) .nav-av { filter: none; opacity: .62; }
-  .a-nav .tabs .tb-a { color: rgba(var(--ink-rgb), .58); font-weight: 600; }
-  .a-nav .tabs .tb-a.is-active { color: var(--ver-text); }
-  .a-nav .tabs .tb-a.is-active .ic { color: var(--ver-text); background: rgba(107, 15, 26, .09); box-shadow: none; transform: none; }
-  html[data-theme="dark"] .a-nav .tabs .tb-a.is-active .ic { background: rgba(212, 175, 55, .14); }
 
   /* ═══ DÉCOUVRIR ═══ */
   .ap-dec.sx-page { display: block; max-width: none; padding: 0; }
@@ -207,7 +200,7 @@
   .sx-tuiles { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 14px; }
   .sx-tuile { display: grid; gap: 4px; align-content: start; color: inherit; text-decoration: none; min-width: 0; }
   .sx-tuile-cv { position: relative; display: block; margin-bottom: 6px; }
-  .sx-tuile-cv .cv { font-size: 13.5px; width: 100%; border-radius: 14px; box-shadow: 0 16px 28px -18px rgba(40, 8, 14, .75); }
+  .sx-tuile-cv .cv { font-size: 11.5px; width: 100%; border-radius: 14px; box-shadow: 0 16px 28px -18px rgba(40, 8, 14, .75); }
   .sx-tuile-cv .sx-chip { position: absolute; top: 8px; right: 8px; box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .4); background: var(--paper); }
   .sx-tuile b { font: 600 15px/1.25 var(--sans); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .sx-tuile small { font-size: 13px; color: var(--ash); }
@@ -341,8 +334,96 @@
   .sx-invite--clair .sx-sur { color: var(--gold-text); }
   .sx-invite--clair h2 { color: var(--ink); font-size: 24px; }
   .sx-invite--clair p { color: var(--ash); }
+  /* ═══ ÉCRIRE ═══ */
+  .ec.sx-page { padding: 0; max-width: none; }
+  .ec.sx-page .sx-titre { margin-top: 8px; }
+  .sx-formats .sx-ligne-ic { background: rgba(107, 15, 26, .07); }
+  .sx-formats .sx-ligne-t b { display: flex; align-items: center; gap: 8px; }
+  .sx-livre-c { display: flex; align-items: center; gap: 14px; width: 100%; margin-top: 12px; padding: 16px; border: 0; border-radius: 20px; text-align: left; cursor: pointer; font: inherit;
+    color: #FFF4E0; background: radial-gradient(120% 120% at 0% 0%, rgba(160, 36, 56, .6), transparent 60%), linear-gradient(150deg, #6B0F1A, #3A0811); box-shadow: 0 16px 30px -20px rgba(70, 8, 18, .9); }
+  .sx-livre-c-ic { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: linear-gradient(135deg, #F2D98C, var(--gold)); color: #3A2410; }
+  .sx-livre-c-ic .ic { width: 22px; height: 22px; }
+  .sx-livre-c .sx-ligne-t b { display: flex; align-items: center; gap: 8px; color: #FFF7EA; font-size: 17px; }
+  .sx-livre-c .sx-ligne-t small { color: rgba(255, 244, 224, .82); }
+  .sx-livre-c .sx-chip { background: rgba(255, 255, 255, .16); color: #F6E1A6; }
+  .sx-livre-c > .ic { flex: none; width: 20px; height: 20px; }
+  .sx-auteur-espace { display: grid; gap: 14px; }
+  .sx-auteur-espace .sx-h { margin: 0; }
+  .sx-auteur-espace .sx-moi-n { grid-template-columns: repeat(3, 1fr); border-top: 0; padding: 0; }
+  .sx-auteur-espace .sx-moi-n dd { font-size: 19px; }
+  .sx-auteur-espace .ec-etat { font-size: 12.5px; }
+  #ecMesEcrits { display: grid; gap: 12px; }
+  #ecMesEcrits .sx-h { margin: 0; }
+  #ecMesEcrits [hidden] { display: none; }
+  .sx-brouillon { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; color: inherit; text-decoration: none; padding: 14px 16px; }
+  .sx-brouillon .sx-chip { justify-self: start; }
+  .sx-brouillon b { grid-column: 1; font: 600 16px/1.3 var(--sans); }
+  .sx-brouillon small { grid-column: 1; font-size: 13px; color: var(--ash); }
+  .sx-brouillon-go { grid-column: 2; grid-row: 1 / span 3; display: inline-flex; align-items: center; gap: 4px; padding: 9px 12px; border-radius: 12px; background: var(--ver); color: var(--ver-ink); font: 600 13.5px/1 var(--sans); }
+  .sx-brouillon-go .ic { width: 14px; height: 14px; }
   .sx-auteur-c p { grid-column: 1 / -1; margin: 8px 0 0; color: var(--ash); font-size: 14.5px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+}
+@media (max-width: 899px) {
+  html:not([data-theme="dark"]) { --gold-text: #7A5C17; --ash: #66595A; }
+  /* ─── barre d'onglets (maquettes Stitch) : l'onglet actif en bordeaux, les
+     autres en gris net — plus de flou, qui donnait une impression de défaut ─── */
+  .a-nav .tabs { border-color: var(--sx-trait); box-shadow: 0 14px 34px -18px rgba(40, 8, 14, .45); background: color-mix(in srgb, var(--paper) 94%, transparent); }
+  .a-nav .tabs .tb-a:not(.is-active):not(.tabs-ecrire) .ic, .a-nav .tabs .tb-a:not(.is-active) .nav-av { filter: none; opacity: .62; }
+  .a-nav .tabs .tb-a { color: rgba(var(--ink-rgb), .58); font-weight: 600; }
+  .a-nav .tabs .tb-a.is-active { color: var(--ver-text); }
+  .a-nav .tabs .tb-a.is-active:not(.tabs-ecrire) .ic { color: var(--ver-text); background: rgba(107, 15, 26, .09); box-shadow: none; transform: none; }
+  html[data-theme="dark"] .a-nav .tabs .tb-a.is-active:not(.tabs-ecrire) .ic { background: rgba(212, 175, 55, .14); }
+}
+/* sur ordinateur, les écrans de l'application restent à une largeur de lecture,
+   la barre latérale fait office d'en-tête */
+@media (min-width: 900px) {
+  .sx-page { max-width: 760px; margin: 0 auto; padding-top: 24px; }
+  .sx-page > .sx-barre { display: none; }
 }
 @media (max-width: 899px) and (prefers-reduced-motion: reduce) {
   .sx-btn, .sx-barre { transition: none; }
 }
+
+/* ═══ PAGE D'UN AUTEUR (toute largeur) ═══ */
+.sx-au-tete { display: grid; justify-items: center; text-align: center; gap: 10px; }
+.sx-au-av .vl-mono { --t: 104px; font-size: 38px; box-shadow: 0 0 0 4px var(--paper), 0 0 0 6px rgba(212, 175, 55, .75), 0 18px 34px -18px rgba(60, 10, 18, .8); }
+.sx-au-tete h1 { margin: 6px 0 0; font: 600 32px/1.08 var(--serif); }
+.sx-au-tete .sx-chapeau { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.sx-au-tete .sx-chapeau .ic { width: 15px; height: 15px; }
+.sx-au-bio { margin: 0; max-width: 46ch; font-size: 15.5px; line-height: 1.55; color: rgba(var(--ink-rgb), .82); }
+.sx-au-tete .sx-moi-n { width: 100%; grid-template-columns: repeat(3, 1fr); margin-top: 6px; }
+.sx-au-tete .sx-une-b { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.sx-au #oLivres, .sx-au #oEcrits { display: grid; gap: 18px; }
+.sx-au [hidden] { display: none !important; }
+.sx-au-une { display: grid; grid-template-columns: 104px 1fr; gap: 16px; align-items: center; color: inherit; text-decoration: none; }
+.sx-au-une .cv { font-size: 7px; border-radius: 10px; box-shadow: 0 14px 24px -16px rgba(40, 8, 14, .75); }
+.sx-au-une-t { display: grid; gap: 4px; }
+.sx-au-une-t b { font: 600 21px/1.15 var(--serif); }
+.sx-au-une-t small { font-size: 13.5px; color: var(--ash); line-height: 1.4; }
+.sx-au-une-t .sx-chip { justify-self: start; margin-top: 4px; }
+.sx-parutions h2 { margin: 0 0 8px; font: 600 20px/1.2 var(--serif); }
+
+/* ═══ UN ÉCRIT ET SES COMMENTAIRES (toute largeur) ═══ */
+.sx-ecrit .vl-lecture-ecrit { max-width: 640px; padding-top: 4px; }
+.sx-ecrit #commentaires { scroll-margin-top: 72px; display: grid; gap: 14px; }
+.sx-ecrit .sx-h h2 { display: flex; align-items: baseline; gap: 8px; }
+.sx-ecrit .vl-com-form { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; background: none; }
+.sx-com-champ { display: flex; align-items: flex-end; gap: 10px; padding: 8px 8px 8px 10px; border-radius: 20px; background: var(--surface); }
+.sx-com-champ .vl-mono { --t: 36px; flex: none; }
+.sx-com-champ textarea { flex: 1; min-width: 0; min-height: 36px; max-height: 160px; resize: none; border: 0; background: none; outline: none; padding: 8px 2px; font: 400 16px/1.35 var(--sans); color: var(--ink); }
+.sx-com-champ:focus-within { background: var(--paper); box-shadow: inset 0 0 0 1.5px rgba(var(--ink-rgb), .18); }
+.sx-com-note { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ash); }
+.sx-com-note .ic { width: 14px; height: 14px; color: var(--gold-text); }
+.sx-ecrit .vl-com-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.sx-ecrit .vl-com { display: grid; grid-template-columns: auto 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--sx-trait); }
+.sx-ecrit .vl-com--rep { margin-left: 42px; padding-top: 4px; border-bottom: 0; }
+.sx-ecrit .vl-com-h { margin: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sx-ecrit .vl-com-h strong { font: 600 15px/1.3 var(--sans); }
+.sx-ecrit .vl-com-h small { font-size: 12.5px; }
+.sx-ecrit .vl-com-t { margin: 4px 0 6px; font-size: 15.5px; line-height: 1.5; }
+.sx-ecrit .vl-com-acts { margin: 0; display: flex; gap: 16px; }
+.sx-ecrit .vl-com-acts .ec-lien { font: 600 13.5px/1 var(--sans); color: var(--ash); padding: 6px 0; text-decoration: none; background: none; border: 0; cursor: pointer; }
+.sx-ecrit .vl-com-acts .ec-lien:first-child { color: var(--ver-text); }
+.sx-ecrit .vl-com-vide { padding: 18px 0; color: var(--ash); }
+.sx-ecrit .vl-signaler { justify-self: start; display: inline-flex; align-items: center; gap: 6px; color: var(--ash); font-size: 13.5px; }
+.sx-ecrit .vl-signaler .ic { width: 15px; height: 15px; }
