@@ -1,0 +1,172 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Sōzō — LES ÉCRANS DE L'APPLICATION (téléphone, ≤ 899 px) — préfixe sx-
+   08/11/2026 : d'après les maquettes Stitch du propriétaire (projet « Sozo »),
+   revues avant d'être recopiées :
+   · fond BLANC pur, bordeaux pour les actions, or pour les repères ;
+   · titres en serif (Cormorant Garamond, déjà hébergée), interface en Inter ;
+   · des cartes douces, mais pas de cases partout : on laisse respirer ;
+   · aucun texte d'information sous 13 px (lisible en plein soleil) ;
+   · seulement des fonctions qui existent dans Sōzō.
+   Chargé EN DERNIER par chaque écran de app/ : il ne touche pas l'ordinateur.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 899px) {
+  :root {
+    --sx-rayon: 20px;
+    --sx-ombre: 0 1px 2px rgba(30, 10, 14, .04), 0 12px 32px -24px rgba(60, 14, 22, .45);
+    --sx-trait: rgba(var(--ink-rgb), .09);
+    --sx-voile: rgba(var(--ink-rgb), .045);
+  }
+  html:not([data-theme="dark"]) { --gold-text: #7A5C17; --ash: #66595A; }
+
+  /* ─── en-tête d'écran ─── */
+  .sx-barre { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    min-height: 56px; padding: max(6px, env(safe-area-inset-top, 0px)) 8px 6px 16px; margin: 0 -2px; transition: background .25s, box-shadow .25s; }
+  .sx-barre.is-defile { background: color-mix(in srgb, var(--bone) 88%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 1px 0 var(--sx-trait); }
+  .sx-barre-d { display: flex; align-items: center; gap: 2px; }
+  .sx-ic { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--ink); cursor: pointer; text-decoration: none; }
+  .sx-ic .ic { width: 23px; height: 23px; }
+  .sx-ic:active { background: var(--sx-voile); }
+  .sx-av { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--ver); color: var(--ver-ink); font: 600 13px/1 var(--sans); text-decoration: none; }
+  .sx-retour { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: -10px; border-radius: 50%; color: var(--ink); text-decoration: none; }
+  .sx-retour:active { background: var(--sx-voile); }
+  .sx-retour .ic { width: 24px; height: 24px; }
+  .sx-barre-t { flex: 1; min-width: 0; font: 600 17px/1.2 var(--sans); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .sx-ecran { display: grid; gap: 26px; max-width: 640px; margin: 0 auto; padding: 0 16px 28px; }
+  .sx-ecran > * { min-width: 0; }
+  .a-nav main:has(> .sx-page) { padding-top: 0; }
+  .sx-titre { font: 600 34px/1.05 var(--serif); letter-spacing: -0.01em; margin: 4px 0 0; }
+  .sx-titre + .sx-chapeau { margin-top: -18px; }
+  .sx-chapeau { color: var(--ash); font-size: 15.5px; line-height: 1.45; margin: 0; }
+  .sx-sur { display: inline-flex; align-items: center; gap: 6px; font: 600 12px/1.2 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--gold-text); }
+  .sx-sur .ic { width: 14px; height: 14px; }
+  .sx-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
+  .sx-h h2 { font: 600 24px/1.15 var(--serif); margin: 0; }
+  .sx-h a, .sx-h button { flex: none; font: 600 14px/1 var(--sans); color: var(--ver-text); text-decoration: none; background: none; border: 0; padding: 6px 0; cursor: pointer; }
+
+  /* ─── pastilles (filtres, onglets d'écran) ─── */
+  .sx-pilules { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px; scroll-padding: 16px; }
+  .sx-pilules::-webkit-scrollbar { display: none; }
+  .sx-pilule { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 16px; border-radius: 999px; border: 0;
+    background: var(--surface); color: var(--ink); font: 600 14.5px/1 var(--sans); text-decoration: none; cursor: pointer; white-space: nowrap; }
+  .sx-pilule .ic { width: 16px; height: 16px; }
+  .sx-pilule.is-on, .sx-pilule[aria-selected="true"], .sx-pilule[aria-current="page"] { background: var(--ver); color: var(--ver-ink); }
+  .sx-pilule small { font-size: 12.5px; opacity: .75; font-weight: 600; }
+
+  /* ─── cartes, boutons, barres ─── */
+  .sx-carte { background: var(--paper); border: 1px solid var(--sx-trait); border-radius: var(--sx-rayon); padding: 16px; box-shadow: var(--sx-ombre); }
+  .sx-carte--douce { background: var(--surface); border-color: transparent; box-shadow: none; }
+  .sx-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; padding: 0 20px; border-radius: 15px; border: 0;
+    font: 600 15.5px/1.1 var(--sans); text-decoration: none; cursor: pointer; transition: transform .12s, filter .2s; }
+  .sx-btn:active { transform: scale(.98); }
+  .sx-btn .ic { width: 19px; height: 19px; }
+  .sx-btn--plein { background: var(--ver); color: var(--ver-ink); box-shadow: 0 10px 22px -14px rgba(107, 15, 26, .8); }
+  .sx-btn--contour { background: var(--paper); color: var(--ink); box-shadow: inset 0 0 0 1.5px rgba(var(--ink-rgb), .16); }
+  .sx-btn--or { background: linear-gradient(135deg, #F2D98C, var(--gold) 55%, #B8902C); color: #2A1A06; box-shadow: 0 10px 22px -14px rgba(120, 80, 10, .9); }
+  .sx-btn--doux { background: var(--surface); color: var(--ink); }
+  .sx-btn--petit { min-height: 38px; padding: 0 14px; border-radius: 12px; font-size: 14px; }
+  .sx-btn--bloc { width: 100%; }
+  .sx-btn[disabled] { opacity: .55; }
+  .sx-prog { display: block; height: 5px; border-radius: 99px; background: rgba(var(--ink-rgb), .1); overflow: hidden; }
+  .sx-prog i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #B8902C, var(--gold)); }
+  .sx-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 999px; font: 600 12.5px/1.2 var(--sans); background: var(--surface); color: var(--ink); }
+  .sx-chip--or { background: rgba(212, 175, 55, .18); color: var(--gold-text); }
+  .sx-chip--bord { background: rgba(107, 15, 26, .09); color: var(--ver-text); }
+  html[data-theme="dark"] .sx-chip--bord { background: rgba(212, 175, 55, .14); }
+  .sx-vide { display: grid; justify-items: center; gap: 10px; padding: 36px 18px; text-align: center; color: var(--ash); font-size: 15px; }
+  .sx-vide .sz-plume, .sx-vide > .ic { width: 52px; height: 52px; }
+  .sx-vide strong { color: var(--ink); font: 600 22px/1.2 var(--serif); }
+
+  /* ─── rangées de couvertures ─── */
+  .sx-rang { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 4px 16px 6px; scroll-snap-type: x proximity; scroll-padding: 16px; }
+  .sx-rang::-webkit-scrollbar { display: none; }
+  .sx-livre { flex: none; width: 132px; display: grid; gap: 4px; align-content: start; color: inherit; text-decoration: none; scroll-snap-align: start; }
+  .sx-livre .cv { font-size: 10.6px; width: 132px; border-radius: 12px; box-shadow: 0 14px 26px -18px rgba(40, 8, 14, .7); margin-bottom: 6px; }
+  .sx-livre b { font: 600 14.5px/1.25 var(--sans); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .sx-livre span { font-size: 13px; color: var(--ash); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sx-livre .sx-chip { justify-self: start; margin-top: 2px; }
+
+  /* ─── listes en lignes ─── */
+  .sx-liste { display: grid; }
+  .sx-ligne { display: flex; align-items: center; gap: 14px; padding: 13px 2px; color: inherit; text-decoration: none; border-bottom: 1px solid var(--sx-trait); background: none; border-left: 0; border-right: 0; border-top: 0; width: 100%; text-align: left; font: inherit; cursor: pointer; }
+  .sx-ligne:last-child { border-bottom: 0; }
+  .sx-ligne-ic { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; background: var(--surface); color: var(--ver-text); }
+  .sx-ligne-ic .ic { width: 20px; height: 20px; }
+  .sx-ligne-t { flex: 1; min-width: 0; display: grid; gap: 2px; }
+  .sx-ligne-t b { font: 600 15.5px/1.3 var(--sans); }
+  .sx-ligne-t small { font-size: 13.5px; color: var(--ash); line-height: 1.35; }
+  .sx-ligne > .ic:last-child { flex: none; width: 18px; height: 18px; color: rgba(var(--ink-rgb), .35); }
+
+  /* ─── pages qu'on fait glisser du doigt (Profil, Notes) ───
+     Le défilement horizontal est NATIF (scroll-snap) : il suit le doigt, et
+     n'atteint jamais la barre d'onglets du bas (ui.js l'exclut du geste
+     « onglet suivant » : [data-sans-glisse]). */
+  .sx-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -16px; overscroll-behavior-x: contain; }
+  .sx-pager::-webkit-scrollbar { display: none; }
+  .sx-pager > section { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; padding: 0 16px; }
+  .sx-onglets { position: sticky; top: calc(56px + env(safe-area-inset-top, 0px)); z-index: 5; background: color-mix(in srgb, var(--bone) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 8px 16px; margin: -8px -16px 0; }
+
+  /* ─── mots (écrits courts) ─── */
+  .sx-mot { display: grid; gap: 12px; }
+  .sx-mot-tete { display: flex; align-items: center; gap: 10px; }
+  .sx-mot-tete .vl-mono { --t: 38px; }
+  .sx-mot-tete div { display: grid; gap: 1px; min-width: 0; }
+  .sx-mot-tete b { font: 600 15px/1.25 var(--sans); }
+  .sx-mot-tete b a { color: inherit; text-decoration: none; }
+  .sx-mot-tete small { font-size: 13px; color: var(--ash); }
+  .sx-mot blockquote { margin: 0; font: italic 500 21px/1.42 var(--serif); }
+  .sx-mot blockquote p { margin: 0; }
+  .sx-mot-source { font-size: 13.5px; color: var(--gold-text); font-weight: 600; }
+  .sx-gestes { display: flex; align-items: center; gap: 4px; border-top: 1px solid var(--sx-trait); padding-top: 8px; margin: 2px -6px -6px; }
+  .sx-gestes .vl-geste { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 10px; border: 0; border-radius: 12px; background: none; color: var(--ink); font: 600 14px/1 var(--sans); text-decoration: none; cursor: pointer; }
+  .sx-gestes .vl-geste .ic { width: 20px; height: 20px; }
+  .sx-gestes .vl-geste:active { background: var(--sx-voile); }
+  .sx-gestes .vl-geste[aria-pressed="true"] { color: var(--ver-text); }
+  .sx-gestes .vl-geste[data-geste="jaime"][aria-pressed="true"] .ic { fill: currentColor; }
+  .sx-gestes .vl-geste[data-geste="partager"] { margin-left: auto; }
+  .sx-gestes .vl-geste-l { font-weight: 600; }
+
+  html[data-theme="dark"] .sx-btn--plein { box-shadow: none; }
+
+  /* ═══ DÉCOUVRIR ═══ */
+  .ap-dec.sx-page { display: block; max-width: none; padding: 0; }
+  .ap-dec.sx-page .ap-fond { opacity: .55; background: radial-gradient(120% 46% at 50% 0%, rgb(var(--t-r) var(--t-g) var(--t-b) / .5) 0%, rgb(var(--t-r) var(--t-g) var(--t-b) / .16) 50%, transparent 80%); }
+  html[data-theme="dark"] .ap-dec.sx-page .ap-fond { opacity: 1; }
+  .ap-dec.sx-page > .sx-barre, .ap-dec.sx-page > .sx-ecran { position: relative; z-index: 1; }
+  .ap-dec .sx-barre.is-defile { background: color-mix(in srgb, var(--bone) 86%, transparent); }
+  .sx-une { position: relative; display: grid; justify-items: center; gap: 10px; padding: 22px 18px 20px; border-radius: 26px; text-align: center;
+    background: linear-gradient(180deg, rgb(var(--t-r) var(--t-g) var(--t-b) / .14), rgb(var(--t-r) var(--t-g) var(--t-b) / .05)); border: 1px solid rgb(var(--t-r) var(--t-g) var(--t-b) / .14); }
+  .sx-une-sur { padding: 6px 12px; border-radius: 999px; background: var(--paper); box-shadow: var(--sx-ombre); }
+  .sx-une-cv { display: block; width: min(56vw, 210px); margin: 6px 0 4px; text-decoration: none; }
+  .sx-une-cv .cv { border-radius: 14px; box-shadow: 0 26px 40px -24px rgba(30, 6, 10, .85), 0 4px 10px -6px rgba(0, 0, 0, .3); }
+  .sx-une-t { font: 600 31px/1.08 var(--serif); margin: 4px 0 0; letter-spacing: -0.01em; }
+  .sx-une-m { margin: 0; color: var(--ash); font-size: 14.5px; }
+  .sx-une-b { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-top: 6px; }
+  .sx-installer { display: grid; grid-template-columns: 40px 1fr; align-items: center; gap: 4px 12px; font-size: 14.5px; }
+  .sx-installer .sz-plume { width: 40px; height: 40px; grid-row: span 2; }
+  .sx-installer-a { display: flex; gap: 8px; }
+  .sx-rang--reprise { gap: 12px; }
+  .sx-reprise { flex: none; width: min(84vw, 340px); display: grid; grid-template-columns: 64px 1fr 40px; align-items: center; gap: 14px; padding: 12px; color: inherit; text-decoration: none; scroll-snap-align: start; }
+  .sx-reprise .cv { font-size: 5.1px; width: 64px; border-radius: 9px; box-shadow: 0 10px 18px -12px rgba(40, 8, 14, .7); }
+  .sx-reprise-t { display: grid; gap: 3px; min-width: 0; }
+  .sx-reprise-t b { font: 600 16px/1.25 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sx-reprise-t > small { font-size: 13px; color: var(--ash); }
+  .sx-reprise-p { display: grid; gap: 5px; margin-top: 4px; }
+  .sx-reprise-p small { font-size: 12.5px; color: var(--ash); }
+  .sx-reprise-go { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--ver); color: var(--ver-ink); }
+  .sx-reprise-go .ic { width: 20px; height: 20px; }
+  .sx-verset { display: grid; gap: 12px; margin: 0; background: linear-gradient(160deg, rgba(212, 175, 55, .12), rgba(212, 175, 55, .03)), var(--paper); border-color: rgba(212, 175, 55, .3); }
+  .sx-verset[hidden] { display: none; }
+  .sx-verset blockquote { margin: 0; font: italic 500 21px/1.45 var(--serif); }
+  .sx-verset blockquote p { margin: 0; }
+  .sx-verset figcaption { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .sx-verset figcaption b { font: 600 14px/1.2 var(--sans); color: var(--gold-text); letter-spacing: .04em; text-transform: uppercase; }
+  .sx-invite { display: grid; justify-items: start; gap: 10px; padding: 22px 20px; border-radius: 24px; color: #F8EEDC;
+    background: radial-gradient(120% 90% at 0% 0%, rgba(160, 36, 56, .55), transparent 60%), linear-gradient(150deg, #5C0E1B, #2E060D); }
+  .sx-invite .sx-sur { color: #E6C873; }
+  .sx-invite h2 { font: 600 27px/1.12 var(--serif); margin: 0; color: #FFF7EA; }
+  .sx-invite p { margin: 0 0 6px; color: rgba(248, 238, 220, .86); font-size: 15px; }
+}
+@media (max-width: 899px) and (prefers-reduced-motion: reduce) {
+  .sx-btn, .sx-barre { transition: none; }
+}

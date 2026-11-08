@@ -52,11 +52,32 @@ self.addEventListener('fetch', (e) => {
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin')) return;     // jamais en cache
   // l'enveloppe : le réseau d'abord (les mises à jour arrivent), la copie hors ligne sinon
   if (url.pathname.startsWith('/app/') || url.pathname.startsWith('/assets/') || STATIQUE.test(url.pathname)) {
-    e.respondWith(fetch(req).then(async (rep) => {
+    const garder = async (rep) => {
       if (rep.ok && rep.type === 'basic') (await caches.open(ENVELOPPE)).put(req, rep.clone());
       return rep;
-    }).catch(async () => (await caches.match(req)) || (await caches.match(req, { ignoreSearch: true }))
-      || (req.mode === 'navigate' ? caches.match('/app/hors-ligne.html') : Response.error())));
+    };
+    const copie = async () => (await caches.match(req)) || (await caches.match(req, { ignoreSearch: true }))
+      || (req.mode === 'navigate' ? caches.match('/app/hors-ligne.html') : Response.error());
+    /* 08/11/2026 — « une application, pas un site ».
+       · Un fichier VERSIONNÉ (?v=empreinte) ne change jamais sous cette
+         adresse : la copie d'abord, sans attendre le réseau.
+       · Une page : le réseau d'abord, mais pas plus de 1,5 s — sur une
+         connexion lente, la dernière copie s'affiche et la nouvelle est
+         gardée pour la prochaine fois. */
+    if (url.searchParams.has('v') && req.mode !== 'navigate') {
+      e.respondWith(caches.match(req).then((c) => c || fetch(req).then(garder)).catch(copie));
+      return;
+    }
+    if (req.mode === 'navigate') {
+      const reseau = fetch(req).then(garder);
+      e.waitUntil(reseau.catch(() => {}));
+      e.respondWith(Promise.race([
+        reseau,
+        new Promise((ok) => setTimeout(ok, 1500)).then(() => caches.match(req)).then((c) => c || reseau)
+      ]).catch(copie));
+      return;
+    }
+    e.respondWith(fetch(req).then(garder).catch(copie));
   }
 });
 function personnel(req, nom) {

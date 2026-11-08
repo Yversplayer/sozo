@@ -302,6 +302,15 @@ def creer_app():
             rep.headers["Cache-Control"] = "no-store"
         elif rep.mimetype == "text/html" or request.path in ("/app/sw.js",):
             rep.headers["Cache-Control"] = "no-cache"
+            if rep.mimetype == "text/html" and request.path.startswith("/app/"):
+                # 08/11/2026 — « une application, pas un site » : les onglets voisins
+                # sont préparés d'avance par le navigateur (règles de spéculation,
+                # app/vitesse.json). Par en-tête et non par <script> en ligne : la
+                # CSP reste « script-src 'self' » (test_socle).
+                rep.headers["Speculation-Rules"] = '"/app/vitesse.json"'
+        elif request.path == "/app/vitesse.json":
+            rep.headers["Content-Type"] = "application/speculationrules+json"
+            rep.headers["Cache-Control"] = "no-cache"
         elif request.args.get("v"):
             # Fichier VERSIONNÉ (app.css?v=22) : son contenu ne changera jamais
             # sous cette adresse ; une nouvelle version change l'adresse. Le

@@ -30,6 +30,8 @@
     return fetch(url, o).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, d: d }; });
     }).then(function (res) {
+      // une écriture réussie : la copie du catalogue n'est plus sûre (voir plus bas)
+      if (res.ok && methode !== 'GET' && window.SOZO_CATALOGUE_PERIME) window.SOZO_CATALOGUE_PERIME();
       // Lot E : publier ou commenter sans la charte → la montrer, puis rejouer
       // la demande UNE fois si elle est acceptée (le serveur reste seul juge).
       // 22/10/2026 : une fonction réservée à Plume — une petite note dans un coin,
@@ -87,9 +89,54 @@
     var r = document.querySelector('#main .sz-reveil');
     if (r) (r.closest('.wrap') || r).remove();
   }
-  window.SOZO_PRET = page === 'connexion.html' ? Promise.resolve() :
-    catalogue(0).then(function (d) {
-      sansReveil();
-      D.authors = d.authors; D.books = d.books; D.reader = d.reader;
-    }, function (e) { clearTimeout(minuterie); throw e; });
+  /* 08/11/2026 — « une application, pas un site » : changer d'onglet ne doit
+     plus montrer un écran vide le temps que /api/catalogue revienne (~2 s
+     depuis Kinshasa). Le dernier catalogue reçu est gardé pour l'ONGLET
+     (sessionStorage : il disparaît avec lui), au nom du compte qui l'a reçu.
+     L'écran se construit aussitôt avec lui, puis le serveur est interrogé en
+     arrière-plan et sa réponse remplace la copie.
+     Ce que la copie ne décide jamais : le texte d'une page reste servi page par
+     page par le serveur, qui vérifie le droit de la lire à chaque fois. Toute
+     écriture réussie (SOZO_API, autre que GET) périme la copie : l'écran
+     suivant repart du serveur. La déconnexion l'efface (auth.js). */
+  var CLE = 'sozo-catalogue', FRAICHEUR = 30 * 60000;
+  function compte() { var s = window.SozoAuth && SozoAuth.session; return s && s.id != null ? String(s.id) : null; }
+  function lireCopie() {
+    try {
+      var c = JSON.parse(sessionStorage.getItem(CLE) || 'null');
+      if (c && c.u && c.u === compte() && Date.now() - c.t < FRAICHEUR && c.d && c.d.books) return c.d;
+    } catch (e) {}
+    return null;
+  }
+  function garderCopie(d) { try { if (compte()) sessionStorage.setItem(CLE, JSON.stringify({ u: compte(), t: Date.now(), d: d })); } catch (e) {} }
+  function poser(d) { D.authors = d.authors; D.books = d.books; D.reader = d.reader; }
+  var enCours = null;
+  function rafraichir() {
+    if (enCours) return enCours;
+    enCours = catalogue(7).then(function (d) {             // 7 : pas de nouvel essai, c'est un fond de tâche
+      garderCopie(d); poser(d);
+      document.dispatchEvent(new CustomEvent('sozo:catalogue'));
+    }).catch(function () {}).then(function () { enCours = null; });
+    return enCours;
+  }
+  window.SOZO_CATALOGUE_PERIME = function () {
+    try { sessionStorage.removeItem(CLE); } catch (e) {}
+    try { localStorage.setItem('sozo-ecrit', String(Date.now())); } catch (e) {}   // les onglets préparés d'avance se rechargeront (ui.js)
+    if (page !== 'connexion.html') rafraichir();
+  };
+  var copie = page === 'connexion.html' ? null : lireCopie();
+  if (copie) {
+    clearTimeout(minuterie);
+    poser(copie);
+    window.SOZO_PRET = Promise.resolve();
+    // en arrière-plan ; une page « prérendue » (onglet préparé d'avance) attend d'être montrée
+    if (document.prerendering) document.addEventListener('prerenderingchange', rafraichir, { once: true });
+    else rafraichir();
+  } else {
+    window.SOZO_PRET = page === 'connexion.html' ? Promise.resolve() :
+      catalogue(0).then(function (d) {
+        sansReveil();
+        garderCopie(d); poser(d);
+      }, function (e) { clearTimeout(minuterie); throw e; });
+  }
 })();

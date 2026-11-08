@@ -39,4 +39,29 @@
       document.dispatchEvent(new CustomEvent('sozo:theme', { detail: clair ? 'light' : 'dark' }));
     }
   };
+
+  /* 08/11/2026 — passer d'une page à l'autre comme dans une application : la
+     page entre du bon côté (onglet suivant à droite, précédent à gauche, une
+     fiche ouverte « par-dessus », un retour qui recule), la barre d'onglets ne
+     bouge pas (app.css, @view-transition). Le sens se lit dans la navigation
+     elle-même (navigation.activation), avant le premier rendu (pagereveal) :
+     ce script est dans <head>. Sans ces API, la page s'affiche simplement. */
+  var ONGLETS = ['decouvrir.html', 'explorer.html', 'studio.html', 'suivis.html?vue=notes', 'profil.html'];
+  function onglet(u) {
+    try {
+      var x = new URL(u), p = x.pathname.split('/').pop();
+      if (p === 'suivis.html') return x.searchParams.get('vue') === 'notes' ? 3 : -1;
+      return ONGLETS.indexOf(p);
+    } catch (e) { return -1; }
+  }
+  window.addEventListener('pagereveal', function (e) {
+    var vt = e.viewTransition, act = window.navigation && navigation.activation;
+    if (!vt || !act || !act.from || !act.entry) return;
+    var de = onglet(act.from.url), vers = onglet(act.entry.url), t;
+    if (act.navigationType === 'reload') { vt.skipTransition(); return; }
+    if (de >= 0 && vers >= 0) t = vers > de ? 'sz-avant' : 'sz-arriere';
+    else if (act.navigationType === 'traverse' || vers >= 0) t = 'sz-retour';
+    else t = 'sz-pousse';
+    try { vt.types.add(t); } catch (x) {}
+  });
 })();

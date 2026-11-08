@@ -79,7 +79,10 @@ async function servirFichier(requete, env, url) {
     // 7 jours ; le reste revérifié.
     const type = reponse.headers.get("Content-Type") || "";
     let cache = "no-cache";
-    if (type.startsWith("text/html") || url.pathname === "/app/sw.js") cache = "no-cache";
+    // 08/11/2026 : onglets préparés d'avance (règles de spéculation) — même règle que Flask
+    if (type.startsWith("text/html") && url.pathname.startsWith("/app/")) finale.headers.set("Speculation-Rules", '"/app/vitesse.json"');
+    if (url.pathname === "/app/vitesse.json") finale.headers.set("Content-Type", "application/speculationrules+json");
+    if (type.startsWith("text/html") || url.pathname === "/app/sw.js" || url.pathname === "/app/vitesse.json") cache = "no-cache";
     else if (url.searchParams.get("v")) cache = "public, max-age=31536000, immutable";
     else if (DUREE_7_JOURS.test(url.pathname) || url.pathname.startsWith("/app/bible/") || url.pathname.startsWith("/app/langue/")) cache = "public, max-age=604800";
     finale.headers.set("Cache-Control", cache);

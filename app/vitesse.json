@@ -1,0 +1,21 @@
+{
+  "prerender": [
+    {
+      "where": { "and": [
+        { "selector_matches": ".tabs a.tb-a" },
+        { "not": { "selector_matches": ".is-active" } }
+      ] },
+      "eagerness": "eager"
+    }
+  ],
+  "prefetch": [
+    {
+      "where": { "and": [
+        { "href_matches": "/app/*" },
+        { "not": { "selector_matches": ".tabs a" } },
+        { "not": { "selector_matches": "[data-sortir], [download]" } }
+      ] },
+      "eagerness": "moderate"
+    }
+  ]
+}

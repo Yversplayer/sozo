@@ -1421,3 +1421,33 @@ html[data-theme="dark"] .bi-etageres { background: linear-gradient(180deg, #1F1C
 .au-head > .btn { align-self: end; }
 @media (max-width: 760px) { .au-head > div:nth-child(2) { padding-top: 0; } }
 .bb > * { min-width: 0; }   /* la rangée des livres de la Bible défile, elle n’élargit plus la page */
+
+/* ═══ 08/11/2026 — passer d'une page à l'autre comme dans une application ═══
+   Le navigateur fond l'ancienne page dans la nouvelle (View Transitions entre
+   documents) ; assets/theme.js choisit le sens : onglet suivant (sz-avant),
+   précédent (sz-arriere), fiche ouverte par-dessus (sz-pousse), retour
+   (sz-retour). La barre d'onglets et le menu latéral ne bougent pas : ils
+   portent leur propre nom de transition. Mouvement réduit : aucune animation. */
+@view-transition { navigation: auto; }
+.tabs { view-transition-name: sz-onglets; }
+.nav { view-transition-name: sz-nav; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .24s; animation-timing-function: cubic-bezier(.2, .8, .2, 1); animation-fill-mode: both; }
+html:active-view-transition-type(sz-avant)::view-transition-old(root) { animation-name: sz-vt-sort-g; }
+html:active-view-transition-type(sz-avant)::view-transition-new(root) { animation-name: sz-vt-entre-d; }
+html:active-view-transition-type(sz-arriere)::view-transition-old(root) { animation-name: sz-vt-sort-d; }
+html:active-view-transition-type(sz-arriere)::view-transition-new(root) { animation-name: sz-vt-entre-g; }
+html:active-view-transition-type(sz-pousse)::view-transition-old(root) { animation: sz-vt-recule .32s cubic-bezier(.2, .8, .2, 1) both; }
+html:active-view-transition-type(sz-pousse)::view-transition-new(root) { animation: sz-vt-par-dessus .32s cubic-bezier(.2, .8, .2, 1) both; box-shadow: -18px 0 40px -20px rgba(0, 0, 0, .35); }
+html:active-view-transition-type(sz-retour)::view-transition-old(root) { z-index: 1; animation: sz-vt-s-en-va .3s cubic-bezier(.2, .8, .2, 1) both; box-shadow: -18px 0 40px -20px rgba(0, 0, 0, .35); }
+html:active-view-transition-type(sz-retour)::view-transition-new(root) { animation: sz-vt-revient .3s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes sz-vt-sort-g { to { transform: translateX(-10%); opacity: 0; } }
+@keyframes sz-vt-sort-d { to { transform: translateX(10%); opacity: 0; } }
+@keyframes sz-vt-entre-d { from { transform: translateX(10%); opacity: 0; } }
+@keyframes sz-vt-entre-g { from { transform: translateX(-10%); opacity: 0; } }
+@keyframes sz-vt-par-dessus { from { transform: translateX(100%); } }
+@keyframes sz-vt-recule { to { transform: translateX(-24%); filter: brightness(.94); } }
+@keyframes sz-vt-s-en-va { to { transform: translateX(100%); } }
+@keyframes sz-vt-revient { from { transform: translateX(-24%); filter: brightness(.94); } }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

@@ -662,9 +662,28 @@ window.SOZO = (() => {
     ['profil', 'profil.html', 'Profil', 'user', ['profil', 'compte', 'bibliotheque']]
   ];
   const GLISSE = 'sozo-glisse';
+  /* 08/11/2026 : quand le navigateur sait fondre une page dans la suivante
+     (View Transitions, app.css), on part AUSSITÔT — plus d'attente de 140 ms
+     ni de page qui s'efface dans le vide : l'onglet, déjà préparé d'avance
+     (app/vitesse.json), apparaît sous le doigt. */
+  const transitionsNatives = !!window.CSSViewTransitionRule;
+  /* Une page préparée d'avance (règles de spéculation) n'est pas encore vue :
+     ses appels secondaires (cloche, récents, appareil) attendent qu'elle le
+     soit. Et si quelque chose a été ÉCRIT entre-temps (un abonnement, un
+     achat…), elle se recharge en la montrant : elle avait été construite
+     avec l'état d'avant. */
+  const quandVisible = (fn) => (document.prerendering ? document.addEventListener('prerenderingchange', () => fn(), { once: true }) : fn());
+  if (document.prerendering) {
+    const prepareeLe = Date.now();
+    document.addEventListener('prerenderingchange', () => {
+      let ecrit = 0;
+      try { ecrit = +localStorage.getItem('sozo-ecrit') || 0; } catch (e) {}
+      if (ecrit > prepareeLe || Date.now() - prepareeLe > 5 * 60000) location.reload();
+    }, { once: true });
+  }
   function partir(url, sens) {
     try { sessionStorage.setItem(GLISSE, JSON.stringify({ sens, t: Date.now() })); } catch (e) {}
-    if (reduced) { location.href = url; return; }
+    if (reduced || transitionsNatives) { location.href = url; return; }
     document.body.classList.add(sens > 0 ? 'ap-part-g' : 'ap-part-d');
     setTimeout(() => { location.href = url; }, 140);
   }
@@ -674,7 +693,7 @@ window.SOZO = (() => {
     try {
       const g = JSON.parse(sessionStorage.getItem(GLISSE) || 'null');
       sessionStorage.removeItem(GLISSE);
-      if (g && Date.now() - g.t < 4000 && !reduced) document.body.classList.add(g.sens > 0 ? 'ap-entre-g' : 'ap-entre-d');
+      if (g && Date.now() - g.t < 4000 && !reduced && !transitionsNatives) document.body.classList.add(g.sens > 0 ? 'ap-entre-g' : 'ap-entre-d');
     } catch (e) {}
     // retour arrière (page gardée en mémoire) : elle revient en place, pas à moitié partie
     addEventListener('pageshow', (e) => { if (e.persisted) document.body.classList.remove('ap-part-g', 'ap-part-d', 'ap-glisse', 'ap-entre-g', 'ap-entre-d'); });
@@ -871,7 +890,7 @@ window.SOZO = (() => {
       nav.querySelector('.nav-rec-l').innerHTML = lignes.join('');
       nav.querySelector('#navRecents').hidden = false;
     };
-    recents();
+    quandVisible(recents);
     const ab = head.querySelector('#acctBtn'), am = head.querySelector('#acctMenu');
     const closeMenu = () => { am.hidden = true; ab.setAttribute('aria-expanded', 'false'); };
     ab.addEventListener('click', (e) => { e.stopPropagation(); am.hidden = !am.hidden; ab.setAttribute('aria-expanded', String(!am.hidden)); });
@@ -881,7 +900,7 @@ window.SOZO = (() => {
     // 28/10/2026 : sur téléphone le cercle « Moi » mène au compte ; on s'y déconnecte aussi
     document.addEventListener('click', (e) => { if (e.target.closest('main [data-sortir]')) SozoAuth.close(); });
     document.addEventListener('click', (e) => { if (e.target.closest('[data-visite]')) { closeMenu(); visite(); } });
-    majCloche(); synchroAppareil();
+    quandVisible(() => { majCloche(); synchroAppareil(); });
     const onScroll = () => head.classList.toggle('is-scrolled', scrollY > 8);
     addEventListener('scroll', onScroll, { passive: true }); onScroll();
   }

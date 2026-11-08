@@ -86,53 +86,75 @@ window.SOZO_PRET.then(() => {
     const premiere = (b) => { const v = S.visiblePages(b).find((p) => S.readable(S.access(b, p.n))); return v ? v.n : null; };
     const allerLire = (b) => { const lu = D.reader.progress[b.id]; const vis = S.visiblePages(b); return vis.some((p) => p.n === lu) ? `lire.html?id=${encodeURIComponent(b.id)}&p=${lu}` : premiere(b) ? `lire.html?id=${encodeURIComponent(b.id)}&p=${premiere(b)}` : `livre.html?id=${encodeURIComponent(b.id)}`; };
     const abo = (b) => S.isFollowed(b.id);
-    const boutonAbo = (b) => `<button class="ap-b ap-b--voile" type="button" data-abo="${S.esc(b.id)}" aria-pressed="${abo(b)}">${S.icon(abo(b) ? 'check' : 'plus')}<span>${abo(b) ? 'Abonné(e)' : 'S’abonner'}</span></button>`;
-    const rang = (titre, livres, lien) => livres.length ? `<section class="ap-rang" aria-label="${S.esc(titre)}">
-      <div class="ap-rang-h"><h2>${S.esc(titre)}</h2>${lien ? `<a href="${lien}">Tout voir</a>` : ''}</div>
-      <div class="xp-defile ap-defile" tabindex="0">${livres.map((b) => `<a class="ap-livre" href="livre.html?id=${encodeURIComponent(b.id)}">${S.cover(b, { d3: false })}<span>${S.esc(b.title)}</span></a>`).join('')}</div>
+    /* 08/11/2026 — l'accueil des maquettes Stitch du propriétaire : la plume
+       et « Sōzō », la cloche et le profil ; Livres · Écrits · La Bible ; le
+       LIVRE DU JOUR dans une carte teintée par sa couverture ; reprendre la
+       lecture (barre de progression, page) ; la pensée du moment et le verset
+       du jour en cartes ; les rangées de couvertures avec leur prix ; l'invitation
+       à écrire. Rien d'inventé : chaque nombre vient du serveur. */
+    const boutonAbo = (b) => `<button class="sx-btn sx-btn--contour" type="button" data-abo="${S.esc(b.id)}" aria-pressed="${abo(b)}">${S.icon(abo(b) ? 'check' : 'plus')}<span>${abo(b) ? 'Abonné(e)' : 'S’abonner'}</span></button>`;
+    const prix = (b) => {
+      if (b.access === 'free') return '<span class="sx-chip sx-chip--or">Gratuit</span>';
+      const p = S.priceFrom(b);
+      return p != null ? `<span class="sx-chip sx-chip--bord">${b.access === 'mixed' ? 'Dès ' : ''}${S.esc(S.money(p))}</span>` : `<span class="sx-chip">${S.esc(S.accessLabel(b))}</span>`;
+    };
+    const carteLivre = (b) => `<a class="sx-livre" href="livre.html?id=${encodeURIComponent(b.id)}">${S.cover(b, { d3: false })}<b>${S.esc(b.title)}</b><span>${S.esc(S.author(b.author).name)}</span>${prix(b)}</a>`;
+    const rang = (titre, livres, lien) => livres.length ? `<section aria-label="${S.esc(titre)}">
+      <div class="sx-h"><h2>${S.esc(titre)}</h2>${lien ? `<a href="${lien}">Voir tout</a>` : ''}</div>
+      <div class="sx-rang" data-sans-glisse>${livres.map(carteLivre).join('')}</div>
     </section>` : '';
     const reprise = enCours.filter((b) => D.reader.progress[b.id]);
     const parCat = cats.map((c) => [c, autres.filter((b) => b.cat === c && b !== une)]).filter(([, l]) => l.length >= 2).slice(0, 3);
-    main.innerHTML = `<div class="ap-dec">
+    const total = (b) => S.visiblePages(b).filter((p) => S.access(b, p.n) !== 'soon').length;
+    const carteReprise = (b) => `<a class="sx-carte sx-reprise" href="${lienLecture(b)}">
+        ${S.cover(b, { d3: false })}
+        <span class="sx-reprise-t"><span class="sx-sur">En cours</span><b>${S.esc(b.title)}</b><small>${S.esc(S.author(b.author).name)}</small>
+          <span class="sx-reprise-p"><span class="sx-prog" role="progressbar" aria-valuenow="${pctDe(b)}" aria-valuemin="0" aria-valuemax="100" aria-label="${S.esc(b.title)} : ${pctDe(b)} % lu"><i style="width:${pctDe(b)}%"></i></span><small>Page ${D.reader.progress[b.id]}${total(b) ? ` / ${total(b)}` : ''} · ${pctDe(b)} %</small></span></span>
+        <span class="sx-reprise-go" aria-hidden="true">${S.icon('right')}</span>
+      </a>`;
+    main.innerHTML = `<div class="ap-dec sx-page">
       <div class="ap-fond" aria-hidden="true"></div>
-      <header class="ap-barre" id="apBarre">
+      <header class="sx-barre" id="apBarre">
         <a class="ap-logo" href="decouvrir.html" aria-label="Sōzō — accueil">${S.PLUME_OR}<span class="ap-logo-t" aria-hidden="true">Sōzō</span></a>
-        <span class="ap-barre-d">
-          <a class="ap-ic" href="profil.html#telechargements" aria-label="Mes téléchargements">${S.icon('download')}</a>
-          <a class="ap-ic" href="notifications.html" data-cloche aria-label="Notifications">${S.icon('bell')}</a>
+        <span class="sx-barre-d">
+          <a class="sx-ic" href="profil.html#telechargements" aria-label="Mes téléchargements">${S.icon('download')}</a>
+          <a class="sx-ic" href="notifications.html" data-cloche aria-label="Notifications">${S.icon('bell')}</a>
+          <a class="sx-ic" href="profil.html" aria-label="Mon profil"><span class="sx-av" aria-hidden="true">${S.esc(initiales)}</span></a>
         </span>
       </header>
-      <nav class="ap-filtres" aria-label="Que lire ?"><a href="explorer.html">Livres</a><a href="explorer.html?vue=ecrits">Écrits</a><a href="bible.html">La Bible</a></nav>
-      ${une ? `<section class="ap-une" aria-labelledby="uneT">
-        <a class="ap-une-cv" href="livre.html?id=${encodeURIComponent(une.id)}" aria-label="${S.esc(une.title)} — la fiche du livre">${S.cover(une, { big: true, d3: false })}</a>
-        <h1 class="ap-une-t" id="uneT">${S.esc(une.title)}</h1>
-        <p class="ap-une-m">${S.esc(une.cat)}<i aria-hidden="true"></i>${S.esc(S.accessLabel(une))}<i aria-hidden="true"></i>${S.esc(S.author(une.author).name)}</p>
-        <div class="ap-une-b"><a class="ap-b ap-b--plein" href="${allerLire(une)}">${S.icon('book')}<span>Aller lire</span></a>${boutonAbo(une)}</div>
-      </section>` : `<section class="ap-une ap-une--vide"><h1 class="ap-une-t">Les premiers livres arrivent</h1><p class="ap-une-m">En attendant, écrivez le vôtre.</p></section>`}
-      <aside class="ap-installer" id="bandeauInstaller" hidden><span>Installez Sōzō sur votre écran d’accueil, et lisez même sans réseau.</span>
-        <span class="ap-installer-a"><button class="ap-lien" type="button" id="instOui">Installer</button><button class="ap-lien ap-lien--doux" type="button" id="instNon">Plus tard</button></span></aside>
-      ${reprise.length ? `<section class="ap-rang" aria-label="Reprendre la lecture">
-        <div class="ap-rang-h"><h2>Reprendre la lecture</h2><a href="profil.html">Tout voir</a></div>
-        <div class="xp-defile ap-defile" tabindex="0">${reprise.map((b) => `<a class="ap-livre ap-livre--reprise" href="${lienLecture(b)}">${S.cover(b, { d3: false })}
-          <span class="ap-prog" role="progressbar" aria-valuenow="${pctDe(b)}" aria-valuemin="0" aria-valuemax="100" aria-label="${S.esc(b.title)} : ${pctDe(b)} % lu"><i style="width:${pctDe(b)}%"></i></span><span>Page ${D.reader.progress[b.id]}</span></a>`).join('')}</div>
+      <div class="sx-ecran">
+      <nav class="sx-pilules" aria-label="Que lire ?" data-sans-glisse><a class="sx-pilule is-on" href="explorer.html">${S.icon('book')}Livres</a><a class="sx-pilule" href="explorer.html?vue=ecrits">${S.icon('feather')}Écrits</a><a class="sx-pilule" href="bible.html">${S.icon('library')}La Bible</a></nav>
+      ${une ? `<section class="sx-une" aria-labelledby="uneT">
+        <span class="sx-sur sx-une-sur">${S.icon('star')} Livre du jour</span>
+        <a class="sx-une-cv" href="livre.html?id=${encodeURIComponent(une.id)}" aria-label="${S.esc(une.title)} — la fiche du livre">${S.cover(une, { big: true, d3: false })}</a>
+        <h1 class="sx-une-t" id="uneT">${S.esc(une.title)}</h1>
+        <p class="sx-une-m">${S.esc(une.cat)} · ${S.esc(S.accessLabel(une))} · ${S.esc(S.author(une.author).name)}</p>
+        <div class="sx-une-b"><a class="sx-btn sx-btn--plein" href="${allerLire(une)}">${S.icon('book')}<span>Aller lire</span></a>${boutonAbo(une)}</div>
+      </section>` : `<section class="sx-une sx-carte--douce sx-vide"><strong>Les premiers livres arrivent</strong>En attendant, écrivez le vôtre.</section>`}
+      <aside class="sx-carte sx-installer" id="bandeauInstaller" hidden>${S.PLUME_OR}<span>Installez Sōzō sur votre écran d’accueil, et lisez même sans réseau.</span>
+        <span class="sx-installer-a"><button class="sx-btn sx-btn--plein sx-btn--petit" type="button" id="instOui">Installer</button><button class="sx-btn sx-btn--doux sx-btn--petit" type="button" id="instNon">Plus tard</button></span></aside>
+      ${reprise.length ? `<section aria-label="Reprendre la lecture">
+        <div class="sx-h"><h2>Reprendre la lecture</h2><a href="profil.html">Voir tout</a></div>
+        <div class="sx-rang sx-rang--reprise" data-sans-glisse>${reprise.map(carteReprise).join('')}</div>
       </section>` : ''}
       <div id="apMot1"></div>
       ${rang('Nouveautés', nouveautes.filter((b) => b !== une), 'explorer.html')}
-      <figure class="ap-mot ap-mot--verset" id="versetJour" hidden></figure>
+      <figure class="sx-carte sx-verset" id="versetJour" hidden></figure>
       <div id="apMot2"></div>
       ${rang('Pour vous', pourVous.filter((b) => b !== une).slice(0, 12), 'explorer.html')}
       ${parCat.map(([c, l], i) => `${rang(c, l, `explorer.html?cat=${encodeURIComponent(c)}`)}<div id="apMot${i + 3}"></div>`).join('')}
-      <section class="ap-invite" aria-labelledby="inviteT">
-        ${S.PLUME_OR}
+      <section class="sx-invite" aria-labelledby="inviteT">
+        <span class="sx-sur">${S.icon('feather')} Inspiration &amp; partage</span>
         <h2 id="inviteT">Et vous, qu’avez-vous sur le cœur ?</h2>
         <p>Une pensée, une prière, un poème : quelques mots suffisent. C’est gratuit, toujours.</p>
-        <a class="ap-b ap-b--or" href="ecrits.html?nouveau=pensee">${S.icon('feather')}<span>Écrire une pensée</span></a>
+        <a class="sx-btn sx-btn--or" href="ecrits.html?nouveau=pensee">${S.icon('feather')}<span>Écrire une pensée</span></a>
       </section>
+      </div>
     </div>`;
     const dec = main.querySelector('.ap-dec');
     if (une) S.teinte(une).then((t) => S.poserTeinte(dec, t));
     const barre = $('#apBarre');
-    const auDefil = () => barre.classList.toggle('is-defile', scrollY > 24);
+    const auDefil = () => barre.classList.toggle('is-defile', scrollY > 12);
     addEventListener('scroll', auDefil, { passive: true }); auDefil();
 
     main.addEventListener('click', async (e) => {
@@ -149,18 +171,22 @@ window.SOZO_PRET.then(() => {
     const sansMarques = (t) => String(t || '').split('\n').map((l) => l.replace(/^(#{1,2} |> |• )/, '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/\*(.+?)\*/g, '$1')).join('\n').trim();
     // typographie française : pas de « : » ni de « ? » orphelin en début de ligne
     const fr = (t) => t.replace(/ ([:;!?])/g, '\u202F$1');
-    const mot = (e) => {
+    const mot = (e, i = 0) => {
       let t = sansMarques(e.texte), source = '';
       const m = /\n— ([^\n]+)$/.exec(t);
       if (m) { source = m[1]; t = t.slice(0, m.index).trim(); }
       const auteur = /^u\d+$/.test(e.auteur.id) ? `<a href="auteur.html?id=${encodeURIComponent(e.auteur.id)}">${S.esc(e.auteur.nom)}</a>` : S.esc(e.auteur.nom);
-      return `<figure class="ap-mot" data-ecrit="${e.id}">
-        <blockquote><p>${fr(S.esc(t)).replace(/\n/g, '<br>')}</p></blockquote>
-        <figcaption><span>— ${source ? S.esc(source) : auteur}</span>${source ? `<small>partagé par ${auteur}</small>` : ''}${e.exemple ? '<small class="ap-ex">Exemple</small>' : ''}</figcaption>
-        <footer class="ap-gestes">
-          <button type="button" class="ap-geste" data-geste="jaime" aria-pressed="${e.moi.jaime}" aria-label="J’aime${e.jaime ? ` (${e.jaime})` : ''}">${S.icon('heart')}<span data-n>${e.jaime || ''}</span></button>
-          <a class="ap-geste" href="ecrit.html?id=${e.id}#commentaires" aria-label="Commentaires${e.commentaires ? ` (${e.commentaires})` : ''}">${S.icon('bulle')}<span>${e.commentaires || ''}</span></a>
-          <button type="button" class="ap-geste" data-geste="partager" aria-label="Partager">${S.icon('partager')}</button>
+      const nature = (E.NATURES[e.nature] || 'Écrit');
+      return `<figure class="sx-carte sx-mot" data-ecrit="${e.id}">
+        <div class="sx-mot-tete">${S.monogramme(e.auteur.nom)}<div><b>${auteur}</b><small>${S.esc(nature)}${e.publie_le ? ` · ${S.esc(S.depuisJours(e.publie_le))}` : ''}${e.exemple ? ' · Exemple' : ''}</small></div></div>
+        ${i === 0 ? `<span class="sx-sur">${S.icon('feather')} Pensée du moment</span>` : ''}
+        <blockquote><p>« ${fr(S.esc(t)).replace(/\n/g, '<br>')} »</p></blockquote>
+        ${source ? `<figcaption class="sx-mot-source">— ${S.esc(source)}</figcaption>` : ''}
+        <footer class="sx-gestes">
+          <button type="button" class="vl-geste" data-geste="jaime" aria-pressed="${e.moi.jaime}" aria-label="J’aime${e.jaime ? ` (${e.jaime})` : ''}">${S.icon('heart')}<span data-n>${e.jaime || ''}</span></button>
+          <a class="vl-geste" href="ecrit.html?id=${e.id}#commentaires" aria-label="Commentaires${e.commentaires ? ` (${e.commentaires})` : ''}">${S.icon('bulle')}<span>${e.commentaires || ''}</span></a>
+          <button type="button" class="vl-geste" data-geste="garde" aria-pressed="${e.moi.garde}" aria-label="${e.moi.garde ? 'Gardé dans ma bibliothèque' : 'Garder dans ma bibliothèque'}">${S.icon('garder')}<span class="vl-geste-l">${e.moi.garde ? 'Gardé' : 'Garder'}</span></button>
+          <button type="button" class="vl-geste" data-geste="partager" aria-label="Partager">${S.icon('partager')}</button>
         </footer>
       </figure>`;
     };
@@ -170,14 +196,15 @@ window.SOZO_PRET.then(() => {
         .sort((x, y) => (y.jaime || 0) - (x.jaime || 0) || (y.publie_le || '').localeCompare(x.publie_le || ''));
       // un mot du jour qui change chaque jour, puis les plus aimés
       if (mots.length > 1) mots.unshift(mots.splice(jour % mots.length, 1)[0]);
-      mots.slice(0, 5).forEach((e, i) => { const z = $(`#apMot${i + 1}`); if (z) z.outerHTML = mot(e); });
+      mots.slice(0, 5).forEach((e, i) => { const z = $(`#apMot${i + 1}`); if (z) z.outerHTML = mot(e, i); });
     });
     E.brancher(main, (id) => mots.find((e) => e.id === id));
     window.SOZO_API('GET', '/api/bible/jour').then((r) => {
       const x = r.ok && r.d.verset; if (!x) return;
       const nom = S.bible ? S.bible.BOOKS[x.b - 1][0] : '';
       const z = $('#versetJour');
-      z.innerHTML = `<blockquote><p>${fr(S.esc(x.t))}</p></blockquote><figcaption><span>— <a href="bible.html?b=${x.b}&c=${x.c}&v=${x.v}">${S.esc(nom)} ${x.c}:${x.v}</a></span><small>le verset du jour</small></figcaption>`;
+      z.innerHTML = `<span class="sx-sur">${S.icon('sun')} Verset du jour</span><blockquote><p>« ${fr(S.esc(x.t))} »</p></blockquote>
+        <figcaption><b>${S.esc(nom)} ${x.c}:${x.v}</b><a class="sx-btn sx-btn--doux sx-btn--petit" href="bible.html?b=${x.b}&c=${x.c}&v=${x.v}">${S.icon('book')}Méditer</a></figcaption>`;
       z.hidden = false;
     });
     const bandeau = () => {

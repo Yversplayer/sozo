@@ -16,7 +16,7 @@
   var page = location.pathname.split('/').pop() || '';
   function lire() { try { return JSON.parse(sessionStorage.getItem(CACHE)); } catch (e) { return null; } }
   function garder(m) {
-    try { if (m) sessionStorage.setItem(CACHE, JSON.stringify(m)); else sessionStorage.removeItem(CACHE); } catch (e) {}
+    try { if (m) sessionStorage.setItem(CACHE, JSON.stringify(m)); else { sessionStorage.removeItem(CACHE); sessionStorage.removeItem('sozo-catalogue'); } } catch (e) {}
   }
   function csrf() { var m = document.cookie.match(/(?:^|; )sozo_csrf=([^;]+)/); return m ? decodeURIComponent(m[1]) : ''; }
   function versConnexion() { location.replace('connexion.html?suite=' + encodeURIComponent(page + location.search + location.hash)); }
@@ -90,7 +90,9 @@
         return new Promise(function (ok) { setTimeout(ok, 10000); }).then(function () { return demander(essai + 1); });
       });
   }
-  demander(0)
+  /* 08/11/2026 : une page préparée d'avance (onglet voisin) avec un profil
+     connu ne redemande « qui suis-je ? » qu'au moment d'être montrée. */
+  function verifier() { return demander(0)
     .then(function (r) {
       reveilInutile();
       if (r.status === 401) { garder(null); oublierCaches().then(versConnexion); return null; }
@@ -106,5 +108,7 @@
       if (window.SozoTheme && d.moi && d.moi.theme) SozoTheme.set(d.moi.theme, { serveur: true });
       if (!avant) location.reload();          // première visite de l'onglet : on affiche avec le profil
     })
-    .catch(function () { reveilInutile(); if (!moi) versConnexion(); });
+    .catch(function () { reveilInutile(); if (!moi) versConnexion(); }); }
+  if (moi && document.prerendering) document.addEventListener('prerenderingchange', verifier, { once: true });
+  else verifier();
 })();
