@@ -74,6 +74,43 @@ window.SOZO_PRET.then(() => {
       <p class="ash rd-cherche-n">Seules les pages que vous pouvez lire sont parcourues.</p><div id="chercheR" aria-live="polite"></div></aside>
     <aside class="rd-pins" id="pins" hidden aria-label="Mes épingles dans ce livre"><div class="rd-pins-h"><strong>Mes épingles</strong><button class="icon-btn" type="button" id="pinsX" aria-label="Fermer">${S.icon('x')}</button></div><div id="pinsL"></div></aside>`;
   body.prepend(top);
+  /* 08/11/2026 — la liseuse des maquettes Stitch (téléphone) : une seule ligne
+     en haut (Retour, le titre, « Aa », « ⋯ ») ; chercher, marque-page, écouter,
+     mes épingles et la concentration passent dans le menu « ⋯ », avec leur nom
+     en toutes lettres. Ce sont les MÊMES boutons, déplacés : leurs gestes ne
+     changent pas. En bas, « ‹ Précédente · Page n / N · Suivante › ». */
+  const TELR = matchMedia('(max-width: 899px)').matches;
+  let majNav = () => {};
+  if (TELR) {
+    top.classList.add('sx-rd-top');
+    const plus = document.createElement('span');
+    plus.className = 'sx-rd-plus';
+    plus.innerHTML = `<button class="icon-btn" type="button" id="rdPlus" aria-haspopup="true" aria-expanded="false" aria-controls="rdMenu" aria-label="Plus d’outils">${S.icon('dots')}</button><span class="sx-rd-menu" id="rdMenu" role="menu" hidden></span>`;
+    top.querySelector('#setBtn').after(plus);
+    const menu = plus.querySelector('#rdMenu'), pb = plus.querySelector('#rdPlus');
+    [['chercheBtn', 'Chercher dans ce livre'], ['signetBtn', 'Marque-page'], ['voixBtn', 'Écouter la page'], ['pinsBtn', 'Mes épingles'], ['focusBtn', 'Mode concentration']].forEach(([id, l]) => {
+      const x = top.querySelector(`#${id}`); if (!x) return;
+      x.setAttribute('role', 'menuitem'); x.insertAdjacentHTML('beforeend', `<span class="sx-rd-l">${l}</span>`); menu.appendChild(x);
+    });
+    const fermerM = () => { menu.hidden = true; pb.setAttribute('aria-expanded', 'false'); };
+    pb.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; pb.setAttribute('aria-expanded', String(!menu.hidden)); if (!menu.hidden) menu.querySelector('button').focus(); });
+    menu.addEventListener('click', () => setTimeout(fermerM, 0));
+    document.addEventListener('click', (e) => { if (!e.target.closest('.sx-rd-plus')) fermerM(); });
+    menu.addEventListener('keydown', (e) => { if (e.key === 'Escape') { fermerM(); pb.focus(); } });
+    const nav = document.createElement('nav');
+    nav.className = 'sx-rd-nav'; nav.setAttribute('aria-label', 'Page précédente ou suivante');
+    nav.innerHTML = `<button type="button" class="sx-rd-nav-b" id="rdPrec">${S.icon('left')}<span>Précédente</span></button><span class="sx-rd-nav-n" id="rdNavN" aria-live="polite"></span><button type="button" class="sx-rd-nav-b" id="rdSuiv"><span>Suivante</span>${S.icon('right')}</button>`;
+    body.appendChild(nav);
+    body.classList.add('sx-rd');
+    const voisin = (d) => { const i = visible.findIndex((p) => p.n === n); return visible[i + d]; };
+    nav.querySelector('#rdPrec').addEventListener('click', () => { const v = voisin(-1); if (v) aller(v.n); });
+    nav.querySelector('#rdSuiv').addEventListener('click', () => { const v = voisin(1); if (v) aller(v.n); });
+    majNav = () => {
+      const i = visible.findIndex((p) => p.n === n);
+      nav.querySelector('#rdNavN').textContent = i >= 0 ? `Page ${n} / ${visible.length}` : '';
+      nav.querySelector('#rdPrec').disabled = i <= 0; nav.querySelector('#rdSuiv').disabled = i < 0 || i >= visible.length - 1;
+    };
+  }
   const sortie = document.createElement('button');
   sortie.type = 'button'; sortie.className = 'rd-sortie btn btn--sm'; sortie.innerHTML = `${S.icon('x')} Quitter la concentration`;
   body.appendChild(sortie);
@@ -330,7 +367,7 @@ window.SOZO_PRET.then(() => {
     document.title = `${b.title}, page ${n} — Sōzō`;
     history.replaceState(null, '', `lire.html?id=${encodeURIComponent(b.id)}&p=${n}`);
     $$('.rd-strip a').forEach((x) => { const ici = +x.dataset.aller === n; x.classList.toggle('is-here', ici); if (ici) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
-    majSignet();
+    majSignet(); majNav();
   }
 
   /* ─── Lot D (21/10/2026) : marque-pages, recherche dans le livre, voix ─── */

@@ -158,18 +158,27 @@
 
   /* Étape 2 : payer au numéro Sōzō, puis déclarer la référence.
      Sert aussi à reprendre un achat laissé en suspens (Mon compte). */
+  /* 08/11/2026 — d'après la maquette Stitch « Achat & reçu » : le montant en
+     grand, trois étapes numérotées (envoyer au numéro Sōzō — copiable —,
+     dire avec quel opérateur, recopier la référence du SMS), puis « J'ai payé :
+     déclarer ». Rien ne change sur le fond : c'est le serveur qui enregistre la
+     déclaration, et Sōzō qui confirme ; rien n'est débloqué avant. */
   function declarer(p, moyens, apres) {
     const montant = S.money(p.montant / 100);
-    const nums = moyens.numeros.map((x) => `<div><span>${S.esc(x.operateur)}</span><strong>${S.esc(x.numero)}</strong></div>`).join('');
-    S.modal({ title: `Payer ${montant}`, body: `
+    const nums = moyens.numeros.map((x) => `<div class="sx-pay-num"><span><small>${S.esc(x.operateur)}</small><b>${S.esc(x.numero)}</b></span><button type="button" class="sx-btn sx-btn--doux sx-btn--petit" data-copier="${S.esc(x.numero)}">Copier</button></div>`).join('');
+    const m = S.modal({ title: `Payer ${montant}`, body: `
       ${moyens.test ? `<p class="warn">${S.icon('lock')}<span><strong>Environnement de test.</strong> N'envoyez pas d'argent réel : les numéros ci-dessous sont factices.</span></p>` : ''}
-      <p>1. Envoyez <strong>${montant}</strong> par Mobile Money à l'un de ces numéros Sōzō :</p>
-      <div class="recap">${nums}</div>
-      <p>2. Indiquez la référence de la transaction (reçue par SMS de votre opérateur) :</p>
-      <label class="cx-field"><span>Opérateur</span><select id="payOp">${moyens.operateurs.map((o) => `<option>${S.esc(o)}</option>`).join('')}</select></label>
-      <label class="cx-field"><span>Référence de la transaction</span><input id="payRef" maxlength="40" autocomplete="off" placeholder="Ex. : MP2610151234"></label>
-      <p class="cx-err" id="payErr" role="alert"></p>
-      <p class="note">${S.icon('clock')} Sōzō vérifie la transaction, puis ouvre votre accès. Vous suivez l'état dans « Mon compte ».</p>`,
+      <div class="sx-pay">
+        <p class="sx-pay-montant"><small>Montant à envoyer</small><b>${montant}</b></p>
+        <ol class="sx-pay-etapes">
+          <li><span class="sx-pay-n">1</span><div><b>Envoyez ${montant} par Mobile Money</b><small>à l’un des numéros Sōzō :</small>${nums}</div></li>
+          <li><span class="sx-pay-n">2</span><div><b>Avec quel opérateur ?</b><input type="hidden" id="payOp" value="${S.esc(moyens.operateurs[0] || '')}">
+            <div class="sx-pay-ops" role="radiogroup" aria-label="Opérateur">${moyens.operateurs.map((o, i) => `<button type="button" role="radio" class="sx-pay-op" data-op="${S.esc(o)}" aria-checked="${i === 0}">${S.esc(o)}</button>`).join('')}</div></div></li>
+          <li><span class="sx-pay-n">3</span><div><b>La référence reçue par SMS</b><label class="cx-field"><span class="sr">Référence de la transaction</span><input id="payRef" maxlength="40" autocomplete="off" autocapitalize="characters" placeholder="Ex. : MP2610151234"></label></div></li>
+        </ol>
+        <p class="cx-err" id="payErr" role="alert"></p>
+        <p class="note">${S.icon('clock')} Sōzō vérifie la transaction, puis ouvre votre accès. Vous suivez l'état dans « Mes achats ».</p>
+      </div>`,
       actions: [
         { label: 'Annuler l’achat', onClick: async (close) => { const a = await window.SOZO_API('POST', `/api/paiements/${p.id}/annulation`); close(); if (!a.ok) S.toast(a.d.erreur || 'Annulation impossible.'); if (apres) apres(); } },
         { label: 'J’ai payé : déclarer', primary: true, onClick: async (close) => {
@@ -180,6 +189,14 @@
           close(); suivi(d.d.paiement); if (apres) apres();
         } }
       ] });
+    m.el.querySelectorAll('[data-op]').forEach((b) => b.addEventListener('click', () => {
+      m.el.querySelectorAll('[data-op]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+      document.getElementById('payOp').value = b.dataset.op;
+    }));
+    m.el.querySelectorAll('[data-copier]').forEach((b) => b.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(b.dataset.copier.replace(/\s*\(TEST\)$/, '')); b.textContent = 'Copié'; setTimeout(() => { b.textContent = 'Copier'; }, 1800); }
+      catch (e) { S.toast('Copie impossible : recopiez le numéro.'); }
+    }));
   }
 
   async function reprendre(p, apres) {
@@ -188,12 +205,18 @@
     declarer(p, m.d, apres);
   }
 
+  /* l'état du paiement, comme un reçu : il dit ce que le SERVEUR a enregistré */
   function suivi(p) {
     const etat = { PENDING: 'En attente de vérification', CONFIRMED: 'Confirmé', FAILED: 'Refusé', CREATED: 'À payer', CANCELLED: 'Annulé', UNKNOWN: 'En cours de vérification' }[p.etat] || p.etat;
-    S.modal({ title: etat, body: p.etat === 'CONFIRMED'
-      ? '<p>Votre accès est ouvert. Bonne lecture !</p>'
-      : `<p>Votre paiement de <strong>${S.money(p.montant / 100)}</strong> est déclaré${p.reference ? ` (référence ${S.esc(p.reference)})` : ''}. Sōzō le vérifie, puis ouvre votre accès : rien n'est débloqué avant cette confirmation.</p><p class="note">${S.icon('user')} Suivez l'état dans « Mon compte ».</p>`,
-      actions: [{ label: 'Mon compte', onClick: () => { location.href = 'compte.html'; } }, { label: 'Fermer', primary: true, onClick: (close) => { close(); if (p.etat === 'CONFIRMED') location.reload(); } }] });
+    const ok = p.etat === 'CONFIRMED';
+    S.modal({ title: ok ? 'Paiement confirmé' : 'Paiement déclaré', body: `<div class="sx-recu">
+        <span class="sx-recu-ic${ok ? ' is-ok' : ''}">${S.icon(ok ? 'check' : 'clock')}</span>
+        <span class="sx-chip ${ok ? 'sx-chip--or' : 'sx-chip--bord'}">${S.esc(etat)}</span>
+        <p class="sx-recu-montant">${S.money(p.montant / 100)}</p>
+        ${p.reference ? `<p class="sx-recu-ref">Référence <b>${S.esc(p.reference)}</b></p>` : ''}
+        <p>${ok ? 'Votre accès est ouvert. Bonne lecture !' : 'Sōzō vérifie votre paiement, puis ouvre votre accès : rien n’est débloqué avant cette confirmation.'}</p>
+      </div>`,
+      actions: [{ label: 'Mes achats', onClick: () => { location.href = 'compte.html#hAchats'; } }, { label: ok ? 'Lire' : 'Fermer', primary: true, onClick: (close) => { close(); if (ok) location.reload(); } }] });
   }
 
   S.buy = { options, recap, plume, payer, reprendre, carte, animerCarte, avisPro };
