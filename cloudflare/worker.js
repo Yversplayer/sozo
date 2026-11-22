@@ -117,6 +117,28 @@ const ASSETLINKS = [{
   },
 }];
 
+// 22/11/2026 — GARDER LE SERVEUR GRATUIT ÉVEILLÉ.
+// Render endort un service gratuit après 15 min sans requête. Le réveil ne
+// passe plus par le relais : une requête venue d'un Worker reçoit une
+// vérification anti-robot (429) et n'atteint jamais le serveur ; seul un vrai
+// navigateur sur l'adresse Render le réveille (« Application loading »). Constaté
+// le 22/11 : Sōzō ne répondait plus, journaux Render vides depuis 7 jours.
+// Ce déclencheur (wrangler.jsonc, "triggers") appelle /api/sante toutes les
+// 10 minutes : le serveur ne s'endort plus. Il ne peut PAS réveiller un serveur
+// déjà endormi (même 429) : après une suspension, ouvrir une fois
+// https://sozo-api.onrender.com/api/sante dans un navigateur.
+// Heures : ~744 h par mois de 31 jours sur les 750 h gratuites de l'espace
+// Render « Yvon's workspace », partagées avec klassio-api, qui continue de
+// dormir. Le réveiller longtemps (plus de ~6 h un mois de 31 jours) épuiserait
+// le quota et Render suspendrait LES DEUX jusqu'au mois suivant.
+async function garderEveille(env) {
+  if (!env.SOZO_API_ORIGIN) return;
+  const reponse = await fetch(new URL("/api/sante", env.SOZO_API_ORIGIN), {
+    headers: { "User-Agent": "sozo-worker-reveil" },
+  });
+  if (!reponse.ok) console.log(`Réveil : /api/sante a répondu ${reponse.status} (serveur endormi ou suspendu ?)`);
+}
+
 export default {
   async fetch(requete, env) {
     const url = new URL(requete.url);
@@ -127,5 +149,9 @@ export default {
     }
     if (url.pathname === "/api" || url.pathname.startsWith("/api/")) return relayerApi(requete, env, url);
     return servirFichier(requete, env, url);
+  },
+
+  async scheduled(evenement, env, ctx) {
+    ctx.waitUntil(garderEveille(env));
   },
 };

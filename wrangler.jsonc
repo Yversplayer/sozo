@@ -25,5 +25,8 @@
   "vars": {
     "SOZO_API_ORIGIN": "https://sozo-api.onrender.com"
   },
+  // 22/11/2026 : appelle /api/sante toutes les 10 minutes pour que le serveur
+  // gratuit de Render ne s'endorme pas (voir garderEveille dans worker.js).
+  "triggers": { "crons": ["*/10 * * * *"] },
   "observability": { "enabled": true }
 }
