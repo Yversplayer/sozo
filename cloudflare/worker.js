@@ -108,12 +108,18 @@ function exigerHttps(requete, url) {
 // propriétaire ; sans lui, l'application s'ouvre avec une barre d'adresse.
 // Ce n'est que l'empreinte PUBLIQUE de la clé de signature : rien de secret.
 // Une nouvelle clé (Play Store, autre identifiant) = une entrée de plus ici.
+// 22/11/2026 : la clé du 30/10 (2B:49…) est perdue avec le Mac ; nouvelle clé
+// PWABuilder (22:9A…). L'ancienne reste listée : les téléphones qui ont encore
+// l'ancienne application continuent de l'ouvrir sans barre d'adresse.
 const ASSETLINKS = [{
   relation: ["delegate_permission/common.handle_all_urls"],
   target: {
     namespace: "android_app",
     package_name: "dev.workers.mudeyimusimwa.sozo.twa",
-    sha256_cert_fingerprints: ["2B:49:AE:06:2B:EC:88:09:0D:F1:CC:6E:F7:E9:79:A7:CA:5A:87:CA:2B:76:48:4F:FE:31:0D:54:F4:48:4C:FB"],
+    sha256_cert_fingerprints: [
+      "22:9A:D3:3D:62:74:0D:FA:78:62:80:3A:58:E5:8B:C1:3F:14:BF:E8:29:F5:FC:E2:E7:FD:EC:7F:FB:6F:C2:63",
+      "2B:49:AE:06:2B:EC:88:09:0D:F1:CC:6E:F7:E9:79:A7:CA:5A:87:CA:2B:76:48:4F:FE:31:0D:54:F4:48:4C:FB",
+    ],
   },
 }];
 
