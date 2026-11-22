@@ -1,0 +1,41 @@
+# Garde la base Supabase de Sōzō active (offre gratuite).
+#
+# Supabase met en pause un projet gratuit qui ne reçoit pas assez de vraies
+# requêtes sur 7 jours ; « quelques requêtes par jour suffisent »
+# (https://supabase.com/docs/guides/platform/free-project-pausing). Projet
+# `sozo` mis en pause le 18/11/2026, relancé le 22/11/2026 (REPRISE §18).
+#
+# Le réveil du Worker (cloudflare/worker.js, garderEveille) garde le serveur
+# Render éveillé, mais /api/sante n'interroge pas la base : sans vrais lecteurs,
+# Supabase remettrait le projet en pause. Ce job lit une ligne quatre fois par
+# jour, directement dans Supabase, sans toucher au code du serveur.
+#
+# Secret à poser UNE fois (Settings → Secrets and variables → Actions) :
+#   SUPABASE_DB_URL = la même adresse que SOZO_DATABASE_URL sur Render (sozo-api).
+# Rien n'est affiché : le dépôt est public, ses journaux aussi.
+# GitHub suspend les tâches planifiées d'un dépôt public après 60 jours sans
+# commit (un e-mail prévient) : un commit ou « Enable workflow » les relance.
+name: Base Supabase active
+
+on:
+  schedule:
+    - cron: "47 */6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  requete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Lire une ligne dans la base
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Secret SUPABASE_DB_URL absent (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -t -c "select 1 from books limit 1" > /dev/null
+          echo "Base Sōzō sollicitée."
